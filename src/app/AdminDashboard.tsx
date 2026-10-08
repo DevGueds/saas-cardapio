@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { useNavigate } from "react-router"
 import MenuManagement from "./MenuManagement"
+import { useSharedStore, useSharedProducts } from "./dataStore"
 
 type OrderStatus = "new" | "preparing" | "delivery"
 type PaymentStatus = "confirmed" | "pending"
@@ -141,9 +142,15 @@ export default function AdminDashboard() {
     return "menu"
   })
   const [orders, setOrders] = useState(initialOrders)
-  const [storeOpen, setStoreOpen] = useState(true)
+  const [store, setStore] = useSharedStore()
+  const [products] = useSharedProducts()
+  const storeOpen = store.isOpen
   const [soundOn, setSoundOn] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const handleToggleStoreOpen = () => {
+    setStore((prev) => ({ ...prev, isOpen: !prev.isOpen }))
+  }
 
   const newOrders = orders.filter((order) => order.status === "new").length
   const revenue = useMemo(
@@ -224,7 +231,9 @@ export default function AdminDashboard() {
           >
             <ShoppingBag size={19} />
             <span>Gestão do Cardápio</span>
-            <small>13 itens</small>
+            <small>
+              {products.length} {products.length === 1 ? "item" : "itens"}
+            </small>
           </button>
           <button
             className={activeTab === "orders" ? "is-active" : ""}
@@ -321,7 +330,12 @@ export default function AdminDashboard() {
                 type="button"
                 role="switch"
                 aria-checked={storeOpen}
-                onClick={() => setStoreOpen((current) => !current)}
+                onClick={handleToggleStoreOpen}
+                title={
+                  storeOpen
+                    ? "Clique para fechar a loja"
+                    : "Clique para abrir a loja"
+                }
               >
                 <span />
               </button>

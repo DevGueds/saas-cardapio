@@ -17,23 +17,14 @@ import {
   X,
 } from "lucide-react"
 
-export type Category = {
-  id: string
-  name: string
-  iconName?: string
-}
+import {
+  Category,
+  Product,
+  useSharedCategories,
+  useSharedProducts,
+} from "./dataStore"
 
-export type Product = {
-  id: string
-  categoryId: string
-  name: string
-  description: string
-  price: number
-  imageUrl: string
-  available: boolean // Status: true = "Disponível", false = "Esgotado"
-  popular?: boolean
-  createdAt?: string
-}
+export type { Category, Product }
 
 export type Toast = {
   id: string
@@ -77,169 +68,14 @@ const PRESET_IMAGES = [
   },
 ]
 
-const initialCategories: Category[] = [
-  { id: "burgers", name: "Hambúrgueres" },
-  { id: "sides", name: "Acompanhamentos" },
-  { id: "drinks", name: "Bebidas" },
-  { id: "desserts", name: "Sobremesas" },
-]
-
-const initialProducts: Product[] = [
-  {
-    id: "prod-1",
-    categoryId: "burgers",
-    name: "Smash Clássico",
-    description:
-      "Pão brioche artesanal tostado na manteiga, blend smash 120g, queijo cheddar inglês derretido, picles crocantes e molho especial da casa.",
-    price: 28.0,
-    imageUrl:
-      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80",
-    available: true,
-    popular: true,
-  },
-  {
-    id: "prod-2",
-    categoryId: "burgers",
-    name: "Brasa Bacon Duplo",
-    description:
-      "Carne 160g assada na brasa de carvão, generosas fatias de bacon artesanal crocante, cheddar inglês duplo, cebola caramelizada e barbecue.",
-    price: 36.9,
-    imageUrl:
-      "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=600&q=80",
-    available: true,
-    popular: true,
-  },
-  {
-    id: "prod-3",
-    categoryId: "burgers",
-    name: "Double Smash Cheese",
-    description:
-      "Dois smash burgers ultra selados de 90g cada, queijo prato derretido duplo, picles em fatias e maionese verde artesanal.",
-    price: 34.9,
-    imageUrl:
-      "https://images.unsplash.com/photo-1583032015879-672535619379?auto=format&fit=crop&w=600&q=80",
-    available: true,
-  },
-  {
-    id: "prod-4",
-    categoryId: "burgers",
-    name: "Brasa Salad Especial",
-    description:
-      "Blend 160g suculento, queijo estepe, alface americana fresca, tomate caqui em rodelas, cebola roxa fininha e maionese verde de ervas.",
-    price: 32.9,
-    imageUrl:
-      "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=600&q=80",
-    available: true,
-  },
-  {
-    id: "prod-5",
-    categoryId: "burgers",
-    name: "Trufado Melt Gourmet",
-    description:
-      "Blend nobre 180g, creme de queijos com azeite trufado branco, cogumelos paris salteados na manteiga e cebola crispy artesanal.",
-    price: 42.0,
-    imageUrl:
-      "https://images.unsplash.com/photo-1594212699903-ec8a3eca50f5?auto=format&fit=crop&w=600&q=80",
-    available: false, // Esgotado / Pausado para demonstração
-  },
-  {
-    id: "prod-6",
-    categoryId: "sides",
-    name: "Batata Frita Rústica Especial",
-    description:
-      "Batatas rústicas com casca cortadas à mão, alecrim fresco, flor de sal e maionese verde especial da casa.",
-    price: 24.0,
-    imageUrl:
-      "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&w=600&q=80",
-    available: true,
-  },
-  {
-    id: "prod-7",
-    categoryId: "sides",
-    name: "Batata com Cheddar & Bacon",
-    description:
-      "Porção generosa de fritas crocantes com fondue cremoso de queijo cheddar e farofa crocante de bacon artesanal.",
-    price: 29.9,
-    imageUrl:
-      "https://images.unsplash.com/photo-1585109649139-366815a0d713?auto=format&fit=crop&w=600&q=80",
-    available: true,
-  },
-  {
-    id: "prod-8",
-    categoryId: "sides",
-    name: "Onion Rings Artesanais",
-    description:
-      "Anéis de cebola doce empanados em farinha panko temperada e crocante. Acompanha molho barbecue artesanal defumado.",
-    price: 22.0,
-    imageUrl:
-      "https://images.unsplash.com/photo-1639024471287-035186f55a1b?auto=format&fit=crop&w=600&q=80",
-    available: true,
-  },
-  {
-    id: "prod-9",
-    categoryId: "drinks",
-    name: "Coca-Cola Lata 350ml",
-    description:
-      "Refrigerante Coca-Cola em lata 350ml bem gelado (Normal ou Zero Açúcar).",
-    price: 6.0,
-    imageUrl:
-      "https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=600&q=80",
-    available: true,
-  },
-  {
-    id: "prod-10",
-    categoryId: "drinks",
-    name: "Guaraná Antarctica 350ml",
-    description:
-      "O autêntico sabor brasileiro da fruta guaraná, lata de 350ml servida estupidamente gelada.",
-    price: 6.0,
-    imageUrl:
-      "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=600&q=80",
-    available: true,
-  },
-  {
-    id: "prod-11",
-    categoryId: "drinks",
-    name: "Suco Natural de Laranja 500ml",
-    description:
-      "Suco 100% natural espremido na hora com laranjas selecionadas, sem água e sem açúcar adicionado.",
-    price: 11.0,
-    imageUrl:
-      "https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&w=600&q=80",
-    available: true,
-  },
-  {
-    id: "prod-12",
-    categoryId: "desserts",
-    name: "Brownie com Sorvete e Calda",
-    description:
-      "Brownie de chocolate belga quentinho com pedaços de nozes, sorvete artesanal de baunilha e calda de chocolate.",
-    price: 19.9,
-    imageUrl:
-      "https://images.unsplash.com/photo-1564355808539-22fda35bed7e?auto=format&fit=crop&w=600&q=80",
-    available: true,
-  },
-  {
-    id: "prod-13",
-    categoryId: "desserts",
-    name: "Mini Churros com Doce de Leite",
-    description:
-      "6 unidades de mini churros crocantes polvilhados com açúcar e canela, servidos com pote de doce de leite cremoso.",
-    price: 17.0,
-    imageUrl:
-      "https://images.unsplash.com/photo-1624300629298-e9de39c13be5?auto=format&fit=crop&w=600&q=80",
-    available: true,
-  },
-]
-
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 })
 
 export default function MenuManagement() {
-  const [categories, setCategories] = useState<Category[]>(initialCategories)
-  const [products, setProducts] = useState<Product[]>(initialProducts)
+  const [categories, setCategories] = useSharedCategories()
+  const [products, setProducts] = useSharedProducts()
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState("")
@@ -270,11 +106,16 @@ export default function MenuManagement() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const showToast = (message: string, type: Toast["type"] = "success") => {
-    const id = Math.random().toString(36).substring(2, 9)
-    setToasts((prev) => [...prev, { id, message, type }])
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id))
-    }, 3800)
+    setToasts((prev) => {
+      if (prev.some((t) => t.message === message)) {
+        return prev
+      }
+      const id = Math.random().toString(36).substring(2, 9)
+      setTimeout(() => {
+        setToasts((current) => current.filter((t) => t.id !== id))
+      }, 3800)
+      return [...prev, { id, message, type }]
+    })
   }
 
   // Open Modal for New Product
@@ -412,22 +253,23 @@ export default function MenuManagement() {
 
   // Status Toggle (Disponível in green / Esgotado in gray)
   const handleToggleStatus = (productId: string) => {
+    const target = products.find((item) => item.id === productId)
+    if (!target) return
+
+    const nextState = !target.available
+    if (nextState) {
+      showToast(`"${target.name}" agora está disponível no cardápio!`)
+    } else {
+      showToast(
+        `"${target.name}" foi pausado (Esgotado) no cardápio.`,
+        "warning",
+      )
+    }
+
     setProducts((prev) =>
-      prev.map((item) => {
-        if (item.id === productId) {
-          const nextState = !item.available
-          if (nextState) {
-            showToast(`"${item.name}" agora está disponível no cardápio!`)
-          } else {
-            showToast(
-              `"${item.name}" foi pausado (Esgotado) no cardápio.`,
-              "warning",
-            )
-          }
-          return { ...item, available: nextState }
-        }
-        return item
-      }),
+      prev.map((item) =>
+        item.id === productId ? { ...item, available: nextState } : item,
+      ),
     )
   }
 
@@ -497,7 +339,7 @@ export default function MenuManagement() {
   const unavailableCount = totalCount - availableCount
 
   return (
-    <div className="menu-mgmt-wrapper w-full max-w-[1440px] mx-auto transition-all">
+    <div className="menu-mgmt-wrapper w-full max-w-[90rem] mx-auto transition-all">
       {/* 1. TOP ACTION BAR */}
       <section className="bg-white border border-slate-200/90 px-6 lg:px-8 py-6 mb-8 rounded-2xl shadow-xs">
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
@@ -539,7 +381,7 @@ export default function MenuManagement() {
           {/* Right Side: Search bar, Category filter dropdown, View Switcher & Primary Green Button "+ Novo Produto" */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Search Bar */}
-            <div className="relative min-w-[260px] flex-1 sm:flex-initial">
+            <div className="relative min-w-[16.25rem] flex-1 sm:flex-initial">
               <Search
                 size={16}
                 className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
@@ -728,7 +570,7 @@ export default function MenuManagement() {
                                 />
                                 {!product.available && (
                                   <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-2xs flex items-center justify-center">
-                                    <span className="text-[10px] font-bold tracking-wider uppercase text-white bg-slate-900/80 px-1.5 py-0.5 rounded-sm">
+                                    <span className="text-[0.625rem] font-bold tracking-wider uppercase text-white bg-slate-900/80 px-1.5 py-0.5 rounded-sm">
                                       Pausado
                                     </span>
                                   </div>
@@ -750,7 +592,7 @@ export default function MenuManagement() {
                                   </h3>
                                   {product.popular && (
                                     <span
-                                      className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200/60"
+                                      className="shrink-0 inline-flex items-center gap-0.5 text-[0.625rem] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200/60"
                                       title="Item popular"
                                     >
                                       <Sparkles size={10} />
@@ -769,7 +611,7 @@ export default function MenuManagement() {
 
                             {/* Price (Bold Emerald Text) */}
                             <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-baseline justify-between">
-                              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
+                              <span className="text-[0.6875rem] font-medium text-slate-400 uppercase tracking-wider">
                                 Preço
                               </span>
                               <span className="text-base font-extrabold text-emerald-700 tracking-tight font-manrope">
@@ -886,7 +728,7 @@ export default function MenuManagement() {
                                       {product.name}
                                     </strong>
                                     {product.popular && (
-                                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1 rounded-sm">
+                                      <span className="text-[0.625rem] font-bold text-amber-700 bg-amber-50 px-1 rounded-sm">
                                         Top
                                       </span>
                                     )}
@@ -1005,9 +847,7 @@ export default function MenuManagement() {
                   id="modal-headline"
                   className="text-lg font-bold text-slate-900 font-manrope"
                 >
-                  {editingProduct
-                    ? "Editar Produto"
-                    : "Cadastrar Novo Produto"}
+                  {editingProduct ? "Editar Produto" : "Cadastrar Novo Produto"}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Preencha as informações do item para exibir no cardápio
@@ -1122,7 +962,7 @@ export default function MenuManagement() {
 
                 {/* Quick Presets Picker */}
                 <div className="mt-2.5 flex items-center gap-2 flex-wrap text-xs text-slate-500">
-                  <span className="text-[11px] font-medium text-slate-400">
+                  <span className="text-[0.6875rem] font-medium text-slate-400">
                     Sugestões rápidas:
                   </span>
                   {PRESET_IMAGES.slice(0, 6).map((preset) => (
@@ -1133,7 +973,7 @@ export default function MenuManagement() {
                         setFormImagePreview(preset.url)
                         setFormImageUrl(preset.url)
                       }}
-                      className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition-colors cursor-pointer"
+                      className="text-[0.6875rem] font-medium px-2 py-0.5 rounded-md bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 transition-colors cursor-pointer"
                     >
                       {preset.label}
                     </button>
