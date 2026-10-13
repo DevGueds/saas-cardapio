@@ -1,0 +1,48 @@
+:root {
+  color: #1b1c19;
+  background: #f6f6f2;
+  font-family: "DM Sans", sans-serif;
+  font-synthesis: none;
+  --ink: #1b1c19;
+  --muted: #6d7068;
+  --line: #e4e5de;
+  --paper: #ffffff;
+  --wash: #f6f6f2;
+  --brand: #059669;
+  --brand-dark: #047857;
+  --green: #059669;
+  --soft-green: #ecfdf5;
+  --shadow: 0 1.125rem 3.75rem rgba(35, 32, 23, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 20rem;
+  min-height: 100vh;
+  background: var(--wash);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 0.1875rem solid rgba(5, 150, 105, 0.26);
+  outline-offset: 0.125rem;
+}

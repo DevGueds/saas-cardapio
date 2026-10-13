@@ -1,13 +1,23 @@
 {
-  "name": "figma-make-app",
+  "name": "saas-cardapio",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "vite --mode demo",
+    "dev:restricted": "vite",
+    "build": "pnpm check:text && tsc --noEmit && vite build",
+    "build:demo": "pnpm check:text && tsc --noEmit && vite build --mode demo",
     "preview": "vite preview",
-    "format": "oxfmt"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.tests.json",
+    "lint": "eslint src && node scripts/check-architecture.mjs && pnpm check:text",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build:demo",
+    "format": "prettier --write .",
+    "check:text": "node scripts/check-text.mjs",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "lucide-react": "^1.52.0",
@@ -16,14 +26,28 @@
     "react-router": "^7.9.6"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^6.0.0",
+    "eslint": "^10.12.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jsdom": "^30.1.2",
+    "prettier": "^3.9.9",
     "tailwindcss": "^4.0.0",
-    "@tailwindcss/vite": "^4.0.0",
-    "oxfmt": "^0.2.0",
     "typescript": "^5.7.0",
-    "vite": "^8.0.5"
+    "typescript-eslint": "^8.71.1",
+    "vite": "^8.0.5",
+    "vitest": "^5.0.3"
+  },
+  "packageManager": "pnpm@11.23.0",
+  "engines": {
+    "node": ">=22.13.0"
   }
 }
