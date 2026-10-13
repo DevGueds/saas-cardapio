@@ -1,0 +1,10 @@
+node_modules
+dist
+.cache
+coverage
+test-results
+playwright-report
+pnpm-lock.yaml
+.figma
+.gitattributes
+vite.config.ts

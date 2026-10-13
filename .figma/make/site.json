@@ -1,10 +1,12 @@
 {
-  "description": "Enables restaurants to showcase digital menus with seamless WhatsApp ordering, offering a responsive design, cart management, and easy checkout.",
+  "description": "Cardápio digital para restaurantes ? demonstração local.",
   "robots": {
     "index": false
   },
   "accessibility": {
     "addBypassLinks": false,
     "ignoreReducedMotion": false
-  }
+  },
+  "title": "Cardápio digital",
+  "language": "pt-BR"
 }

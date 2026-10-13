@@ -19,3 +19,9 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
+
+!.env.demo
+!.env.example
+/test-results/
+/playwright-report/
+/coverage/

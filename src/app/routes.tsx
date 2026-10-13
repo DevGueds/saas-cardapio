@@ -1,59 +1,78 @@
 import { createBrowserRouter, Navigate, Outlet } from "react-router"
 
-function HydrateFallback() {
-  return (
-    <div className="min-h-screen bg-[#f6f6f2] flex flex-col items-center justify-center gap-3">
-      <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-      <span className="text-sm font-medium text-[#6d7068]">Carregando...</span>
-    </div>
-  )
-}
+import PublicRoute from "./presentation/PublicRoute"
 
-export const router = createBrowserRouter([
+import AdminRoute from "./presentation/AdminRoute"
+
+import NotFoundPage from "./presentation/NotFoundPage"
+
+import RouteErrorPage from "./presentation/RouteErrorPage"
+
+export const router = createBrowserRouter(
+  [
+    {
+      Component: Outlet,
+      ErrorBoundary: RouteErrorPage,
+
+      HydrateFallback: () => (
+        <main className="state-page">
+          <p role="status">Carregando…</p>
+        </main>
+      ),
+
+      children: [
+        { path: "/", Component: PublicRoute },
+
+        { path: "/menu/:slug?", Component: PublicRoute },
+
+        {
+          path: "/admin",
+          Component: AdminRoute,
+          children: [
+            { index: true, element: <Navigate to="menu" replace /> },
+
+            {
+              path: "products",
+              element: <Navigate to="/admin/menu" replace />,
+            },
+
+            {
+              path: "menu",
+              lazy: async () => ({
+                Component: (await import("../modules/catalog/presentation/CatalogPage"))
+                  .default,
+              }),
+            },
+
+            {
+              path: "settings",
+              lazy: async () => ({
+                Component: (
+                  await import("../modules/restaurant/presentation/RestaurantSettingsPage")
+                ).default,
+              }),
+            },
+
+            {
+              path: "orders",
+              lazy: async () => ({
+                Component: (
+                  await import("../modules/demo-orders/presentation/DemoOrdersPage")
+                ).default,
+              }),
+            },
+          ],
+        },
+
+        { path: "*", Component: NotFoundPage },
+      ],
+    },
+  ],
   {
-    id: "root",
-    HydrateFallback,
-    Component: Outlet,
-    children: [
-      {
-        path: "/",
-        lazy: async () => {
-          const { default: Component } = await import("./PublicMenu")
-          return { Component }
-        },
-      },
-      {
-        path: "/menu/:slug?",
-        lazy: async () => {
-          const { default: Component } = await import("./PublicMenu")
-          return { Component }
-        },
-      },
-      {
-        path: "/admin",
-        lazy: async () => {
-          const { default: Component } = await import("./AdminDashboard")
-          return { Component }
-        },
-      },
-      {
-        path: "/admin/menu",
-        lazy: async () => {
-          const { default: Component } = await import("./AdminDashboard")
-          return { Component }
-        },
-      },
-      {
-        path: "/admin/products",
-        lazy: async () => {
-          const { default: Component } = await import("./AdminDashboard")
-          return { Component }
-        },
-      },
-      {
-        path: "*",
-        element: <Navigate to="/" replace />,
-      },
-    ],
+    basename:
+      new URL(import.meta.env.BASE_URL, window.location.origin).pathname.replace(
+        /\/$/,
+        "",
+      ) || "/",
   },
-])
+)

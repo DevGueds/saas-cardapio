@@ -1,0 +1,341 @@
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+:focus-visible {
+  outline: 3px solid #059669;
+  outline-offset: 3px;
+}
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.state-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+  background: #f6f6f2;
+}
+.state-page h1 {
+  font-size: 1.65rem;
+  font-weight: 800;
+}
+.primary-button,
+.secondary-button,
+.danger-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+}
+.primary-button {
+  color: white;
+  background: #059669;
+}
+.primary-button:hover:not(:disabled) {
+  background: #047857;
+}
+.secondary-button {
+  color: #374151;
+  background: #f8fafc;
+  border-color: #dbe1e7;
+}
+.danger-button {
+  color: white;
+  background: #be123c;
+}
+.text-button {
+  background: none;
+  color: #047857;
+  font-size: 0.8rem;
+  padding: 0.5rem 0;
+  text-decoration: underline;
+}
+.error-notice,
+.info-notice,
+.success-notice {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  margin: 0.8rem 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.error-notice {
+  background: #fff1f2;
+  color: #9f1239;
+  border: 1px solid #fecdd3;
+}
+.error-notice small {
+  font-size: 0.7rem;
+}
+.error-notice ul {
+  list-style: disc inside;
+}
+.info-notice {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+.success-notice {
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+.global-error {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 0 1rem;
+  background: white;
+}
+.app-dialog {
+  border: 0;
+  border-radius: 1.25rem;
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: 0;
+  overflow-y: auto;
+  background: white;
+  color: #19261f;
+  box-shadow: 0 24px 80px #0f172a40;
+}
+.app-dialog::backdrop {
+  background: #11182780;
+  backdrop-filter: blur(3px);
+}
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.dialog-heading h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+.dialog-heading button {
+  background: #f1f5f9;
+  border: 0;
+  border-radius: 50%;
+  padding: 0.5rem;
+}
+.editor-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+.editor-form fieldset {
+  display: grid;
+  gap: 1.2rem;
+}
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+}
+.field {
+  display: grid;
+  gap: 0.4rem;
+}
+.field > span,
+.field-label {
+  font-weight: 650;
+  font-size: 0.8125rem;
+}
+.field input,
+.field select,
+.field textarea {
+  box-sizing: border-box;
+  min-height: 2.8rem;
+  width: 100%;
+  border: 1px solid #d1d9df;
+  border-radius: 0.65rem;
+  padding: 0.7rem;
+  background: white;
+  font-size: 0.875rem;
+  color: #1e293b;
+}
+.field textarea {
+  resize: vertical;
+}
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 0.875rem;
+}
+.check-field input {
+  accent-color: #059669;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+.image-picker {
+  display: grid;
+  gap: 0.5rem;
+}
+.image-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 0.9rem;
+  min-height: 7rem;
+  text-align: left;
+  font-size: 0.8rem;
+}
+.image-dropzone img {
+  width: 5rem;
+  height: 5rem;
+  border-radius: 0.6rem;
+  object-fit: cover;
+}
+.image-dropzone small {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+.settings-page {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  max-width: 58rem;
+  margin: auto;
+}
+.settings-page > header {
+  padding: 1.5rem 1.5rem 0;
+}
+.settings-page h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+.settings-page header p {
+  color: #64748b;
+  margin-top: 0.35rem;
+}
+.checkout-dialog {
+  width: min(34rem, 100vw);
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0 0 0 auto;
+  border-radius: 1rem 0 0 1rem;
+}
+.checkout-form {
+  padding: 0 1.5rem 1.5rem;
+}
+.checkout-actions {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+.checkout-actions p {
+  font-size: 0.75rem;
+  text-align: center;
+  color: #6b7280;
+}
+.checkout-actions a {
+  text-decoration: none;
+  justify-content: center;
+}
+.cart-item__info {
+  flex: 1;
+  min-width: 0;
+}
+.cart-item__info h3 {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.unavailable-label {
+  color: #b91c1c;
+}
+.delivery-fields {
+  margin-top: 1rem;
+}
+.admin-nav a {
+  text-decoration: none;
+}
+@media (max-width: 40rem) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  .app-dialog {
+    width: calc(100vw - 1rem);
+  }
+  .editor-form {
+    padding: 1rem;
+  }
+  .checkout-dialog {
+    width: 100%;
+    border-radius: 0;
+  }
+  .form-actions {
+    flex-wrap: wrap;
+  }
+}
+
+.image-placeholder {
+  display: grid;
+  place-items: center;
+  background: #e8ede8;
+  color: #94a39b;
+}
+.product-card__media > .image-placeholder {
+  width: 100%;
+  height: 100%;
+}
+.checkout-dialog {
+  max-width: 100vw;
+}
+.cart-item__info h3 {
+  white-space: normal;
+  overflow: visible;
+}
+@media (max-width: 51.25rem) {
+  .admin-sidebar {
+    visibility: hidden;
+  }
+  .admin-sidebar.is-open {
+    visibility: visible;
+  }
+}
