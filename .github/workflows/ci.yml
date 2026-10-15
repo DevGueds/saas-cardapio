@@ -6,13 +6,14 @@ permissions:
   contents: read
 jobs:
   application:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
+          package-manager-cache: false
       - uses: pnpm/action-setup@v4
         with:
           version: 11.23.0
@@ -29,5 +30,5 @@ jobs:
       - run: pnpm docker:up
       - run: pnpm test:e2e:docker
       - run: pnpm audit --prod
-      - if: always()
+      - if: always() && hashFiles('backend/.env') != ''
         run: pnpm docker:down
