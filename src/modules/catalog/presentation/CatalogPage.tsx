@@ -1,6 +1,16 @@
+import { useAccount } from "../../identity/presentation/AccountContext"
+import PageHeading from "../../../shared/presentation/PageHeading"
 import { useState } from "react"
 
-import { LayoutGrid, List, Plus, Search, UtensilsCrossed } from "lucide-react"
+import {
+  CheckCircle2,
+  LayoutGrid,
+  List,
+  Package,
+  PauseCircle,
+  Plus,
+  Search,
+} from "lucide-react"
 
 import { useMenu } from "../../../app/presentation/MenuScope"
 
@@ -24,6 +34,7 @@ export default function CatalogPage() {
   const { menu, loading, error: loadError, reload } = useMenu()
 
   const services = useServices()
+  const account = useAccount()
 
   const mutation = useMutation()
 
@@ -42,7 +53,8 @@ export default function CatalogPage() {
 
   const [notice, setNotice] = useState("")
 
-  const blocked = loading || !!loadError || mutation.pending
+  const blocked =
+    loading || !!loadError || mutation.pending || account?.restaurant.role === "STAFF"
 
   const products = menu.products.filter(
     (product) =>
@@ -94,25 +106,58 @@ export default function CatalogPage() {
 
   return (
     <div className="catalog-page">
-      <section className="catalog-toolbar">
-        <div className="catalog-title">
-          <span className="catalog-title-icon">
-            <UtensilsCrossed />
+      <PageHeading
+        eyebrow="Seu catálogo"
+        title="Gestão do Cardápio"
+        description="Deixe seus produtos prontos para o próximo pedido."
+      >
+        <button
+          type="button"
+          className="primary-button"
+          disabled={blocked}
+          onClick={() => {
+            setNotice("")
+            setEditor({})
+          }}
+        >
+          <Plus size={19} aria-hidden="true" /> Novo produto
+        </button>
+      </PageHeading>
+      <div className="catalog-counts" aria-label="Resumo do catálogo">
+        <div>
+          <span className="stat-icon">
+            <Package size={22} aria-hidden="true" />
           </span>
           <div>
-            <h1>Gestão do Cardápio</h1>
-            <p>Cadastre, edite e pause seus produtos</p>
+            <span>Produtos no cardápio</span>
+            <strong>{menu.products.length}</strong>
           </div>
+          <small>Seu catálogo completo</small>
         </div>
-        <div className="catalog-counts">
-          <span>{menu.products.length} produtos</span>
-          <span>
-            {menu.products.filter((product) => product.available).length} disponíveis
+        <div>
+          <span className="stat-icon stat-icon--green">
+            <CheckCircle2 size={22} aria-hidden="true" />
           </span>
-          <span>
-            {menu.products.filter((product) => !product.available).length} esgotados
-          </span>
+          <div>
+            <span>Disponíveis</span>
+            <strong>{menu.products.filter((product) => product.available).length}</strong>
+          </div>
+          <small>Prontos para pedir</small>
         </div>
+        <div>
+          <span className="stat-icon stat-icon--amber">
+            <PauseCircle size={22} aria-hidden="true" />
+          </span>
+          <div>
+            <span>Esgotados</span>
+            <strong>
+              {menu.products.filter((product) => !product.available).length}
+            </strong>
+          </div>
+          <small>Você pode reativar quando quiser</small>
+        </div>
+      </div>
+      <section className="catalog-toolbar" aria-label="Busca e visualização">
         <div className="catalog-filters">
           <label className="search-field">
             <Search size={18} />
@@ -153,17 +198,6 @@ export default function CatalogPage() {
               <List size={18} />
             </button>
           </div>
-          <button
-            type="button"
-            className="primary-button"
-            disabled={blocked}
-            onClick={() => {
-              setNotice("")
-              setEditor({})
-            }}
-          >
-            <Plus size={18} /> Novo produto
-          </button>
         </div>
       </section>
       {notice && (
@@ -194,7 +228,32 @@ export default function CatalogPage() {
         <div className="empty-search">
           <Search size={30} />
           <h2>Nenhum produto encontrado</h2>
-          <p>Cadastre um produto ou altere os filtros de busca.</p>
+          <p>
+            {search || categoryId
+              ? "Tente outro nome ou veja todas as categorias."
+              : "Seu cardápio começa com o primeiro produto."}
+          </p>
+          {search || categoryId ? (
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => {
+                setSearch("")
+                setCategoryId("")
+              }}
+            >
+              Limpar filtros
+            </button>
+          ) : (
+            <button
+              className="primary-button"
+              type="button"
+              disabled={blocked}
+              onClick={() => setEditor({})}
+            >
+              <Plus size={18} /> Cadastrar primeiro produto
+            </button>
+          )}
         </div>
       )}
       {editor && (

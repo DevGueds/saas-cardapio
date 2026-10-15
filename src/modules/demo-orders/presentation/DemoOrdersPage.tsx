@@ -1,146 +1,224 @@
-import { useState } from "react"
-
-import { CheckCircle2, ChefHat, ChevronRight, Clock3, Printer, Truck } from "lucide-react"
-
+import { useEffect, useRef, useState } from "react"
+import {
+  Banknote,
+  CheckCircle2,
+  ChefHat,
+  Clock3,
+  FlaskConical,
+  Printer,
+  ReceiptText,
+  Search,
+  Truck,
+} from "lucide-react"
 import { formatMoney } from "../../../shared/domain/money"
-
+import { normalizeName } from "../../../shared/domain/validation"
+import PageHeading from "../../../shared/presentation/PageHeading"
 import { advanceDemoOrder, type DemoOrderStatus } from "../domain/demo-order"
-
 import { demoOrders } from "../application/demo-orders"
+import DemoOrderCard from "./DemoOrderCard"
 
-const columns: { id: DemoOrderStatus; title: string; icon: typeof Clock3 }[] = [
-  { id: "new", title: "Novos pedidos", icon: Clock3 },
-  { id: "preparing", title: "Em preparo", icon: ChefHat },
-
-  { id: "delivery", title: "Saiu para entrega", icon: Truck },
+const columns: {
+  id: DemoOrderStatus
+  title: string
+  description: string
+  icon: typeof Clock3
+}[] = [
+  {
+    id: "new",
+    title: "Novos pedidos",
+    description: "Prontos para começar",
+    icon: ReceiptText,
+  },
+  {
+    id: "preparing",
+    title: "Em preparo",
+    description: "A cozinha está cuidando",
+    icon: ChefHat,
+  },
+  {
+    id: "delivery",
+    title: "Saiu para entrega",
+    description: "A caminho do cliente",
+    icon: Truck,
+  },
 ]
 
 export default function DemoOrdersPage() {
   const [orders, setOrders] = useState(demoOrders)
+  const movedOrder = useRef<{ id: string; previousStatus: DemoOrderStatus } | null>(null)
+  const [filter, setFilter] = useState<DemoOrderStatus | "all">("all")
+  const [search, setSearch] = useState("")
+  const [notice, setNotice] = useState("")
+  const visibleOrders = orders.filter((order) =>
+    normalizeName(`${order.id} ${order.customer}`).includes(normalizeName(search)),
+  )
+  const activeColumns = columns.filter(
+    (column) => filter === "all" || filter === column.id,
+  )
+
+  useEffect(() => {
+    const moved = movedOrder.current
+    if (!moved) return
+    const target =
+      document.getElementById(`demo-order-${moved.id}`) ??
+      document.getElementById(`orders-${moved.previousStatus}`)
+    target?.focus()
+    movedOrder.current = null
+  }, [orders])
+
+  function advance(id: string) {
+    const current = orders.find((order) => order.id === id)
+    if (!current || current.status === "delivery") return
+    movedOrder.current = { id, previousStatus: current.status }
+    setOrders((items) =>
+      items.map((item) => (item.id === id ? advanceDemoOrder(item) : item)),
+    )
+    setNotice(
+      `Pedido #${id} movido para ${current.status === "new" ? "Em preparo" : "Saiu para entrega"}.`,
+    )
+  }
 
   return (
-    <>
-      <div className="admin-page-heading">
+    <div className="orders-page">
+      <PageHeading
+        eyebrow="Organize cada etapa"
+        title="Gestor de Pedidos"
+        description="Da cozinha até a entrega, tudo no seu lugar."
+      >
+        <button className="secondary-button" type="button" onClick={() => window.print()}>
+          <Printer size={18} aria-hidden="true" />
+          Imprimir quadro
+        </button>
+      </PageHeading>
+      <div className="orders-metrics" aria-label="Resumo demonstrativo">
         <div>
-          <p>Simulação local</p>
-          <h1>Gestor de Pedidos</h1>
+          <span className="stat-icon">
+            <ReceiptText size={22} aria-hidden="true" />
+          </span>
           <span>
-            Exemplos para explorar o painel. Alterações são reiniciadas ao sair.
+            <small>Pedidos de exemplo</small>
+            <strong>{orders.length}</strong>
           </span>
         </div>
-        <div className="admin-metrics">
-          <div>
-            <span>
-              <small>Pedidos de exemplo</small>
-              <strong>{orders.length}</strong>
-            </span>
-          </div>
-          <div>
-            <span>
-              <small>Total demonstrativo</small>
-              <strong>
-                {formatMoney(orders.reduce((sum, order) => sum + order.total, 0))}
-              </strong>
-            </span>
-          </div>
+        <div>
+          <span className="stat-icon stat-icon--amber">
+            <ChefHat size={22} aria-hidden="true" />
+          </span>
+          <span>
+            <small>Em preparo agora</small>
+            <strong>
+              {orders.filter((order) => order.status === "preparing").length}
+            </strong>
+          </span>
+        </div>
+        <div>
+          <span className="stat-icon stat-icon--green">
+            <Banknote size={22} aria-hidden="true" />
+          </span>
+          <span>
+            <small>Total demonstrativo</small>
+            <strong>
+              {formatMoney(orders.reduce((sum, order) => sum + order.total, 0))}
+            </strong>
+          </span>
         </div>
       </div>
-      <p className="info-notice">
-        Este quadro não recebe os pedidos preparados pelo cardápio. Pagamentos e clientes
-        são fictícios.
+      <div className="demo-orders-notice">
+        <FlaskConical size={21} aria-hidden="true" />
+        <div>
+          <strong>Experimente à vontade. Este quadro é uma simulação.</strong>
+          <p>
+            Clientes e pagamentos são fictícios. Pedidos do WhatsApp não aparecem aqui, e
+            as alterações reiniciam ao sair.
+          </p>
+        </div>
+        <span>Demonstração</span>
+      </div>
+      <div className="orders-toolbar">
+        <div className="order-filters" aria-label="Filtrar etapa">
+          <button
+            type="button"
+            aria-pressed={filter === "all"}
+            onClick={() => setFilter("all")}
+          >
+            Todos<span>{orders.length}</span>
+          </button>
+          {columns.map((column) => (
+            <button
+              key={column.id}
+              type="button"
+              aria-pressed={filter === column.id}
+              onClick={() => setFilter(column.id)}
+            >
+              {column.title}
+              <span>{orders.filter((order) => order.status === column.id).length}</span>
+            </button>
+          ))}
+        </div>
+        <label className="search-field">
+          <Search size={18} aria-hidden="true" />
+          <input
+            aria-label="Buscar pedidos"
+            placeholder="Número ou nome do cliente"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </label>
+      </div>
+      <p className="sr-only" role="status">
+        {notice}
       </p>
-      <section className="kanban-board" aria-label="Quadro demonstrativo de pedidos">
-        {columns.map((column) => {
+      <section
+        className={`kanban-board ${filter !== "all" ? "kanban-board--filtered" : ""}`}
+        aria-label="Quadro demonstrativo de pedidos"
+      >
+        {activeColumns.map((column) => {
           const Icon = column.icon
-          const items = orders.filter((order) => order.status === column.id)
-
+          const items = visibleOrders.filter((order) => order.status === column.id)
           return (
-            <div className={`kanban-column kanban-column--${column.id}`} key={column.id}>
+            <section
+              className={`kanban-column kanban-column--${column.id}`}
+              key={column.id}
+              aria-labelledby={`orders-${column.id}`}
+            >
               <div className="kanban-column__heading">
+                <span className="column-icon">
+                  <Icon size={20} aria-hidden="true" />
+                </span>
                 <div>
-                  <span className="column-icon">
-                    <Icon size={17} />
-                  </span>
-                  <strong>{column.title}</strong>
+                  <h2 tabIndex={-1} id={`orders-${column.id}`}>
+                    {column.title}
+                  </h2>
+                  <p>{column.description}</p>
                 </div>
-                <em>{items.length}</em>
+                <span className="column-count">{items.length}</span>
               </div>
               <div className="kanban-list">
                 {items.map((order) => (
-                  <article className="order-card" key={order.id}>
-                    <div className="order-card__top">
-                      <div>
-                        <span>Pedido de exemplo</span>
-                        <strong>#{order.id}</strong>
-                      </div>
-                      <time>
-                        <Clock3 size={13} />
-                        {order.time}
-                      </time>
-                    </div>
-                    <div className="order-customer">
-                      <span>{order.customer.charAt(0)}</span>
-                      <div>
-                        <strong>{order.customer}</strong>
-                        <button disabled type="button">
-                          Contato indisponível na demonstração
-                        </button>
-                      </div>
-                    </div>
-                    <ul>
-                      {order.items.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                    <div className="order-payment">
-                      <div>
-                        <span>Total</span>
-                        <strong>{formatMoney(order.total)}</strong>
-                      </div>
-                      <span
-                        className={`payment-pill payment-pill--${order.paymentStatus}`}
-                      >
-                        {order.paymentMethod} ·{" "}
-                        {order.paymentStatus === "confirmed"
-                          ? "Simulado"
-                          : "Pendente (exemplo)"}
-                      </span>
-                    </div>
-                    <div className="order-actions">
-                      <button type="button" onClick={() => window.print()}>
-                        <Printer size={15} />
-                        Imprimir quadro
-                      </button>
-                      {order.status !== "delivery" && (
-                        <button
-                          type="button"
-                          className="order-actions__primary"
-                          onClick={() =>
-                            setOrders((current) =>
-                              current.map((item) =>
-                                item.id === order.id ? advanceDemoOrder(item) : item,
-                              ),
-                            )
-                          }
-                        >
-                          Avançar status
-                          <ChevronRight size={15} />
-                        </button>
-                      )}
-                    </div>
-                  </article>
+                  <DemoOrderCard
+                    key={order.id}
+                    order={order}
+                    onAdvance={() => advance(order.id)}
+                  />
                 ))}
                 {!items.length && (
                   <div className="kanban-empty">
-                    <CheckCircle2 size={24} />
-                    <span>Nenhum pedido nesta etapa</span>
+                    <CheckCircle2 size={28} aria-hidden="true" />
+                    <strong>
+                      {search ? "Nenhum resultado" : "Tudo em dia por aqui"}
+                    </strong>
+                    <p>
+                      {search
+                        ? "Tente outro nome ou número."
+                        : "Nenhum pedido nesta etapa."}
+                    </p>
                   </div>
                 )}
               </div>
-            </div>
+            </section>
           )
         })}
       </section>
-    </>
+    </div>
   )
 }

@@ -1,0 +1,16 @@
+.git
+**/node_modules
+**/dist
+**/.test-build
+backend/src/generated
+.cache
+test-results
+playwright-report
+coverage
+.env*
+**/.env*
+!/.env.demo
+!/.env.api
+*.log
+.plugins
+.opencode-skills

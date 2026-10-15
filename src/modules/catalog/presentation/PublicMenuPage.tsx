@@ -1,18 +1,22 @@
+import { useServices } from "../../../app/presentation/ServicesProvider"
 import PublicProductCard from "./PublicProductCard"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
-import { useNavigate } from "react-router"
-
+import { Link } from "react-router"
 import {
+  ArrowUpRight,
+  Bike,
   ChevronRight,
   Clock3,
+  Flame,
   MapPin,
-  Menu,
+  MessageCircle,
   Search,
   ShoppingBag,
-  Store,
+  UtensilsCrossed,
   X,
 } from "lucide-react"
+import ImageWithFallback from "../../../shared/presentation/ImageWithFallback"
 
 import { useMenu } from "../../../app/presentation/MenuScope"
 
@@ -25,11 +29,14 @@ import CheckoutDrawer from "../../checkout/presentation/CheckoutDrawer"
 import { useCart } from "../../checkout/presentation/use-cart"
 
 export default function PublicMenuPage() {
-  const navigate = useNavigate()
-
   const { menu, loading, error: loadError } = useMenu()
+  const { mode } = useServices()
 
   const { restaurant: store, categories, products } = menu
+
+  useEffect(() => {
+    document.title = `${store.name} · Cardápio digital`
+  }, [store.name])
 
   const controller = useCart(store.id, products)
 
@@ -67,125 +74,143 @@ export default function PublicMenuPage() {
     setSelection(id)
     setSearch("")
 
-    document
-      .getElementById("cardapio")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    document.getElementById("cardapio")?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+      block: "start",
+    })
   }
 
   return (
     <div className="app-shell">
-      <header className="hero">
-        <img className="hero__image" src={store.coverUrl || undefined} alt="" />
-        <div className="hero__shade" />
-        <div className="hero__topbar">
-          <button
-            className="icon-button icon-button--glass"
-            type="button"
-            aria-label="Acessar painel administrativo"
-            onClick={() => navigate("/admin")}
-          >
-            <Menu size={20} strokeWidth={2.2} />
-          </button>
-          <span className="demo-badge">Cardápio demo · dados locais</span>
-          <button
-            className="icon-button icon-button--glass cart-shortcut"
-            type="button"
-            aria-label={`Abrir carrinho com ${itemCount} ${
-              itemCount === 1 ? "item" : "itens"
-            }`}
-            onClick={() => setCartOpen(true)}
-          >
-            <ShoppingBag size={20} strokeWidth={2.2} />
-            {itemCount > 0 && <span className="cart-shortcut__count">{itemCount}</span>}
-          </button>
-        </div>
+      <a className="skip-link" href="#cardapio">
+        Pular para o cardápio
+      </a>
+      <header className="public-topbar">
+        <Link className="public-wordmark" to={`/menu/${store.slug}`}>
+          <UtensilsCrossed size={21} aria-hidden="true" />
+          <span>Cardápio digital</span>
+        </Link>
+        <span className="demo-badge">
+          {mode === "api" ? "Peça direto com a loja" : "Cardápio demo · dados locais"}
+        </span>
+        <button
+          className="cart-shortcut"
+          type="button"
+          aria-label={`Abrir carrinho com ${itemCount} ${itemCount === 1 ? "item" : "itens"}`}
+          onClick={() => setCartOpen(true)}
+        >
+          <ShoppingBag size={20} aria-hidden="true" />
+          <span>Meu carrinho</span>
+          <span className="cart-shortcut__count">{itemCount}</span>
+        </button>
       </header>
-
-      <main>
-        <section className="store-card" aria-labelledby="store-name">
-          <img
-            className="store-card__logo"
-            src={store.logoUrl || undefined}
-            alt={`Logo ${store.name}`}
-          />
-          <div className="store-card__heading">
-            <div>
-              <h1 id="store-name">{store.name}</h1>
-              <p>{store.description}</p>
+      <main id="public-content">
+        <section className="store-hero" aria-labelledby="store-name">
+          <div className="store-card">
+            <div className="store-card__identity">
+              <ImageWithFallback
+                className="store-card__logo"
+                src={store.logoUrl}
+                alt={`Logo ${store.name}`}
+              />
+              <div
+                className={`status ${store.isOpen ? "status--open" : "status--closed"}`}
+              >
+                <span />
+                {store.isOpen ? "Aberto" : "Fechado"}
+              </div>
             </div>
-            <div className={`status ${store.isOpen ? "status--open" : "status--closed"}`}>
-              <span />
-              {store.isOpen ? "Aberto" : "Fechado"}
+            <p className="store-eyebrow">Seu próximo pedido começa aqui</p>
+            <h1 id="store-name">{store.name}</h1>
+            <p className="store-description">{store.description}</p>
+            <div className="store-meta">
+              <span>
+                <Clock3 size={18} aria-hidden="true" />
+                <span>
+                  <small>Tempo de entrega</small>
+                  <strong>{store.eta}</strong>
+                </span>
+              </span>
+              <span>
+                <Bike size={18} aria-hidden="true" />
+                <span>
+                  <small>Taxa de entrega</small>
+                  <strong>{formatMoney(store.deliveryFee)}</strong>
+                </span>
+              </span>
+              <span>
+                <ShoppingBag size={18} aria-hidden="true" />
+                <span>
+                  <small>Pedido mínimo</small>
+                  <strong>{formatMoney(store.minOrder)}</strong>
+                </span>
+              </span>
             </div>
           </div>
-          <div className="store-meta">
-            <span>
-              <Clock3 size={17} />
-              {store.eta} · Taxa {formatMoney(store.deliveryFee)}
-            </span>
-            <span>
-              <MapPin size={17} />
-              Pedido mínimo {formatMoney(store.minOrder)}
-            </span>
+          <div className="hero-media">
+            <ImageWithFallback src={store.coverUrl} alt="" />
+            <div className="hero-caption">
+              <UtensilsCrossed size={17} aria-hidden="true" />
+              <span>Escolha. Personalize. Aproveite.</span>
+            </div>
           </div>
         </section>
-
-        {/* Store Closed Banner Notice */}
         {!store.isOpen && (
           <div className="store-closed-banner" role="alert">
-            <Clock3 size={20} />
+            <Clock3 size={23} aria-hidden="true" />
             <div>
               <strong>Loja fechada no momento</strong>
-              <p>
-                Estamos fora do horário de atendimento. Você pode consultar o cardápio,
-                mas pedidos estão temporariamente pausados.
-              </p>
+              <p>Você pode explorar o cardápio. Os pedidos voltam quando a loja abrir.</p>
             </div>
           </div>
         )}
-
         <div className="content">
-          <div className="search-box">
-            <Search size={20} aria-hidden="true" />
-            <input
-              aria-label="Buscar no cardápio"
-              type="search"
-              placeholder="O que você está procurando?"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            {search && (
-              <button
-                type="button"
-                aria-label="Limpar busca"
-                onClick={() => setSearch("")}
-              >
-                <X size={18} />
-              </button>
-            )}
+          <div className="menu-discovery">
+            <div className="search-box">
+              <Search size={20} aria-hidden="true" />
+              <input
+                aria-label="Buscar no cardápio"
+                type="search"
+                placeholder="O que você quer comer hoje?"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  aria-label="Limpar busca"
+                  onClick={() => setSearch("")}
+                >
+                  <X size={18} />
+                </button>
+              )}
+            </div>
+            <nav className="category-nav" aria-label="Categorias do cardápio">
+              {displayCategories.map((category) => (
+                <button
+                  className={activeCategory === category.id && !search ? "is-active" : ""}
+                  aria-pressed={activeCategory === category.id && !search}
+                  type="button"
+                  key={category.id}
+                  onClick={() => selectCategory(category.id)}
+                >
+                  {category.id === "$popular" && <Flame size={17} aria-hidden="true" />}
+                  {category.name}
+                </button>
+              ))}
+            </nav>
           </div>
-
-          <nav className="category-nav" aria-label="Categorias do cardápio">
-            {displayCategories.map((category) => (
-              <button
-                className={activeCategory === category.id && !search ? "is-active" : ""}
-                type="button"
-                key={category.id}
-                onClick={() => selectCategory(category.id)}
-              >
-                {category.name}
-              </button>
-            ))}
-          </nav>
-
           <section
             className="menu-section"
             id="cardapio"
             aria-labelledby="category-title"
+            tabIndex={-1}
           >
             <div className="section-heading">
               <div>
-                <span>Cardápio</span>
+                <span className="eyebrow">Feito para você</span>
                 <h2 id="category-title">
                   {search
                     ? `Resultados para “${search}”`
@@ -193,9 +218,11 @@ export default function PublicMenuPage() {
                         ?.name || "Cardápio"}
                 </h2>
               </div>
-              <p>{visibleProducts.length} itens</p>
+              <p>
+                {visibleProducts.length}{" "}
+                {visibleProducts.length === 1 ? "opção" : "opções"}
+              </p>
             </div>
-
             {visibleProducts.length ? (
               <div className="product-grid">
                 {visibleProducts.map((product) => (
@@ -212,18 +239,32 @@ export default function PublicMenuPage() {
               </div>
             ) : (
               <div className="empty-search">
-                <Search size={28} />
+                <Search size={28} aria-hidden="true" />
                 <h3>Nenhum item encontrado</h3>
                 <p>Tente buscar por outro nome ou ingrediente.</p>
-                <button type="button" onClick={() => setSearch("")}>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() => setSearch("")}
+                >
                   Ver cardápio completo
                 </button>
               </div>
             )}
           </section>
+          <div className="menu-howto">
+            <MessageCircle size={24} aria-hidden="true" />
+            <div>
+              <strong>Seu pedido, direto com a loja.</strong>
+              <p>
+                {mode === "api"
+                  ? "Escolha os itens, revise seu carrinho e envie o pedido para a loja."
+                  : "Escolha os itens, revise seu carrinho e envie pelo WhatsApp."}
+              </p>
+            </div>
+          </div>
         </div>
       </main>
-
       {itemCount > 0 && !cartOpen && (
         <div className="floating-cart-wrap">
           <button
@@ -233,20 +274,30 @@ export default function PublicMenuPage() {
           >
             <span className="floating-cart__count">{itemCount}</span>
             <span>
-              Ver carrinho
-              <small>{itemCount === 1 ? "1 item" : `${itemCount} itens`}</small>
+              Ver carrinho<small>Revise e continue seu pedido</small>
             </span>
             <strong>{formatMoney(subtotal)}</strong>
-            <ChevronRight size={20} />
+            <ChevronRight size={20} aria-hidden="true" />
           </button>
         </div>
       )}
-
       {cartOpen && (
         <CheckoutDrawer controller={controller} onClose={() => setCartOpen(false)} />
       )}
-      <footer>
-        <Store size={16} /> Cardápio digital · {store.name}
+      <footer className="public-footer">
+        <span>
+          <UtensilsCrossed size={17} aria-hidden="true" />
+          {store.name}
+        </span>
+        {store.address && (
+          <span className="store-address">
+            <MapPin size={15} aria-hidden="true" />
+            {store.address}
+          </span>
+        )}
+        <Link to="/admin" aria-label="Acessar painel administrativo">
+          Área da loja <ArrowUpRight size={16} aria-hidden="true" />
+        </Link>
       </footer>
     </div>
   )

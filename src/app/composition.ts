@@ -1,3 +1,5 @@
+import type { ApplicationServices } from "./presentation/ServicesProvider"
+import { apiServices } from "./api-services"
 import { Executor } from "../shared/application/execute"
 
 import {
@@ -36,7 +38,8 @@ const repository = new LocalMenuRepository(
   initializeDemo,
 )
 
-export const services = {
+const demoServices: ApplicationServices = {
+  mode: "demo",
   menu: new LoadMenu(repository, demoDirectory, access, executor),
 
   catalog: new CatalogCommands(repository, access, browserIds, executor),
@@ -57,3 +60,6 @@ export const services = {
       throw cause ?? new Error("render_failure")
     }),
 }
+
+export const services =
+  import.meta.env.VITE_APP_MODE === "api" ? apiServices() : demoServices

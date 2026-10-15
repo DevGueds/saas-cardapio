@@ -25,3 +25,8 @@ logs/
 /test-results/
 /playwright-report/
 /coverage/
+
+backend/src/generated/
+backend/.test-build/
+!backend/.env.example
+!/.env.api

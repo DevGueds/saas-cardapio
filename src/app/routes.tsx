@@ -1,4 +1,5 @@
-import { createBrowserRouter, Navigate, Outlet } from "react-router"
+import LoginPage from "../modules/identity/presentation/LoginPage"
+import { createBrowserRouter, Navigate, Outlet, useLocation } from "react-router"
 
 import PublicRoute from "./presentation/PublicRoute"
 
@@ -22,6 +23,7 @@ export const router = createBrowserRouter(
 
       children: [
         { path: "/", Component: PublicRoute },
+        { path: "/login", Component: LoginPage },
 
         { path: "/menu/:slug?", Component: PublicRoute },
 
@@ -29,11 +31,11 @@ export const router = createBrowserRouter(
           path: "/admin",
           Component: AdminRoute,
           children: [
-            { index: true, element: <Navigate to="menu" replace /> },
+            { index: true, Component: AdminAlias },
 
             {
               path: "products",
-              element: <Navigate to="/admin/menu" replace />,
+              Component: AdminAlias,
             },
 
             {
@@ -56,9 +58,11 @@ export const router = createBrowserRouter(
             {
               path: "orders",
               lazy: async () => ({
-                Component: (
-                  await import("../modules/demo-orders/presentation/DemoOrdersPage")
-                ).default,
+                Component:
+                  import.meta.env.VITE_APP_MODE === "api"
+                    ? (await import("../modules/orders/presentation/OrdersPage")).default
+                    : (await import("../modules/demo-orders/presentation/DemoOrdersPage"))
+                        .default,
               }),
             },
           ],
@@ -76,3 +80,8 @@ export const router = createBrowserRouter(
       ) || "/",
   },
 )
+
+function AdminAlias() {
+  const location = useLocation()
+  return <Navigate to={`/admin/menu${location.search}`} replace />
+}

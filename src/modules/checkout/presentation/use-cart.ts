@@ -64,6 +64,7 @@ export function useCart(restaurantId: string, products: readonly Product[]) {
 
   return {
     cart,
+    clear: () => setCart({ restaurantId, lines: [] }),
     changed,
     unavailable,
     updateQuantity,

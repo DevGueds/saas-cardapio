@@ -1,0 +1,133 @@
+.account-page {
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.account-story {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4rem;
+  padding: clamp(2rem, 6vw, 6rem);
+  background: var(--forest);
+  color: white;
+}
+.account-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-family: Manrope, sans-serif;
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+.account-story .eyebrow {
+  color: var(--accent);
+}
+.account-story h1 {
+  font-size: clamp(2rem, 3.8vw, 3.8rem);
+  letter-spacing: -0.05em;
+}
+.account-story p:not(.eyebrow) {
+  margin-top: 1.5rem;
+  color: #dce8db;
+  line-height: 1.8;
+}
+.account-story small {
+  color: #c7d7c5;
+}
+.account-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+.account-card {
+  width: 100%;
+  max-width: 28rem;
+}
+.account-card h2 {
+  font-size: 1.9rem;
+  letter-spacing: -0.04em;
+}
+.account-form,
+.account-form fieldset {
+  display: grid;
+  gap: 1.25rem;
+}
+.account-form {
+  margin: 2rem 0 1rem;
+}
+.stores-page {
+  max-width: 75rem;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 5vw, 4rem);
+}
+.stores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+.account-store-card {
+  display: grid;
+  gap: 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  padding: 1.75rem;
+  background: white;
+  box-shadow: var(--shadow);
+  overflow-wrap: anywhere;
+}
+.account-store-card > svg {
+  color: var(--brand);
+  margin-bottom: 1rem;
+}
+.account-store-card h2 {
+  font-size: 1.25rem;
+}
+.account-store-card span,
+.account-store-card small {
+  color: var(--muted);
+}
+.account-store-card strong {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--brand);
+  margin-top: 1rem;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  padding-top: 1rem;
+}
+.account-actions a,
+.account-actions button {
+  background: none;
+  border: 0;
+  color: inherit;
+  min-height: 44px;
+  padding: 0.5rem 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-size: 0.85rem;
+}
+@media (max-width: 800px) {
+  .account-page {
+    grid-template-columns: 1fr;
+  }
+  .account-story {
+    padding: 2rem 1.5rem;
+    gap: 2rem;
+  }
+  .account-story h1 {
+    font-size: 2rem;
+  }
+  .account-story > small {
+    display: none;
+  }
+  .account-panel {
+    padding-top: 2rem;
+  }
+}

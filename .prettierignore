@@ -8,3 +8,7 @@ pnpm-lock.yaml
 .figma
 .gitattributes
 vite.config.ts
+
+backend/src/generated/
+backend/.test-build/
+backend/prisma/migrations/

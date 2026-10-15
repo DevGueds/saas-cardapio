@@ -1,0 +1,4 @@
+interface:
+  display_name: "Princípios de UX/UI"
+  short_description: "Interfaces claras, acessíveis e consistentes"
+  default_prompt: "Use $ux-ui-design-principles para implementar e revisar a interface preservando os fluxos existentes."

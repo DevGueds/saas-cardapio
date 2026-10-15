@@ -1,5 +1,5 @@
 import ImageWithFallback from "../../../shared/presentation/ImageWithFallback"
-import { Pencil, Trash2 } from "lucide-react"
+import { Check, Pause, Pencil, Trash2 } from "lucide-react"
 
 import type { Category, Product } from "../domain/catalog"
 
@@ -34,6 +34,11 @@ function ProductActions({
         aria-label={`${product.available ? "Pausar" : "Disponibilizar"} ${product.name}`}
         onClick={() => onAvailability(product)}
       >
+        {product.available ? (
+          <Check size={14} aria-hidden="true" />
+        ) : (
+          <Pause size={14} aria-hidden="true" />
+        )}{" "}
         {product.available ? "Disponível" : "Esgotado"}
       </button>
       <button
@@ -43,7 +48,8 @@ function ProductActions({
         aria-label={`Editar ${product.name}`}
         onClick={() => onEdit(product)}
       >
-        <Pencil size={17} />
+        <Pencil size={16} aria-hidden="true" />
+        <span>Editar</span>
       </button>
       <button
         className="action-icon danger"
@@ -94,7 +100,12 @@ export default function ProductList(props: Props) {
                 ))}
               </div>
             ) : (
-              <div className="table-scroll">
+              <div
+                className="table-scroll"
+                role="region"
+                aria-label={`Lista de ${category.name}`}
+                tabIndex={0}
+              >
                 <table className="catalog-table">
                   <caption className="sr-only">Produtos de {category.name}</caption>
                   <thead>

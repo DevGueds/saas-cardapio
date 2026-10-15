@@ -2,6 +2,12 @@ import type { AppError } from "../application/result"
 
 const fieldLabels: Readonly<Record<string, string>> = {
   name: "Nome",
+  email: "E-mail",
+  password: "Senha",
+  currentPassword: "Senha atual",
+  newPassword: "Nova senha",
+  restaurantName: "Nome da loja",
+  slug: "Endereço do cardápio",
   price: "Preço",
   categoryId: "Categoria",
   categoryName: "Nova categoria",

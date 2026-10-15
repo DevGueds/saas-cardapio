@@ -109,18 +109,15 @@ export default function ProductForm({
             antes de salvar.
           </p>
         )}
+        <p className="form-intro">
+          Preencha os dados do produto. Os campos com * são obrigatórios.
+        </p>
         <fieldset disabled={mutation.pending || !!loadError}>
-          <ImagePicker
-            label="Foto do produto"
-            value={imageUrl}
-            onChange={setImageUrl}
-            reader={services.images}
-            onBusyChange={setImageBusy}
-          />
           <label className="field">
             <span>Nome do produto *</span>
             <input
               required
+              placeholder="Ex.: Smash Clássico"
               maxLength={120}
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -172,28 +169,39 @@ export default function ProductForm({
           <label className="field">
             <span>Descrição</span>
             <textarea
+              placeholder="Ingredientes, tamanho e o que torna este produto especial."
               rows={3}
               maxLength={2000}
               value={description}
               onChange={(event) => setDescription(event.target.value)}
             />
           </label>
-          <label className="check-field">
-            <input
-              type="checkbox"
-              checked={available}
-              onChange={(event) => setAvailable(event.target.checked)}
-            />{" "}
-            Disponível no cardápio
-          </label>
-          <label className="check-field">
-            <input
-              type="checkbox"
-              checked={popular}
-              onChange={(event) => setPopular(event.target.checked)}
-            />{" "}
-            Destacar em Mais vendidos
-          </label>
+          <ImagePicker
+            label="Foto do produto"
+            value={imageUrl}
+            onChange={setImageUrl}
+            reader={services.images}
+            onBusyChange={setImageBusy}
+          />
+          <div className="product-options">
+            <h3>Como aparece no cardápio</h3>
+            <label className="check-field">
+              <input
+                type="checkbox"
+                checked={available}
+                onChange={(event) => setAvailable(event.target.checked)}
+              />{" "}
+              Disponível no cardápio
+            </label>
+            <label className="check-field">
+              <input
+                type="checkbox"
+                checked={popular}
+                onChange={(event) => setPopular(event.target.checked)}
+              />{" "}
+              Destacar em Mais vendidos
+            </label>
+          </div>
         </fieldset>
         <div className="form-actions">
           <button
