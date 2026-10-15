@@ -1,0 +1,155 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum OrderStatus {
+  NEW
+  PREPARING
+  OUT_FOR_DELIVERY
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String       @id @db.Char(36)
+  name         String       @db.VarChar(120)
+  email        String       @unique @db.VarChar(254)
+  passwordHash String       @db.VarChar(255)
+  active       Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+  sessions     Session[]
+}
+
+model Tenant {
+  id          String       @id @db.Char(36)
+  name        String       @db.VarChar(120)
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  restaurants Restaurant[]
+}
+
+model Membership {
+  tenantId String  @db.Char(36)
+  userId   String  @db.Char(36)
+  role     Role
+  active   Boolean @default(true)
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@id([tenantId, userId])
+  @@index([userId, active])
+}
+
+model Session {
+  id        String    @id @db.Char(36)
+  userId    String    @db.Char(36)
+  tokenHash String    @unique @db.Char(64)
+  csrfHash  String    @db.Char(64)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+}
+
+model Restaurant {
+  id                 String     @id @db.Char(36)
+  tenantId           String     @db.Char(36)
+  tenant             Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  slug               String     @unique @db.VarChar(80)
+  name               String     @db.VarChar(120)
+  description        String     @db.Text
+  whatsapp           String     @db.VarChar(30)
+  whatsappConfigured Boolean    @default(false)
+  address            String     @db.VarChar(500)
+  logoUrl            String     @db.MediumText
+  coverUrl           String     @db.MediumText
+  deliveryFee        Int        @default(0)
+  minOrder           Int        @default(0)
+  eta                String     @db.VarChar(80)
+  isOpen             Boolean    @default(false)
+  revision           Int        @default(0)
+  createdAt          DateTime   @default(now())
+  categories         Category[]
+  products           Product[]
+  orders             Order[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, createdAt])
+}
+
+model Category {
+  id             String     @id @db.Char(36)
+  tenantId       String     @db.Char(36)
+  restaurantId   String     @db.Char(36)
+  restaurant     Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict)
+  name           String     @db.VarChar(80)
+  normalizedName String     @db.VarChar(80)
+  products       Product[]
+
+  @@unique([tenantId, restaurantId, id])
+  @@unique([tenantId, restaurantId, normalizedName])
+}
+
+model Product {
+  id           String     @id @db.Char(36)
+  tenantId     String     @db.Char(36)
+  restaurantId String     @db.Char(36)
+  categoryId   String     @db.Char(36)
+  restaurant   Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict)
+  category     Category   @relation(fields: [tenantId, restaurantId, categoryId], references: [tenantId, restaurantId, id], onDelete: Restrict)
+  name         String     @db.VarChar(120)
+  description  String     @db.Text
+  price        Int
+  imageUrl     String     @db.MediumText
+  available    Boolean    @default(true)
+  popular      Boolean    @default(false)
+
+  @@unique([tenantId, restaurantId, id])
+}
+
+model Order {
+  id               String      @id @db.Char(36)
+  tenantId         String      @db.Char(36)
+  restaurantId     String      @db.Char(36)
+  restaurant       Restaurant  @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict)
+  revision         Int         @default(0)
+  status           OrderStatus @default(NEW)
+  customer         Json
+  items            Json
+  subtotal         Int
+  deliveryFee      Int
+  total            Int
+  checkoutRevision Int
+  whatsappUrl      String      @db.MediumText
+  idempotencyHash  String      @db.Char(64)
+  payloadHash      String      @db.Char(64)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@unique([tenantId, restaurantId, idempotencyHash])
+  @@index([tenantId, restaurantId, createdAt, id])
+}
+
+model RateLimit {
+  key       String   @id @db.Char(64)
+  count     Int
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

@@ -1,0 +1,256 @@
+.live-orders-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.live-order-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  background: #e8ede5;
+  padding: 0.3rem;
+  border-radius: 0.85rem;
+}
+.live-order-tabs button {
+  border: 0;
+  border-radius: 0.6rem;
+  padding: 0.65rem 1rem;
+  min-height: 44px;
+  background: transparent;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+.live-order-tabs button[aria-pressed="true"] {
+  background: white;
+  color: var(--brand);
+  box-shadow: 0 2px 8px #172f2712;
+}
+.live-order-search {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid #7d8c74;
+  border-radius: 0.7rem;
+  background: white;
+  padding: 0 0.85rem;
+  flex: 1;
+  max-width: 23rem;
+  min-width: 15rem;
+}
+.live-order-search input {
+  border: 0;
+  background: transparent;
+  min-height: 46px;
+  min-width: 0;
+  width: 100%;
+}
+.live-orders-caption {
+  margin: 1rem 0 1.5rem;
+}
+.live-order-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.live-order-column {
+  background: #edf0e9;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  overflow: hidden;
+  border-top: 4px solid #ca8634;
+}
+.live-order-column--preparing {
+  border-top-color: #6085af;
+}
+.live-order-column--out_for_delivery {
+  border-top-color: #56866a;
+}
+.live-order-column > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  gap: 0.5rem;
+}
+.live-order-column > header h2 {
+  font-size: 1rem;
+}
+.live-order-column > header span {
+  display: grid;
+  place-items: center;
+  background: white;
+  min-width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+}
+.live-order-stack {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 0.75rem 0.75rem;
+}
+.live-order-card {
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: white;
+  box-shadow: 0 3px 10px #172f2705;
+}
+.live-order-card header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.live-order-card header strong {
+  font-size: 0.85rem;
+}
+.live-order-card header span {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.live-order-card h3 {
+  font-size: 1rem;
+}
+.live-order-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+}
+.live-order-card li {
+  overflow-wrap: anywhere;
+}
+.live-order-card small {
+  color: var(--muted);
+}
+.live-order-total {
+  border-top: 1px dashed var(--line);
+  padding-top: 0.85rem;
+  margin-top: 0.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.live-order-total span {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+.live-orders-empty {
+  display: grid;
+  justify-items: center;
+  gap: 0.65rem;
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--muted);
+}
+.live-orders-empty p {
+  font-weight: 700;
+}
+.live-order-board--single {
+  grid-template-columns: 1fr;
+}
+.live-order-board--single .live-order-stack {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+}
+.live-order-board--single .live-orders-empty {
+  grid-column: 1/-1;
+}
+.orders-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+.orders-pagination span {
+  font-size: 0.875rem;
+}
+.order-details {
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.5rem;
+}
+.order-details section {
+  display: grid;
+  gap: 0.5rem;
+}
+.order-details h3 {
+  font-size: 1rem;
+}
+.order-details p {
+  overflow-wrap: anywhere;
+}
+.order-details ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.order-details li {
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.order-details li > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.order-details li p {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-top: 0.35rem;
+}
+.order-details-totals {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+}
+.order-details-totals > div {
+  display: flex;
+  justify-content: space-between;
+}
+.order-details-totals dd {
+  margin: 0;
+}
+@media (max-width: 1050px) {
+  .live-order-board {
+    grid-template-columns: 1fr;
+  }
+  .live-order-stack {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  }
+  .live-orders-empty {
+    grid-column: 1/-1;
+  }
+}
+@media (max-width: 640px) {
+  .live-order-tabs {
+    width: 100%;
+  }
+  .live-order-tabs button {
+    flex: 1;
+    padding: 0.6rem 0.45rem;
+  }
+  .live-order-search {
+    width: 100%;
+    max-width: none;
+  }
+  .orders-pagination {
+    gap: 0.5rem;
+  }
+  .orders-pagination button {
+    padding: 0.65rem;
+  }
+}

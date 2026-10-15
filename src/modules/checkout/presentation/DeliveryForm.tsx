@@ -17,7 +17,7 @@ export default function DeliveryForm({
     <fieldset disabled={disabled} className="delivery-fields">
       <div className="checkout-section">
         <div className="checkout-title">
-          <span>1</span>
+          <span>2</span>
           <h3>Dados para entrega</h3>
         </div>
         <div className="form-fields">
@@ -26,6 +26,7 @@ export default function DeliveryForm({
             <input
               required
               autoComplete="name"
+              placeholder="Como podemos chamar você?"
               maxLength={120}
               value={value.name}
               onChange={(event) => update("name", event.target.value)}
@@ -49,6 +50,7 @@ export default function DeliveryForm({
               required
               rows={2}
               autoComplete="street-address"
+              placeholder="Rua, número, bairro e complemento"
               maxLength={500}
               value={value.address}
               onChange={(event) => update("address", event.target.value)}
@@ -58,6 +60,7 @@ export default function DeliveryForm({
             <span>Observações para entrega</span>
             <input
               maxLength={500}
+              placeholder="Ex.: tocar o interfone do apartamento 12"
               value={value.notes}
               onChange={(event) => update("notes", event.target.value)}
             />
@@ -66,7 +69,7 @@ export default function DeliveryForm({
       </div>
       <div className="checkout-section">
         <div className="checkout-title">
-          <span>2</span>
+          <span>3</span>
           <h3>Forma de pagamento</h3>
         </div>
         <label className="field">
@@ -80,6 +83,9 @@ export default function DeliveryForm({
             <option>Dinheiro</option>
           </select>
         </label>
+        <p className="field-help payment-help">
+          O pagamento será combinado diretamente com a loja.
+        </p>
         {value.payment === "Dinheiro" && (
           <label className="field cash-field">
             <span>Precisa de troco para quanto?</span>

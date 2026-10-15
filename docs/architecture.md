@@ -1,76 +1,82 @@
-# Arquitetura da aplicação
+# Arquitetura
 
-## Limites e fluxo
-
-A aplicação é um monólito modular no navegador. DDD define responsabilidades e invariantes; a arquitetura hexagonal separa regras e casos de uso dos adaptadores. Nesta etapa os contextos compartilham um documento de persistência para garantir consistência de catálogo e configurações.
+Monorepo com monólito modular na API e frontend React. DDD organiza os contextos; portas e adaptadores separam domínio/aplicação de NestJS, Fastify, Prisma, React e navegador. Nenhum módulo de negócio importa o framework para validar preços, catálogo ou checkout.
 
 ```mermaid
 flowchart LR
-  UI[React: páginas e hooks] --> USE[Casos de uso]
-  USE --> DOM[Domínio: entidades e invariantes]
-  USE --> PORT[Portas de persistência e serviços]
-  LOCAL[Adaptador localStorage] -. implementa .-> PORT
-  MEMORY[Adaptador em memória para testes] -. implementa .-> PORT
-  ROOT[Composição da aplicação] --> UI
-  ROOT --> LOCAL
+  UI[React] --> CLIENT[Portas de serviços]
+  HTTP[Adaptadores HTTP] -. implementam .-> CLIENT
+  DEMO[Casos de uso demo / localStorage] -. implementam .-> CLIENT
+  HTTP --> CONTROLLERS[NestJS + Fastify]
+  CONTROLLERS --> USE[Casos de uso da API]
+  USE --> CORE[Domínio compartilhado]
+  DEMO --> CORE
+  USE --> PORTS[Portas de repositório e autorização]
+  PRISMA[Adaptadores Prisma] -. implementam .-> PORTS
+  PRISMA --> MYSQL[(MySQL)]
 ```
 
-| Pasta                     | Responsabilidade                                                                                   |
-| ------------------------- | -------------------------------------------------------------------------------------------------- |
-| `src/app`                 | Composição manual de dependências, roteamento e configuração do modo                               |
-| `src/app/presentation`    | Contextos React, estado de carregamento e estrutura administrativa                                 |
-| `src/modules/restaurant`  | Identidade, contato, configuração de entrega e abertura da loja                                    |
-| `src/modules/catalog`     | Categorias, produtos, disponibilidade, leitura do cardápio e persistência do documento             |
-| `src/modules/checkout`    | Carrinho, reconciliação, validação de entrega, cálculo e mensagem                                  |
-| `src/modules/demo-orders` | Simulação independente do quadro de pedidos, reiniciada ao sair                                    |
-| `src/shared`              | Dinheiro, validação comum, resultados, portas técnicas, adaptadores de navegador e UI reutilizável |
-| `tests`                   | Regressões, contratos de persistência, componentes e fluxos no navegador                           |
+## Mapa de responsabilidades
 
-Cada módulo possui apenas as camadas necessárias. Não criar pastas vazias ou um framework de classes base. `demo-orders` não representa um processamento de pedidos real.
+| Pasta                          | Responsabilidade                                                                      |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| `src/app`                      | Composição de serviços demo/API, rotas e escopos React                                |
+| `src/modules/identity`         | Acesso à conta, seleção de loja, senha e adaptador de autenticação                    |
+| `src/modules/catalog`          | Produtos, categorias, cardápio e adaptadores HTTP/local                               |
+| `src/modules/restaurant`       | Configurações e estado da loja                                                        |
+| `src/modules/checkout`         | Carrinho, entrega e envio/preparação de pedido                                        |
+| `src/modules/orders`           | Pedidos persistidos, etapas, detalhes e paginação                                     |
+| `src/modules/demo-orders`      | Quadro fictício isolado, apenas no modo demo                                          |
+| `src/shared`                   | Resultados, diagnóstico, transporte HTTP genérico e UI reutilizável                   |
+| `backend/src/app`              | Configuração, composição manual, bootstrap Nest/Fastify e OpenAPI                     |
+| `backend/src/modules/identity` | Conta, sessões, tenants, memberships e políticas de acesso                            |
+| `backend/src/modules/catalog`  | Leitura pública/privada, produtos, categorias e configurações do agregado restaurante |
+| `backend/src/modules/orders`   | Registro transacional, idempotência, listagem e transições                            |
+| `backend/src/shared`           | Portas técnicas, executor, Prisma, criptografia e tradução HTTP de erros              |
+| `packages/domain`              | Regras portáteis sem React, Zod, Node ou banco                                        |
+| `packages/contracts`           | DTOs, schemas estritos e tipos públicos compartilhados                                |
 
-### Regras de dependência
+Cada contexto cria somente as camadas que utiliza: `domain`, `application`, `infrastructure`, `presentation`. Não existem diretórios vazios nem repositório base genérico. As fachadas antigas em `src/**/domain` reexportam o pacote puro para preservar imports e testes do frontend.
 
-- Domínio importa apenas domínio. Não conhece React, repositórios, navegador, transporte ou armazenamento.
-- Aplicação conhece domínio e portas; não importa implementações de infraestrutura ou apresentação.
-- Apresentação utiliza casos de uso injetados, nunca `localStorage` ou adaptadores concretos.
-- Infraestrutura implementa portas e converte dados externos em estruturas validadas.
-- `shared` não importa os módulos de negócio. `app/composition.ts` é o local de ligação das implementações.
-- Os contextos React da aplicação são a ponte pública de injeção para as telas.
+## Dependências permitidas
 
-`scripts/check-architecture.mjs` verifica essas regras. Componentes React têm exportação padrão e arquivos descritivos por responsabilidade. Estilos globais, cardápio público, painel e formulários ficam separados.
+- Domínio depende de domínio e tipos de contrato; o pacote `domain` não tem dependências externas.
+- Aplicação depende de domínio, portas e schemas; não conhece NestJS, Prisma, React ou navegador.
+- Apresentação traduz HTTP/interação e chama serviços injetados.
+- Infraestrutura implementa as portas e valida dados externos. A API Prisma pode compartilhar leitura transacional do agregado entre catálogo e pedidos.
+- `shared` não depende de regras de módulos. As composições `src/app/composition.ts`, `src/app/api-services.ts` e `backend/src/app/composition.ts` ligam as implementações.
+- Fronteiras são verificadas por `scripts/check-architecture.mjs` e `backend/scripts/check-architecture.mjs`; os testes de contrato complementam a regra estática.
 
-## Domínio e contratos
+## Dinheiro, resultados e contratos
 
-`Restaurant` descreve a loja; `Category` e `Product` têm `restaurantId`. O catálogo exige categorias e identificadores únicos, nomes de categoria normalizados e referências válidas. `Cents` representa centavos inteiros seguros; preços são positivos e taxas podem ser zero. Entradas decimais aceitam vírgula ou ponto com até duas casas, sem separadores de milhares.
+`Cents` é inteiro de 0 a 2.147.483.647; produtos exigem valor positivo. A entrada aceita `28.90` ou `28,90`, até duas casas decimais, sem milhares ou texto residual. Não há cálculo em ponto flutuante de preços armazenados.
 
-`MenuDocument` é o contrato de consistência e persistência: `schemaVersion: 1`, `revision`, restaurante, categorias e produtos. O parser valida os dados novamente a cada leitura e escrita. O contrato não promete tabelas ou um esquema específico de banco.
+`MenuDocument` contém `schemaVersion: 1`, `revision`, `restaurant`, `categories` e `products`. É um snapshot público validado, não uma representação das tabelas. Produtos/categorias pertencem à loja; nomes normalizados de categorias são únicos.
 
-`MenuRepository` oferece:
+Casos de uso retornam `Result<T, AppError>` discriminado por `ok`. O erro contém `code`, mensagem segura, campos e `diagnosticId`. Adaptadores lançam `Failure`; `Operation`/`Executor` convertem em resultado e registram apenas diagnóstico sanitizado. O cliente valida também respostas HTTP.
 
-- `load(restaurantId): Promise<MenuDocument>`: devolve um documento validado ou rejeita com falha tipada.
-- `commit(restaurantId, expectedRevision, next): Promise<MenuDocument>`: verifica a revisão e salva o conjunto; retorna a nova revisão somente após confirmação.
-- `subscribe(restaurantId, listener)`: notifica mudanças daquele restaurante e retorna uma função de cancelamento.
+## Tenancy e persistência real
 
-`RestaurantDirectory.resolve(slug)` separa resolução pública do repositório. A implementação demonstrativa aceita somente `burger-house`; o armazenamento e os casos de uso já recebem o restaurante explicitamente.
+Tenant é a organização; restaurant é a unidade/loja. Uma sessão identifica o usuário, não autoriza um tenant por si só. `AccessPolicy` consulta sessão ativa, membership ativo e tenant ativo antes de liberar o escopo `{ tenantId, restaurantId }`. Acesso a loja alheia devolve 404. Roles limitam operações dentro do escopo autorizado.
 
-Outras portas: `AccessPolicy`, `DiagnosticLogger`, `IdGenerator`, `ExclusiveLock` e `ImageReader`. A leitura de imagem recebe um contrato estrutural de bytes, tamanho e MIME; `FileReader`, decodificação e `Blob` ficam no adaptador.
+O cliente envia a loja na rota. A API deriva o tenant pelo vínculo no banco, sem confiar em tenant/role do corpo. O slug público resolve uma loja ativa. Relações de produtos/categorias usam chaves estrangeiras compostas, incluindo tenant e restaurante.
 
-Casos de uso retornam `Promise<Result<T>>`, com sucesso discriminado ou `AppError`. Nenhuma camada visual precisa interpretar mensagens de exceção para decidir o comportamento. `Failure` transporta códigos e contexto técnico controlado entre adaptadores e aplicação; o executor converte exceções inesperadas em erro seguro.
+A atualização de catálogo/configurações compara revisão, incrementa-a e grava categoria/produto na mesma transação serializável. Conflitos exigem recarregar. Checkout bloqueia a linha do restaurante, relê o agregado e valida os dados atuais antes de criar o pedido. O pedido conserva snapshot dos itens/preços e dados de entrega, mesmo após excluir um produto.
 
-## Consistência local e migração
+O adaptador HTTP envia comandos específicos (criar produto, mudar disponibilidade, atualizar configurações), nunca um documento inteiro fornecido pelo cliente. Polling e BroadcastChannel avisam alterações por loja; respostas antigas são descartadas. O carrinho e os dados ainda não enviados permanecem apenas em memória, isolados pelo restaurante.
 
-A chave atual é `saas-cardapio:v1:restaurant:<id>`. O adaptador obtém um Web Lock para essa chave, relê a revisão, valida e realiza um único `setItem`. Assim, categoria e produto são gravados juntos. Outra aba com revisão antiga recebe `CONFLICT`; seus campos permanecem disponíveis para revisão. Repositórios em memória preservam isolamento e a mesma semântica de revisão nos testes.
+## Demonstração e migração legada
 
-Notificações locais e eventos `storage` atualizam assinantes. Carregamentos têm contador de geração para descartar respostas antigas. Telas preservam o último documento durante erros, exibem a falha e bloqueiam operações dependentes; isso não autoriza uso de dados obsoletos no checkout.
+`.env.demo` habilita explicitamente `localStorage`. Documento por restaurante: `saas-cardapio:v1:restaurant:<id>`. Web Locks serializa abas e a revisão impede sobrescrita. Falta de capacidade, erro de JSON ou quota bloqueia a gravação, preservando os dados.
 
-A migração executa somente na demonstração e quando falta a chave nova. Chaves legadas ausentes recebem exclusivamente os padrões do aplicativo antigo. Chaves existentes são integralmente validadas; listas vazias permanecem vazias. Valores em reais são convertidos para centavos. A configuração explícita de WhatsApp começa desabilitada, e o número conhecido dos exemplos fica vazio no documento migrado, evitando tratá-lo como um destino confirmado. Telefones diferentes do exemplo são preservados, ainda desabilitados até salvar as configurações. Os originais não são removidos nem regravados.
+A migração das chaves antigas roda apenas na demo e quando falta o documento novo. Preserva originais e listas vazias. Campos antes ausentes podem usar os padrões legados exclusivamente nessa migração; dados inválidos não viram exemplos. Esse armazenamento não é importado pela API nem usado quando ela falha.
 
-## Evoluir para API e banco
+## Substituir um adaptador
 
-1. Implementar no backend autenticação, autorização por restaurante e casos de uso equivalentes usando o domínio independente de React. O servidor deriva o restaurante autorizado da sessão e valida o acesso ao recurso solicitado.
-2. Implementar `MenuRepository` transacional no servidor. Substituir revisão local por controle otimista persistido e garantir a gravação conjunta de categoria e produto.
-3. Criar um adaptador HTTP no cliente que cumpra a porta assíncrona, valide respostas e mapeie erros para os códigos existentes. Novas notificações podem usar polling ou transporte de eventos, preservando o cancelamento de assinatura.
-4. Substituir `RestaurantDirectory` e `AccessPolicy` na composição. Controles do cliente continuam sendo UX; a autorização efetiva pertence ao servidor.
-5. Executar os mesmos testes de contrato contra o novo adaptador. Não habilitar modo real enquanto essas dependências não estiverem implementadas.
+1. Implemente as portas de `backend/src/modules/*/application/ports.ts` com o mesmo isolamento, erros, atomicidade e revisão.
+2. Injete a implementação em `backend/src/app/composition.ts`; controllers e regras permanecem.
+3. Execute testes de domínio, integração e browser. Confirme especialmente transação composta, concorrência e isolamento de tenants.
+4. Para alterar o transporte da API, preserve os contratos ou versione `/api/v2`; adapte `src/modules/*/infrastructure/http-*.ts` e o cliente genérico, sem duplicar regras.
+5. Para object storage, adicione uma porta de mídia e adapte imagens; não coloque credenciais do provedor no React.
 
-O carrinho e os dados pessoais não são persistidos. O link WhatsApp contém o texto codificado apenas para o usuário encaminhar. Não há recibo, confirmação de entrega da mensagem, estado de pedido ou confirmação de pagamento associado a esse link.
+Banco e autorização ficam sempre atrás do backend. Veja [backend.md](backend.md) para operação, segurança e endpoints.

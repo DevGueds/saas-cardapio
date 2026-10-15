@@ -5,3 +5,11 @@
 @import "./app/presentation/admin-layout.css";
 @import "./shared/presentation/styles/forms.css";
 @import "./modules/catalog/presentation/catalog-management.css";
+
+@import "./modules/restaurant/presentation/restaurant-settings.css";
+@import "./modules/demo-orders/presentation/demo-orders.css";
+
+@import "./modules/checkout/presentation/checkout.css";
+
+@import "./modules/identity/presentation/account.css";
+@import "./modules/orders/presentation/orders.css";

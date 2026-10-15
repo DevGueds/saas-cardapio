@@ -9,7 +9,9 @@ function files(directory) {
     const file = path.join(directory, entry.name)
 
     return entry.isDirectory()
-      ? files(file)
+      ? ["generated", "dist", "node_modules", ".test-build"].includes(entry.name)
+        ? []
+        : files(file)
       : /\.(tsx?|css|json|md)$/.test(file)
         ? [file]
         : []
@@ -20,7 +22,20 @@ const failures = []
 
 const corrupted = /\p{L}\?+\p{L}|\uFFFD|Ã[\u0080-\u00bf]|â€/u
 
-for (const file of [...files("src"), ".figma/make/site.json"]) {
+function withoutUrls(text) {
+  return text.replace(/https?:\/\/\S+/g, "").replace(/\/[a-zA-Z][^\s]*\?[^\s]*/g, "")
+}
+
+for (const file of [
+  ...files("src"),
+  ...files("backend/src"),
+  ...files("packages/domain/src"),
+  ...files("packages/contracts/src"),
+  ...files("docs"),
+  "README.md",
+  "AGENTS.md",
+  ".figma/make/site.json",
+]) {
   let source
 
   try {
@@ -41,7 +56,7 @@ for (const file of [...files("src"), ".figma/make/site.json"]) {
           ts.isTemplateMiddle(node) ||
           ts.isTemplateTail(node) ||
           ts.isNoSubstitutionTemplateLiteral(node)) &&
-        corrupted.test(node.text.replace(/https?:\/\/\S+/g, ""))
+        corrupted.test(withoutUrls(node.text))
       ) {
         failures.push(
           `${file}:${ast.getLineAndCharacterOfPosition(node.pos).line + 1}: texto possivelmente corrompido`,
@@ -52,7 +67,7 @@ for (const file of [...files("src"), ".figma/make/site.json"]) {
     }
 
     visit(ast)
-  } else if (corrupted.test(source))
+  } else if (corrupted.test(withoutUrls(source)))
     failures.push(`${file}: texto possivelmente corrompido`)
 }
 

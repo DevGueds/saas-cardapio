@@ -11,15 +11,15 @@ Não são registrados conteúdo do armazenamento, imagens, nomes de clientes, te
 | `VALIDATION`             | Corrigir o campo ou estado indicado. Não há gravação parcial.                                                            |
 | `NOT_FOUND`              | Restaurante ou produto deixou de existir; conferir a URL ou atualizar o catálogo.                                        |
 | `ACCESS_DENIED`          | Operação administrativa não autorizada; a demonstração precisa ser habilitada explicitamente.                            |
-| `CONFIGURATION`          | O modo da aplicação não está configurado como demo. Usar o comando apropriado; não há fallback.                          |
+| `CONFIGURATION`          | O modo demo/API ou alguma configuração obrigatória está inválido. Usar o comando apropriado; não há fallback.            |
 | `CONFLICT`               | Outra operação gravou antes. Atualizar os dados, conferir os campos preservados e salvar novamente conscientemente.      |
-| `STORAGE_UNAVAILABLE`    | O navegador recusou leitura ou escrita. Verificar permissões e tentar novamente.                                         |
+| `STORAGE_UNAVAILABLE`    | O armazenamento local ou banco/API está indisponível. Verificar permissões e tentar novamente.                           |
 | `STORAGE_QUOTA`          | O armazenamento está cheio. Usar imagens menores ou remover imagens desnecessárias antes de repetir a operação.          |
 | `CORRUPT_DATA`           | JSON, versão, entidades ou referências inválidas. Preservar o conteúdo original e corrigir a origem antes de recarregar. |
 | `CAPABILITY_UNAVAILABLE` | Web Locks indisponível; usar navegador atualizado em HTTPS ou localhost.                                                 |
 | `UNEXPECTED`             | Falha não prevista. Usar a referência, o módulo e a operação para reproduzir com dados de teste.                         |
 
-## Investigar sem perder dados
+## Investigar a demonstração sem perder dados
 
 1. Anotar referência e operação exibidas. Filtrar o console por `[cardapio]` e pelo identificador.
 2. Se o problema é persistência, inspecionar a chave do restaurante nas ferramentas do navegador. Não limpar `localStorage` como primeira tentativa: isso descarta os dados desse navegador.
@@ -35,4 +35,14 @@ Execute `pnpm check` e `pnpm test:e2e`. Os testes exercitam leitura inválida, q
 
 `scripts/check-text.mjs` valida a codificação UTF-8 e procura corrupção em textos de interface, evitando confundir URLs e operadores TypeScript com texto. Essa verificação roda no lint e antes dos builds. `.editorconfig` orienta os editores a preservar UTF-8 e quebras LF.
 
-A política de acesso demonstrativo não protege um serviço remoto: não há esse serviço nesta etapa. A futura API precisa repetir todas as verificações de autorização, isolamento e integridade no servidor.
+## API e Docker
+
+A demonstração permanece independente. No modo API, a autorização, as revisões e o isolamento são verificados no servidor. `UNAUTHENTICATED` pede novo login; `CSRF_INVALID` pede atualização da sessão; `RATE_LIMITED` exige aguardar a janela do limite. Consulte a tabela completa em [backend.md](backend.md).
+
+1. Confira o estado com `docker compose --env-file backend/.env --profile app ps` e a prontidão em `http://localhost:8080/api/v1/health/ready`.
+2. Consulte `docker compose --env-file backend/.env logs api` e procure o `diagnosticId` exibido. A API registra somente metadados sanitizados; não habilite logs de payload ou queries para investigar.
+3. Em falha de inicialização, confira se `backend/.env` existe e as migrations foram aplicadas. `setup:local` preserva os segredos existentes. Trocar a senha no arquivo não altera automaticamente a senha de um volume MySQL já inicializado.
+4. Em conflito, atualize o catálogo/pedido e confira a alteração antes de reenviar. Em erro de envio, preserve a tentativa: a mesma chave de idempotência recupera o resultado sem duplicar o pedido.
+5. Nunca use exclusão de volume, seeds, dados demo ou limpeza de banco como recuperação automática. Faça backup antes de intervir em dados persistidos.
+
+Verificações completas: `pnpm check:all`, `pnpm api:test:db`, `pnpm test:e2e` e `pnpm test:e2e:api`. A API fora do Docker usa `localhost:3001`; os testes usam banco `_test` e portas próprias.

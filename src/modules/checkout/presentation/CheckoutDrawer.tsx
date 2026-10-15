@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react"
 
-import { ShoppingBag } from "lucide-react"
+import { CheckCircle2, MessageCircle, ShoppingBag } from "lucide-react"
 
 import { useMenu } from "../../../app/presentation/MenuScope"
 
@@ -43,11 +43,13 @@ export default function CheckoutDrawer({
   const services = useServices()
 
   const mutation = useMutation()
+  const api = services.mode === "api"
 
   const [details, setDetails] = useState(emptyDetails)
 
   const [prepared, setPrepared] = useState<{
     url: string
+    orderId?: string
     revision: number
     cart: string
     details: string
@@ -62,7 +64,7 @@ export default function CheckoutDrawer({
     !controller.changed &&
     !controller.unavailable &&
     menu.restaurant.isOpen &&
-    menu.restaurant.whatsappConfigured &&
+    (api || menu.restaurant.whatsappConfigured) &&
     controller.cart.lines.length > 0
 
   const currentLink =
@@ -104,11 +106,46 @@ export default function CheckoutDrawer({
   return (
     <Dialog
       title="Seu carrinho"
-      onClose={onClose}
+      onClose={() => {
+        if (prepared?.orderId) {
+          controller.clear()
+          services.checkout.reset?.(menu.restaurant.id)
+        }
+        onClose()
+      }}
       busy={mutation.pending}
       className="checkout-dialog"
     >
-      {controller.cart.lines.length === 0 ? (
+      {prepared?.orderId ? (
+        <div className="empty-cart">
+          <CheckCircle2 size={38} />
+          <h3>Pedido enviado para a loja!</h3>
+          <p>
+            Seu número é <strong>#{prepared.orderId.slice(0, 8).toUpperCase()}</strong>.
+            Aguarde a confirmação da loja. O pagamento será combinado diretamente com ela.
+          </p>
+          {prepared.url && (
+            <a
+              className="whatsapp-button"
+              href={prepared.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Conversar com a loja no WhatsApp
+            </a>
+          )}
+          <button
+            className="primary-button"
+            onClick={() => {
+              controller.clear()
+              services.checkout.reset?.(menu.restaurant.id)
+              onClose()
+            }}
+          >
+            Voltar ao cardápio
+          </button>
+        </div>
+      ) : controller.cart.lines.length === 0 ? (
         <div className="empty-cart">
           <ShoppingBag size={38} />
           <h3>Seu carrinho está vazio</h3>
@@ -120,6 +157,16 @@ export default function CheckoutDrawer({
       ) : (
         <form className="checkout-form" onSubmit={(event) => void prepare(event)}>
           {loadError && <ErrorNotice error={loadError} onRetry={() => void reload()} />}
+          <p className="checkout-intro">
+            Confira seus itens e preencha os dados para entrega.
+          </p>
+          <div className="checkout-title">
+            <span>1</span>
+            <h3>Seu pedido</h3>
+            <small>
+              {controller.itemCount} {controller.itemCount === 1 ? "item" : "itens"}
+            </small>
+          </div>
           <CartItems
             controller={controller}
             products={menu.products}
@@ -167,28 +214,43 @@ export default function CheckoutDrawer({
               A loja está fechada e não está recebendo pedidos.
             </p>
           )}
-          {!menu.restaurant.whatsappConfigured && (
+          {!api && !menu.restaurant.whatsappConfigured && (
             <p className="info-notice">
               A loja ainda não configurou o WhatsApp para receber pedidos.
             </p>
           )}
           <div className="checkout-actions">
-            <button className="whatsapp-button" disabled={!canPrepare}>
-              {mutation.pending ? "Validando pedido…" : "Preparar pedido para WhatsApp"}
+            <button
+              className={currentLink ? "secondary-button" : "whatsapp-button"}
+              disabled={!canPrepare}
+            >
+              <MessageCircle size={19} aria-hidden="true" />
+              {mutation.pending
+                ? "Validando pedido…"
+                : api
+                  ? "Enviar pedido para a loja"
+                  : "Preparar pedido para WhatsApp"}
             </button>
             {currentLink && (
-              <a
-                className="whatsapp-button"
-                href={currentLink}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Abrir WhatsApp e enviar pedido
-              </a>
+              <div className="checkout-ready">
+                <p role="status">
+                  <CheckCircle2 size={19} aria-hidden="true" />
+                  Pedido preparado! Agora envie para a loja.
+                </p>
+                <a
+                  className="whatsapp-button"
+                  href={currentLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Abrir WhatsApp e enviar pedido
+                </a>
+              </div>
             )}
             <p>
-              Confirme o envio no WhatsApp. A abertura do aplicativo não confirma
-              recebimento ou pagamento.
+              {api
+                ? "Ao enviar, o pedido será registrado no painel da loja. Aguarde a confirmação do restaurante; o envio não confirma pagamento."
+                : "Confirme o envio no WhatsApp. A abertura do aplicativo não confirma recebimento ou pagamento."}
             </p>
           </div>
         </form>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react"
+import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react"
 
 import { X } from "lucide-react"
 
@@ -35,11 +35,38 @@ export default function Dialog({
     }
   }, [])
 
+  function keepFocusInside(event: KeyboardEvent<HTMLDialogElement>) {
+    if (event.key !== "Tab") return
+    const controls = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((element) => element.getClientRects().length > 0 && !element.hidden)
+    const first = controls[0]
+    const last = controls.at(-1)
+    if (!first || !last) {
+      event.preventDefault()
+      event.currentTarget.focus()
+      return
+    }
+    if (
+      event.shiftKey &&
+      (document.activeElement === first || document.activeElement === event.currentTarget)
+    ) {
+      event.preventDefault()
+      last.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first.focus()
+    }
+  }
+
   return (
     <dialog
       ref={ref}
       className={`app-dialog ${className}`}
       aria-label={title}
+      onKeyDown={keepFocusInside}
       onCancel={(event) => {
         event.preventDefault()
         if (!busy) onClose()

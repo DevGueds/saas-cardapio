@@ -49,7 +49,8 @@ for (const file of files(root)) {
 
         const reason =
           originLayer === "domain" &&
-          ((targetLayer && targetLayer !== "domain") || !name.startsWith("."))
+          ((targetLayer && targetLayer !== "domain") ||
+            (!name.startsWith(".") && !name.startsWith("@cardapio/domain/")))
             ? "Domínio só pode depender de domínio local"
             : originLayer === "application" &&
                 (targetLayer === "presentation" ||
@@ -57,7 +58,7 @@ for (const file of files(root)) {
                   /^(react|react-router)/.test(name))
               ? "Aplicação não pode depender de adaptadores"
               : originLayer === "presentation" && targetLayer === "infrastructure"
-                ? "Apresenta??o deve acessar casos de uso"
+                ? "Apresentação deve acessar casos de uso"
                 : relative.startsWith("shared/") && /^(app|modules)\//.test(target)
                   ? "Shared não pode depender dos módulos"
                   : null

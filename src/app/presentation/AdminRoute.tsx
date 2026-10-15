@@ -1,3 +1,4 @@
+import ApiAdminRoute from "../../modules/identity/presentation/ApiAdminRoute"
 import { useEffect, useState } from "react"
 
 import type { Result } from "../../shared/application/result"
@@ -11,6 +12,11 @@ import AdminLayout from "./AdminLayout"
 import MenuScope from "./MenuScope"
 
 export default function AdminRoute() {
+  const services = useServices()
+  return services.mode === "api" ? <ApiAdminRoute /> : <DemoAdminRoute />
+}
+
+function DemoAdminRoute() {
   const services = useServices()
 
   const [access, setAccess] = useState<Result<void> | null>(null)

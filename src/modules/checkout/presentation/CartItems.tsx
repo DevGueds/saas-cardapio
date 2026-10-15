@@ -58,7 +58,7 @@ export default function CartItems({
               >
                 {line.quantity === 1 ? <Trash2 size={15} /> : <Minus size={15} />}
               </button>
-              <span>{line.quantity}</span>
+              <span aria-live="polite">{line.quantity}</span>
               <button
                 type="button"
                 aria-label={`Aumentar ${name}`}

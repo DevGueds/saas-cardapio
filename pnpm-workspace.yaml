@@ -1,0 +1,21 @@
+packages:
+  - "."
+  - "backend"
+  - "packages/*"
+allowBuilds:
+  "@nestjs/core": true
+  "@prisma/engines": true
+  argon2: true
+  esbuild: true
+  prisma: true
+minimumReleaseAgeExclude:
+  - "@fastify/helmet@13.2.0"
+  - fastify@5.12.7
+  - mysql2@3.24.6
+
+# Security fixes within the supported Fastify 5 / Prisma 7 stack. See docs/backend.md.
+overrides:
+  fastify: 5.12.7
+  mariadb: 3.5.4
+  mysql2: 3.24.6
+  deepmerge-ts: 8.0.2

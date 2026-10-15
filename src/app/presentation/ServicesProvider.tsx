@@ -1,3 +1,5 @@
+import type { IdentityService } from "../../modules/identity/application/ports"
+import type { OrdersService } from "../../modules/orders/application/ports"
 import { createContext, useContext, type ReactNode } from "react"
 
 import type { CatalogCommands } from "../../modules/catalog/application/catalog-commands"
@@ -13,10 +15,13 @@ import type { Result } from "../../shared/application/result"
 import type { ImageReader } from "../../shared/application/image-reader"
 
 export interface ApplicationServices {
-  menu: LoadMenu
-  catalog: CatalogCommands
-  restaurant: RestaurantCommands
-  checkout: PrepareOrder
+  mode?: "demo" | "api"
+  auth?: IdentityService
+  orders?: OrdersService
+  menu: Pick<LoadMenu, "execute" | "subscribe"> & { loadAdmin?: LoadMenu["execute"] }
+  catalog: Pick<CatalogCommands, "save" | "setAvailability" | "delete">
+  restaurant: Pick<RestaurantCommands, "update" | "setOpen">
+  checkout: Pick<PrepareOrder, "execute"> & { reset?(restaurantId: string): void }
 
   images: ImageReader
   checkAdmin(): Promise<Result<void>>

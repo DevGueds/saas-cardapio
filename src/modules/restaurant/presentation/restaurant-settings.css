@@ -1,0 +1,145 @@
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 1.5rem;
+  align-items: start;
+}
+.settings-form {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.settings-form > fieldset {
+  display: grid;
+  gap: 1.5rem;
+}
+.settings-form > .success-notice,
+.settings-form > .error-notice {
+  margin: 0;
+}
+.settings-save {
+  position: sticky;
+  top: 94px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid #c1cebb;
+  border-radius: 0.9rem;
+  background: #fffffff5;
+  box-shadow: 0 6px 28px #172f2712;
+  backdrop-filter: blur(10px);
+}
+.settings-save > span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.settings-form {
+  scroll-padding-bottom: 100px;
+}
+.settings-form :is(input, textarea, button) {
+  scroll-margin-bottom: 120px;
+  scroll-margin-top: 220px;
+}
+.form-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  border-radius: 0.65rem;
+  padding: 0.9rem;
+  background: var(--soft-green);
+  color: #38523b;
+  font-size: 0.8125rem;
+}
+.settings-guide {
+  position: sticky;
+  top: 110px;
+  padding: 1.6rem;
+  border: 1px solid #dce4cf;
+  background: #edf2e3;
+  border-radius: 1rem;
+}
+.guide-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 0.9rem;
+  background: #fff;
+  color: var(--brand);
+  margin-bottom: 1.2rem;
+}
+.settings-guide h2 {
+  font-size: 1.15rem;
+  line-height: 1.4;
+  letter-spacing: -0.035em;
+}
+.settings-guide > p {
+  color: #53604d;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  margin: 0.8rem 0;
+}
+.settings-guide ul {
+  list-style: none;
+  display: grid;
+  gap: 1rem;
+  margin: 1.25rem 0 1.5rem;
+  padding: 0;
+}
+.settings-guide li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  color: #40543d;
+  font-size: 0.8125rem;
+}
+.settings-guide .secondary-button {
+  width: 100%;
+  font-size: 0.8125rem;
+}
+.settings-guide > small {
+  display: block;
+  color: #53604d;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  margin-top: 1rem;
+}
+.product-options {
+  display: grid;
+  gap: 0.65rem;
+}
+.product-options h3 {
+  font-size: 0.875rem;
+  margin-bottom: 0.2rem;
+}
+@media (max-width: 1150px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+  .settings-guide {
+    position: static;
+  }
+  .settings-guide ul {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .settings-guide .secondary-button {
+    width: auto;
+  }
+}
+@media (max-width: 640px) {
+  .settings-save {
+    top: 80px;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.85rem;
+  }
+  .settings-save > button {
+    width: 100%;
+  }
+  .settings-guide ul {
+    grid-template-columns: 1fr;
+  }
+}

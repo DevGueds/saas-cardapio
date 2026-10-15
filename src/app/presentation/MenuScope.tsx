@@ -27,9 +27,11 @@ const MenuContext = createContext<MenuContextValue | null>(null)
 
 export default function MenuScope({
   slug,
+  restaurantId: adminRestaurantId,
   children,
 }: {
   slug: string
+  restaurantId?: string
   children: ReactNode
 }) {
   const services = useServices()
@@ -47,7 +49,9 @@ export default function MenuScope({
 
     setLoading(true)
 
-    const result = await services.menu.execute(slug)
+    const result = await (adminRestaurantId && services.menu.loadAdmin
+      ? services.menu.loadAdmin(adminRestaurantId)
+      : services.menu.execute(slug))
 
     if (request !== generation.current.value) return null
 
@@ -59,7 +63,7 @@ export default function MenuScope({
     setLoading(false)
 
     return result.ok ? result.value : null
-  }, [services, slug])
+  }, [services, slug, adminRestaurantId])
 
   useEffect(() => {
     const sequence = generation.current
