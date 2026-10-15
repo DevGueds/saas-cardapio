@@ -151,19 +151,22 @@ test("configurações mantêm campos visíveis ao navegar por teclado e salvam n
   await phone.fill("11999998888")
   await page.keyboard.press("Tab")
   await expect(page.getByLabel("Prazo de entrega *")).toBeFocused()
-  expect(
-    await page.evaluate(() => {
-      const element = document.activeElement as HTMLElement
-      const bounds = element.getBoundingClientRect()
-      const centerX = bounds.x + bounds.width / 2
-      const centerY = bounds.y + bounds.height / 2
-      return (
-        centerY >= 0 &&
-        centerY < innerHeight &&
-        element.contains(document.elementFromPoint(centerX, centerY))
-      )
-    }),
-  ).toBe(true)
+  // Keyboard focus scrolls smoothly; assert visibility after scrolling settles.
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const element = document.activeElement as HTMLElement
+        const bounds = element.getBoundingClientRect()
+        const centerX = bounds.x + bounds.width / 2
+        const centerY = bounds.y + bounds.height / 2
+        return (
+          centerY >= 0 &&
+          centerY < innerHeight &&
+          element.contains(document.elementFromPoint(centerX, centerY))
+        )
+      }),
+    )
+    .toBe(true)
   await page.getByRole("button", { name: "Salvar configurações" }).click()
   await expect(page.getByText("Configurações salvas.")).toBeVisible()
   await page.reload()
