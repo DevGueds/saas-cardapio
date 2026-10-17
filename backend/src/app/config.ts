@@ -1,3 +1,4 @@
+import { isIP } from "node:net"
 import { z } from "zod"
 import { Failure } from "@cardapio/domain/failure"
 
@@ -5,6 +6,11 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
   HOST: z.string().default("127.0.0.1"),
   PORT: z.coerce.number().int().min(1024).max(65535).default(3001),
+  REDIS_URL: z.string().min(1),
+  HTTP_RATE_LIMIT: z.coerce.number().int().min(60).max(100000).default(600),
+  MAX_IN_FLIGHT: z.coerce.number().int().min(16).max(1024).default(128),
+  TRUSTED_PROXY_CIDRS: z.string().default(""),
+  MAP_TILE_URL: z.string().default("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
   DATABASE_URL: z.string().min(1),
   DATABASE_TLS: z.enum(["true", "false"]),
   DATABASE_CA_FILE: z.string().optional(),
@@ -25,9 +31,44 @@ export function loadConfig(input: Record<string, unknown>) {
       "invalid_environment",
     )
   const env = result.data
+  let redis: URL
+  let trustedProxies: string[]
   let database: URL
   let origins: string[]
   try {
+    redis = new URL(env.REDIS_URL)
+    if (
+      !["redis:", "rediss:"].includes(redis.protocol) ||
+      !redis.password ||
+      redis.search ||
+      redis.hash ||
+      !/^\/\d*$/.test(redis.pathname || "/") ||
+      (env.NODE_ENV === "production" && redis.protocol !== "rediss:")
+    )
+      throw new Error()
+    trustedProxies = env.TRUSTED_PROXY_CIDRS
+      ? env.TRUSTED_PROXY_CIDRS.split(",").map((v) => {
+          const [ip, prefix] = v.trim().split("/")
+          const version = isIP(ip!)
+          if (
+            !version ||
+            (prefix !== undefined &&
+              (!/^\d+$/.test(prefix) ||
+                Number(prefix) < (version === 4 ? 8 : 32) ||
+                Number(prefix) > (version === 4 ? 32 : 128)))
+          )
+            throw new Error()
+          return v.trim()
+        })
+      : []
+    const tile = new URL(env.MAP_TILE_URL)
+    if (
+      tile.protocol !== "https:" ||
+      tile.username ||
+      tile.password ||
+      !["{z}", "{x}", "{y}"].every((p) => env.MAP_TILE_URL.includes(p))
+    )
+      throw new Error()
     database = new URL(env.DATABASE_URL)
     if (
       database.protocol !== "mysql:" ||
@@ -69,6 +110,11 @@ export function loadConfig(input: Record<string, unknown>) {
     host: env.HOST,
     port: env.PORT,
     database,
+    redisUrl: redis.href,
+    httpRateLimit: env.HTTP_RATE_LIMIT,
+    maxInFlight: env.MAX_IN_FLIGHT,
+    trustedProxies,
+    mapTileUrl: env.MAP_TILE_URL,
     databaseTls: env.DATABASE_TLS === "true",
     databaseCaFile: env.DATABASE_CA_FILE,
     secret: env.SESSION_SECRET,

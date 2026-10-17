@@ -61,7 +61,12 @@ export class Database {
         "STORAGE_UNAVAILABLE",
         "O banco está indisponível. Tente novamente em instantes.",
         {},
-        "database_unavailable",
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+          /^P[0-9]{4}$/.test(error.code)
+          ? `database_${error.code}`
+          : error instanceof Prisma.PrismaClientValidationError
+            ? "database_query_validation"
+            : "database_unavailable",
       )
     }
   }

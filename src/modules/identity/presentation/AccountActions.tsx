@@ -1,3 +1,6 @@
+import { passwordField } from "@cardapio/contracts"
+import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
+import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
 import { useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router"
 import { useServices } from "../../../app/presentation/ServicesProvider"
@@ -42,30 +45,29 @@ export default function AccountActions() {
           onClose={() => setChanging(false)}
           busy={mutation.pending}
         >
-          <form className="editor-form" onSubmit={(event) => void change(event)}>
+          <ValidatedForm className="editor-form" onSubmit={(event) => void change(event)}>
             <p className="form-intro">
               Após salvar, você precisará entrar novamente em todos os dispositivos.
             </p>
             <fieldset disabled={mutation.pending}>
               <label className="field">
                 <span>Senha atual *</span>
-                <input
+                <ValidatedInput
                   type="password"
                   name="currentPassword"
                   autoComplete="current-password"
                   required
-                  maxLength={512}
                 />
               </label>
               <label className="field">
                 <span>Nova senha *</span>
-                <input
+                <ValidatedInput
                   type="password"
                   name="newPassword"
+                  schema={passwordField}
                   autoComplete="new-password"
                   required
                   minLength={8}
-                  maxLength={128}
                 />
                 <small className="field-help">Use de 8 a 128 caracteres.</small>
               </label>
@@ -84,7 +86,7 @@ export default function AccountActions() {
                 Salvar nova senha
               </button>
             </div>
-          </form>
+          </ValidatedForm>
         </Dialog>
       )}
     </>

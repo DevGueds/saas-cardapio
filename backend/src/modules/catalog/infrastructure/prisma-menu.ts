@@ -1,3 +1,5 @@
+import { parseCommerce, parsePromotion } from "@cardapio/domain/commerce"
+import type { Prisma } from "../../../generated/prisma/client.js"
 import { Failure } from "@cardapio/domain/failure"
 import { parseMenuDocument, type MenuDocument } from "@cardapio/domain/menu-document"
 import { normalizeName } from "@cardapio/domain/validation"
@@ -12,6 +14,7 @@ export async function readMenu(
   const row = await tx.restaurant.findFirst({
     where: { id: scope.restaurantId, tenantId: scope.tenantId, tenant: { active: true } },
     include: {
+      commerce: true,
       categories: { orderBy: { name: "asc" } },
       products: { orderBy: { name: "asc" } },
     },
@@ -25,6 +28,7 @@ export async function readMenu(
         restaurant: row,
         categories: row.categories,
         products: row.products,
+        ...(row.commerce ? { commerce: row.commerce } : {}),
       },
       scope.restaurantId,
     )
@@ -99,6 +103,32 @@ export class PrismaMenu implements MenuRepository {
         await tx.product.upsert({
           where: { tenantId_restaurantId_id: { ...scope, id } },
           create: { ...scope, ...product },
+          update: data,
+        })
+      }
+      if (next.commerce) {
+        const stored = await tx.storeCommerce.findFirst({ where: scope })
+        const previous = stored
+          ? { promotions: (stored.promotions as unknown[]).map(parsePromotion) }
+          : null
+        const commerce = parseCommerce(
+          {
+            ...next.commerce,
+            promotions: next.commerce.promotions.map((p) => ({
+              ...p,
+              used: previous?.promotions.find((old) => old.id === p.id)?.used ?? 0,
+            })),
+          },
+          next.products,
+        )
+        const data = {
+          combos: commerce.combos as unknown as Prisma.InputJsonValue,
+          promotions: commerce.promotions as unknown as Prisma.InputJsonValue,
+          delivery: commerce.delivery as unknown as Prisma.InputJsonValue,
+        }
+        await tx.storeCommerce.upsert({
+          where: { tenantId_restaurantId: scope },
+          create: { ...scope, ...data },
           update: data,
         })
       }

@@ -99,7 +99,11 @@ export class PrismaAccess implements AccessRepository {
       })
     })
   }
-  addMember(tenantId: string, email: string, role: "MANAGER" | "STAFF") {
+  addMember(
+    tenantId: string,
+    email: string,
+    role: Exclude<import("@cardapio/contracts").Role, "OWNER">,
+  ) {
     return this.db.transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { email },

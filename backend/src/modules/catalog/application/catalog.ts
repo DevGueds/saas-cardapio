@@ -26,6 +26,7 @@ export class Catalog {
     private readonly access: AccessPolicy,
     private readonly ids: IdGenerator,
     private readonly operation: Operation,
+    private readonly publicMenus: { publicMenu(slug: string): Promise<MenuDocument> },
   ) {}
   publicMenu(slug: string) {
     return this.operation.run("catalog.public-menu", async () => {
@@ -33,7 +34,7 @@ export class Catalog {
         /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 80,
         "Endereço de cardápio inválido.",
       )
-      return this.menus.load(await this.menus.resolve(slug))
+      return this.publicMenus.publicMenu(slug)
     })
   }
   adminMenu(actor: Actor, restaurantId: string) {

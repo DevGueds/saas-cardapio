@@ -2,6 +2,12 @@ import { z } from "zod"
 import * as contracts from "@cardapio/contracts"
 const requestSchemas = {
   Login: contracts.loginSchema,
+  AccountRegistration: contracts.accountRegistrationSchema,
+  Combo: contracts.saveComboSchema,
+  Promotion: contracts.savePromotionSchema,
+  Delivery: contracts.saveDeliverySchema,
+  Quote: contracts.quoteRequestSchema,
+  Assignment: contracts.assignmentSchema,
   Registration: contracts.registrationSchema,
   Password: contracts.passwordChangeSchema,
   Product: contracts.saveProductSchema,
@@ -16,6 +22,18 @@ const requestSchemas = {
   Open: contracts.openSchema,
 }
 const operations = [
+  ["/auth/register-account", "post", "AccountRegistration", true],
+  ["/public/addresses/{cep}", "get", null, true],
+  ["/public/restaurants/{slug}/checkout/quote", "post", "Quote", true],
+  ["/public/restaurants/{slug}/checkout/attempt", "get", null, true],
+  ["/public/restaurants/{slug}/orders/{orderId}", "get", null, true],
+  ["/restaurants/{restaurantId}/combos", "put", "Combo"],
+  ["/restaurants/{restaurantId}/combos/{offerId}", "delete", "Delete"],
+  ["/restaurants/{restaurantId}/promotions", "put", "Promotion"],
+  ["/restaurants/{restaurantId}/promotions/{offerId}", "delete", "Delete"],
+  ["/restaurants/{restaurantId}/delivery", "put", "Delivery"],
+  ["/restaurants/{restaurantId}/couriers", "get"],
+  ["/restaurants/{restaurantId}/orders/{orderId}/courier", "put", "Assignment"],
   ["/auth/register", "post", "Registration", true],
   ["/auth/login", "post", "Login", true],
   ["/auth/session", "get"],
@@ -70,7 +88,17 @@ for (const entry of operations) {
       required: true,
       schema: { type: "string" },
     })
-  if (path === "/public/restaurants/{slug}/orders")
+  if (path === "/public/restaurants/{slug}/orders/{orderId}")
+    parameters.push({
+      name: "X-Order-Token",
+      in: "header",
+      required: true,
+      schema: { type: "string", pattern: "^[a-f0-9]{64}$" },
+    })
+  if (
+    path === "/public/restaurants/{slug}/orders" ||
+    path === "/public/restaurants/{slug}/checkout/attempt"
+  )
     parameters.push({
       name: "Idempotency-Key",
       in: "header",

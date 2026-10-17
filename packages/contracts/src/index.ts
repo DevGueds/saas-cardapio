@@ -3,35 +3,54 @@ import { errorCodes, type ErrorCode } from "@cardapio/domain/failure"
 import { parseMenuDocument, type MenuDocument } from "@cardapio/domain/menu-document"
 
 export const API_VERSION = "v1"
-export const uuid = z.uuid()
-export const revision = z.number().int().min(0).max(2_147_483_646)
-export const cents = z.number().int().min(0).max(2_147_483_647)
-const name = z.string().trim().min(1).max(120)
-const slug = z
-  .string()
-  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
-  .min(3)
-  .max(80)
-const email = z.email().trim().toLowerCase().max(254)
-export const password = z
-  .string()
-  .refine((value) => Array.from(value).length >= 8, "Use pelo menos 8 caracteres.")
-  .refine((value) => Array.from(value).length <= 128, "Use no máximo 128 caracteres.")
-export const loginSchema = z.strictObject({ email, password: z.string().min(1).max(512) })
+import { uuid, revision, cents } from "./common.js"
+export { uuid, revision, cents } from "./common.js"
+export * from "./commerce.js"
+import { checkoutOptionsSchema, pricedLineSchema, fulfillmentSchema } from "./commerce.js"
+import {
+  labelField as name,
+  personNameField,
+  emailField as email,
+  slugField as slug,
+  passwordField,
+  currentPasswordField,
+  phoneField,
+  optionalPhoneField,
+  moneyField,
+  textField,
+  imageField,
+  validationMessage,
+} from "./fields.js"
+export * from "./fields.js"
+export const password = passwordField
+export const loginSchema = z.strictObject({ email, password: currentPasswordField })
 export const registrationSchema = z.strictObject({
-  name,
+  name: personNameField,
   email,
   password,
   restaurantName: name,
   slug,
 })
+export const accountRegistrationSchema = registrationSchema.pick({
+  name: true,
+  email: true,
+  password: true,
+})
 export const tenantCreationSchema = z.strictObject({ name, restaurantName: name, slug })
 export const restaurantCreationSchema = z.strictObject({ name, slug })
 export const passwordChangeSchema = z.strictObject({
-  currentPassword: z.string().min(1).max(512),
+  currentPassword: currentPasswordField,
   newPassword: password,
 })
-export const roleSchema = z.enum(["OWNER", "MANAGER", "STAFF"])
+export const roleSchema = z.enum([
+  "OWNER",
+  "MANAGER",
+  "STAFF",
+  "CASHIER",
+  "KITCHEN",
+  "COURIER",
+  "VIEWER",
+])
 export type Role = z.infer<typeof roleSchema>
 export const sessionSchema = z.strictObject({
   user: z.strictObject({ id: uuid, name }),
@@ -47,15 +66,15 @@ export const restaurantAccessSchema = z.strictObject({
   role: roleSchema,
 })
 export type RestaurantAccess = z.infer<typeof restaurantAccessSchema>
-export const memberSchema = z.strictObject({ email, role: z.enum(["MANAGER", "STAFF"]) })
-export const moneyText = z.string().max(20)
-const image = z.string().max(7_000_000)
+export const memberSchema = z.strictObject({ email, role: roleSchema.exclude(["OWNER"]) })
+export const moneyText = moneyField()
+const image = imageField
 export const productSchema = z.strictObject({
   name,
-  description: z.string().max(2000),
-  price: moneyText,
+  description: textField(2000),
+  price: moneyField(true),
   categoryId: z.string().max(100),
-  newCategoryName: z.string().trim().min(1).max(80).optional(),
+  newCategoryName: textField(80, true).optional(),
   imageUrl: image,
   available: z.boolean(),
   popular: z.boolean(),
@@ -72,14 +91,14 @@ export const openSchema = z.strictObject({
 })
 export const settingsSchema = z.strictObject({
   name,
-  description: z.string().max(1000),
-  whatsapp: z.string().max(30),
-  address: z.string().max(500),
+  description: textField(1000),
+  whatsapp: optionalPhoneField,
+  address: textField(500),
   logoUrl: image,
   coverUrl: image,
   deliveryFee: moneyText,
   minOrder: moneyText,
-  eta: z.string().trim().min(1).max(80),
+  eta: textField(80, true),
 })
 export const updateSettingsSchema = settingsSchema.extend({ expectedRevision: revision })
 export const cartSchema = z.strictObject({
@@ -90,7 +109,12 @@ export const cartSchema = z.strictObject({
         productId: uuid,
         quantity: z.number().int().min(1).max(999),
         unitPrice: cents.positive(),
-        note: z.string().max(500),
+        note: textField(500),
+        kind: z.enum(["PRODUCT", "COMBO"]).optional(),
+        selections: z
+          .record(uuid, uuid)
+          .refine((v) => Object.keys(v).length <= 8)
+          .optional(),
       }),
     )
     .min(1)
@@ -99,20 +123,50 @@ export const cartSchema = z.strictObject({
 export const deliverySchema = z.strictObject({
   name,
   phone: z.string().max(30),
-  address: z.string().trim().min(1).max(500),
+  address: z.string().trim().max(500),
   notes: z.string().max(500),
   payment: z.enum(["Pix", "Cartão na Entrega", "Dinheiro"]),
   cashChange: z.string().max(30),
 })
-export const checkoutSchema = z.strictObject({
-  expectedRevision: revision,
-  cart: cartSchema,
-  details: deliverySchema,
-})
+export const deliveryInputSchema = deliverySchema
+  .extend({
+    name: personNameField,
+    phone: phoneField,
+    address: textField(500),
+    notes: textField(500),
+    cashChange: textField(30),
+  })
+  .superRefine((v, ctx) => {
+    if (v.payment !== "Dinheiro") return
+    const amount = moneyField(true, true).safeParse(v.cashChange)
+    if (!amount.success)
+      ctx.addIssue({
+        code: "custom",
+        path: ["cashChange"],
+        message: validationMessage(amount.error.issues[0]!),
+      })
+  })
+  .transform((v) => ({ ...v, cashChange: v.payment === "Dinheiro" ? v.cashChange : "" }))
+export const checkoutSchema = z
+  .strictObject({
+    expectedRevision: revision,
+    cart: cartSchema,
+    details: deliveryInputSchema,
+    options: checkoutOptionsSchema.optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.options?.fulfillment?.mode !== "PICKUP" && !value.details.address.trim())
+      context.addIssue({
+        code: "custom",
+        path: ["details", "address"],
+        message: "Informe rua, número, bairro e complemento para a entrega.",
+      })
+  })
 export type CheckoutInput = z.infer<typeof checkoutSchema>
 export const orderStatusSchema = z.enum([
   "NEW",
   "PREPARING",
+  "READY",
   "OUT_FOR_DELIVERY",
   "COMPLETED",
   "CANCELLED",
@@ -132,15 +186,18 @@ export const orderSchema = z.strictObject({
   subtotal: cents,
   deliveryFee: cents,
   total: cents,
-  items: z.array(
-    z.strictObject({
-      productId: uuid,
-      name,
-      quantity: z.number().int().positive(),
-      unitPrice: cents,
-      note: z.string().max(500),
-    }),
-  ),
+  items: z.array(pricedLineSchema),
+  discount: cents.optional(),
+  promotionName: z.string().max(120).nullable().optional(),
+  promotionId: uuid.nullable().optional(),
+  fulfillment: fulfillmentSchema.optional(),
+  region: z.string().max(300).optional(),
+  eta: z.string().max(80).optional(),
+  courierId: uuid.nullable().optional(),
+  history: z
+    .array(z.strictObject({ status: orderStatusSchema, at: z.iso.datetime() }))
+    .max(20)
+    .optional(),
 })
 export type OrderView = z.infer<typeof orderSchema>
 export const orderPageSchema = z.strictObject({
@@ -151,6 +208,10 @@ export const preparedOrderSchema = z.strictObject({
   url: z.union([z.url(), z.literal("")]),
   revision,
   orderId: uuid.optional(),
+  trackingToken: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
 })
 export type PreparedOrderView = z.infer<typeof preparedOrderSchema>
 export const errorSchema = z.strictObject({
@@ -177,4 +238,23 @@ export const menuSchema = z.unknown().transform((value, context) => {
     context.addIssue({ code: "custom", message: "Cardápio inválido." })
     return z.NEVER
   }
+})
+
+export const quoteRequestSchema = z.strictObject({
+  expectedRevision: revision,
+  cart: cartSchema,
+  options: checkoutOptionsSchema.optional(),
+})
+export const assignmentSchema = z.strictObject({
+  expectedRevision: revision,
+  courierId: uuid.nullable(),
+})
+export const trackingSchema = orderSchema
+  .omit({ customer: true, courierId: true, promotionId: true })
+  .extend({ restaurantName: z.string().max(120) })
+export type TrackingView = z.infer<typeof trackingSchema>
+export const teamMemberSchema = z.strictObject({
+  userId: uuid,
+  name: z.string().max(120),
+  role: roleSchema,
 })

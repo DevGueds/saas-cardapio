@@ -32,6 +32,13 @@ export class IdentityController {
     })
     return { ok: true, value: resolved.value.session }
   }
+  @Public() @Post("auth/register-account") registerAccount(
+    @Body() input: unknown,
+    @Req() req: SessionRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    return this.establish(this.app.auth.register(input, req.ip, true), reply)
+  }
   @Public()
   @Post("auth/register")
   register(

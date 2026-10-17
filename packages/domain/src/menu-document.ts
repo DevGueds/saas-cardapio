@@ -1,3 +1,4 @@
+import { parseCommerce, type Commerce } from "./commerce.js"
 import { requireValid } from "./failure.js"
 
 import { record } from "./validation.js"
@@ -18,6 +19,7 @@ export type MenuDocument = Readonly<{
   restaurant: Restaurant
 
   categories: readonly Category[]
+  commerce?: Commerce
   products: readonly Product[]
 }>
 
@@ -57,5 +59,8 @@ export function parseMenuDocument(input: unknown, restaurantId: string): MenuDoc
     restaurant,
     categories,
     products,
+    ...(data.commerce === undefined
+      ? {}
+      : { commerce: parseCommerce(data.commerce, products) }),
   }
 }

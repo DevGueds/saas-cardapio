@@ -5,6 +5,8 @@ import { assertCents } from "./money.js"
 import type { Product } from "./catalog.js"
 
 export type CartLine = Readonly<{
+  kind?: "PRODUCT" | "COMBO"
+  selections?: Readonly<Record<string, string>>
   productId: string
   quantity: number
   unitPrice: number

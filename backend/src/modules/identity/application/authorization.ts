@@ -16,13 +16,16 @@ export class Authorization implements AccessPolicy {
       throw new Failure("UNAUTHENTICATED", "Sua sessão expirou. Entre novamente.")
   }
   async restaurant(actor: Actor, restaurantId: string, permission: Permission) {
+    return (await this.grant(actor, restaurantId, permission)).scope
+  }
+  async grant(actor: Actor, restaurantId: string, permission: Permission) {
     validate(uuid, restaurantId)
     await this.session(actor)
     const membership = await this.access.restaurantMembership(actor, restaurantId)
     if (!membership)
       throw new Failure("NOT_FOUND", "Restaurante não encontrado ou acesso indisponível.")
     assertPermission(membership.role, permission)
-    return membership.scope
+    return membership
   }
   async tenant(actor: Actor, tenantId: string, permission: Permission) {
     validate(uuid, tenantId)

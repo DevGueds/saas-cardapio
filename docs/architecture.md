@@ -23,6 +23,7 @@ flowchart LR
 | `src/app`                      | Composição de serviços demo/API, rotas e escopos React                                |
 | `src/modules/identity`         | Acesso à conta, seleção de loja, senha e adaptador de autenticação                    |
 | `src/modules/catalog`          | Produtos, categorias, cardápio e adaptadores HTTP/local                               |
+| `src/modules/commerce`         | Combos, promoções, regiões de entrega e portas HTTP/local                             |
 | `src/modules/restaurant`       | Configurações e estado da loja                                                        |
 | `src/modules/checkout`         | Carrinho, entrega e envio/preparação de pedido                                        |
 | `src/modules/orders`           | Pedidos persistidos, etapas, detalhes e paginação                                     |
@@ -32,6 +33,8 @@ flowchart LR
 | `backend/src/modules/identity` | Conta, sessões, tenants, memberships e políticas de acesso                            |
 | `backend/src/modules/catalog`  | Leitura pública/privada, produtos, categorias e configurações do agregado restaurante |
 | `backend/src/modules/orders`   | Registro transacional, idempotência, listagem e transições                            |
+| `backend/src/modules/commerce` | Comandos de ofertas e entrega sobre o agregado de loja                                |
+| `backend/src/modules/delivery` | Consulta de CEP por porta externa; sem regra de frete no provedor                     |
 | `backend/src/shared`           | Portas técnicas, executor, Prisma, criptografia e tradução HTTP de erros              |
 | `packages/domain`              | Regras portáteis sem React, Zod, Node ou banco                                        |
 | `packages/contracts`           | DTOs, schemas estritos e tipos públicos compartilhados                                |
@@ -51,7 +54,7 @@ Cada contexto cria somente as camadas que utiliza: `domain`, `application`, `inf
 
 `Cents` é inteiro de 0 a 2.147.483.647; produtos exigem valor positivo. A entrada aceita `28.90` ou `28,90`, até duas casas decimais, sem milhares ou texto residual. Não há cálculo em ponto flutuante de preços armazenados.
 
-`MenuDocument` contém `schemaVersion: 1`, `revision`, `restaurant`, `categories` e `products`. É um snapshot público validado, não uma representação das tabelas. Produtos/categorias pertencem à loja; nomes normalizados de categorias são únicos.
+`MenuDocument` contém `schemaVersion: 1`, `revision`, `restaurant`, `categories`, `products` e `commerce` opcional para compatibilidade com snapshots anteriores. É um snapshot público validado, não uma representação das tabelas. Produtos/categorias pertencem à loja; nomes normalizados de categorias são únicos.
 
 Casos de uso retornam `Result<T, AppError>` discriminado por `ok`. O erro contém `code`, mensagem segura, campos e `diagnosticId`. Adaptadores lançam `Failure`; `Operation`/`Executor` convertem em resultado e registram apenas diagnóstico sanitizado. O cliente valida também respostas HTTP.
 
@@ -63,7 +66,7 @@ O cliente envia a loja na rota. A API deriva o tenant pelo vínculo no banco, se
 
 A atualização de catálogo/configurações compara revisão, incrementa-a e grava categoria/produto na mesma transação serializável. Conflitos exigem recarregar. Checkout bloqueia a linha do restaurante, relê o agregado e valida os dados atuais antes de criar o pedido. O pedido conserva snapshot dos itens/preços e dados de entrega, mesmo após excluir um produto.
 
-O adaptador HTTP envia comandos específicos (criar produto, mudar disponibilidade, atualizar configurações), nunca um documento inteiro fornecido pelo cliente. Polling e BroadcastChannel avisam alterações por loja; respostas antigas são descartadas. O carrinho e os dados ainda não enviados permanecem apenas em memória, isolados pelo restaurante.
+O adaptador HTTP envia comandos específicos (criar produto, mudar disponibilidade, atualizar configurações), nunca um documento inteiro fornecido pelo cliente. Polling e BroadcastChannel avisam alterações por loja; respostas antigas são descartadas. Redux Toolkit mantém carrinho e rascunhos com persistência síncrona no navegador, validação e isolamento por modo/usuário/loja; nunca autoriza preços ou permissões. O contrato `DraftManager` desacopla React do adaptador. Sessão e CSRF permanecem fora dessa persistência.
 
 ## Demonstração e migração legada
 
@@ -80,3 +83,11 @@ A migração das chaves antigas roda apenas na demo e quando falta o documento n
 5. Para object storage, adicione uma porta de mídia e adapte imagens; não coloque credenciais do provedor no React.
 
 Banco e autorização ficam sempre atrás do backend. Veja [backend.md](backend.md) para operação, segurança e endpoints.
+
+## Extensões de comércio e resiliência
+
+`packages/domain/commerce*.ts` concentra invariantes e comandos de combos, promoções e entrega. `quote.ts` calcula linhas, composição, modalidade, frete e o benefício aplicável; frontend demo e API usam a mesma implementação. A API relê dados autorizados ao cotar e grava o pedido numa transação. `StoreCommerce` guarda a configuração versionada junto ao agregado; o contador de usos de promoções é preservado em edições e incrementado no mesmo commit do pedido. Dados antigos sem comércio recebem a modalidade legada de taxa fixa, sem inventar produtos/ofertas.
+
+`CachedMenu` decora o repositório para leitura pública com TTL curto e single-flight por processo. Acesso administrativo, cotação e checkout continuam lendo o banco. `CacheStore`, `RequestLimiter` e `AddressLookup` são portas; Redis e BrasilAPI são adaptadores. `Bulkhead` limita concorrência sem filas ilimitadas. `ResilientHttp` concentra timeout, limite de resposta, retry finito e circuit breaker de consultas externas.
+
+Caddy faz o balanceamento entre processos independentes. Sessão fica no MySQL e limites/cache no Redis; não existe estado de autorização em memória que dependa de sticky session. Veja [resilience.md](resilience.md) para limites, operação, ensaio reproduzível e restrições de capacidade.

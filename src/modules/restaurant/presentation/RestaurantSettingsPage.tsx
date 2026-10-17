@@ -1,3 +1,11 @@
+import { formatField } from "../../../shared/presentation/form-validation/field-formatters"
+import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
+import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
+import ValidatedTextarea from "../../../shared/presentation/form-validation/ValidatedTextarea"
+import { can } from "@cardapio/domain/permissions"
+import { useFormDraft } from "../../../app/presentation/use-form-draft"
+import DraftNotice from "../../../shared/presentation/DraftNotice"
+import { settingsDraftSchema } from "../application/settings-draft"
 import { useAccount } from "../../identity/presentation/AccountContext"
 import { CheckCircle2, MessageCircle, Save, Store } from "lucide-react"
 import { Link } from "react-router"
@@ -24,11 +32,30 @@ export default function RestaurantSettingsPage() {
 
   const services = useServices()
   const account = useAccount()
-  const readOnly = account?.restaurant.role === "STAFF"
+  const readOnly = !!account && !can(account.restaurant.role, "catalog:write")
 
   const mutation = useMutation()
 
-  const [revision, setRevision] = useState(menu.revision)
+  const draft = useFormDraft(
+    "settings",
+    {
+      revision: menu.revision,
+      name: menu.restaurant.name,
+      description: menu.restaurant.description,
+      whatsapp: formatField(menu.restaurant.whatsapp, "phone"),
+      address: menu.restaurant.address,
+      deliveryFee: moneyInput(menu.restaurant.deliveryFee),
+      minOrder: moneyInput(menu.restaurant.minOrder),
+      eta: menu.restaurant.eta,
+      logoRemoved: false,
+      coverRemoved: false,
+    },
+    settingsDraftSchema.parse,
+  )
+  const revision = draft.value.revision
+  const setRevision = (revision: number) =>
+    draft.set((current) => ({ ...current, revision }))
+  const [images, setImages] = useState<{ logoUrl?: string; coverUrl?: string }>({})
 
   const [saved, setSaved] = useState(false)
 
@@ -37,12 +64,12 @@ export default function RestaurantSettingsPage() {
     coverUrl: false,
   })
 
-  const [form, setForm] = useState<RestaurantSettingsInput>(() => ({
-    ...menu.restaurant,
-
-    deliveryFee: moneyInput(menu.restaurant.deliveryFee),
-    minOrder: moneyInput(menu.restaurant.minOrder),
-  }))
+  const form: RestaurantSettingsInput = {
+    ...draft.value,
+    logoUrl: images.logoUrl ?? (draft.value.logoRemoved ? "" : menu.restaurant.logoUrl),
+    coverUrl:
+      images.coverUrl ?? (draft.value.coverRemoved ? "" : menu.restaurant.coverUrl),
+  }
 
   const blocked =
     mutation.pending ||
@@ -54,7 +81,13 @@ export default function RestaurantSettingsPage() {
 
   function update(key: keyof RestaurantSettingsInput, value: string) {
     setSaved(false)
-    setForm((current) => ({ ...current, [key]: value }))
+    if (key === "logoUrl" || key === "coverUrl") {
+      setImages((current) => ({ ...current, [key]: value }))
+      draft.set((current) => ({
+        ...current,
+        [key === "logoUrl" ? "logoRemoved" : "coverRemoved"]: value === "",
+      }))
+    } else draft.set((current) => ({ ...current, [key]: value }))
   }
 
   async function submit(event: FormEvent) {
@@ -67,7 +100,7 @@ export default function RestaurantSettingsPage() {
     )
 
     if (result?.ok) {
-      setRevision(result.value.revision)
+      draft.reset({ ...draft.value, revision: result.value.revision })
       setSaved(true)
     }
   }
@@ -93,8 +126,17 @@ export default function RestaurantSettingsPage() {
         {label}
         {required ? " *" : ""}
       </span>
-      <input
+      <ValidatedInput
         aria-labelledby={`label-${key}`}
+        validation={
+          key === "whatsapp"
+            ? "phone"
+            : key === "deliveryFee" || key === "minOrder"
+              ? "money"
+              : key === "name"
+                ? "name"
+                : undefined
+        }
         value={form[key]}
         required={required}
         maxLength={max}
@@ -126,7 +168,8 @@ export default function RestaurantSettingsPage() {
         description="As informações que ajudam seus clientes a conhecer e pedir na sua loja."
       />
       <div className="settings-layout">
-        <form className="settings-form" onSubmit={(event) => void submit(event)}>
+        <ValidatedForm className="settings-form" onSubmit={(event) => void submit(event)}>
+          <DraftNotice draft={draft} />
           {saved && (
             <p role="status" className="success-notice">
               Configurações salvas.
@@ -165,7 +208,7 @@ export default function RestaurantSettingsPage() {
               )}
               <label className="field">
                 <span>Descrição da loja</span>
-                <textarea
+                <ValidatedTextarea
                   rows={3}
                   maxLength={1000}
                   placeholder="Conte um pouco sobre sua especialidade."
@@ -250,7 +293,7 @@ export default function RestaurantSettingsPage() {
               </div>
             </FormSection>
           </fieldset>
-        </form>
+        </ValidatedForm>
         <aside className="settings-guide" aria-label="Orientações de configuração">
           <span className="guide-icon">
             <Store size={25} aria-hidden="true" />

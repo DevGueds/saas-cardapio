@@ -2,8 +2,32 @@
   admin off
   auto_https off
   persist_config off
+  log default {
+    format filter {
+      wrap json
+      fields {
+        request delete
+        resp_headers delete
+      }
+    }
+  }
+}
+(api-backends) {
+  to api:3001 api-replica:3001
+  lb_policy least_conn
+  health_uri /api/v1/health/ready
+  health_interval 5s
+  health_timeout 2s
+  fail_duration 10s
+  max_fails 1
+  transport http {
+    dial_timeout 500ms
+    response_header_timeout 20s
+    keepalive 4s
+  }
 }
 :8080 {
+  encode zstd gzip
   header {
     X-Content-Type-Options nosniff
     X-Frame-Options DENY
@@ -13,7 +37,20 @@
     -Server
   }
   handle /api/* {
-    reverse_proxy api:3001
+    @reads method GET HEAD
+    handle @reads {
+      reverse_proxy {
+        import api-backends
+        lb_retries 2
+        lb_try_duration 3s
+        lb_try_interval 100ms
+      }
+    }
+    handle {
+      reverse_proxy {
+        import api-backends
+      }
+    }
   }
   handle {
     root * /srv

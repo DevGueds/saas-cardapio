@@ -1,3 +1,6 @@
+import { DeliveryController } from "../modules/delivery/presentation/delivery.controller.js"
+import { Bulkhead } from "../shared/application/bulkhead.js"
+import { CommerceController } from "../modules/commerce/presentation/commerce.controller.js"
 import { SessionGuard } from "../modules/identity/presentation/session-guard.js"
 import "reflect-metadata"
 import { Module } from "@nestjs/common"
@@ -25,13 +28,20 @@ export async function createApplication(config: ApiConfig) {
       IdentityController,
       CatalogController,
       OrdersController,
+      CommerceController,
+      DeliveryController,
       SystemController,
     ],
     providers: [
       { provide: RUNTIME, useValue: runtime },
       {
         provide: "database-lifecycle",
-        useValue: { onApplicationShutdown: () => runtime.db.close() },
+        useValue: {
+          onApplicationShutdown: () => {
+            runtime.redis.close()
+            return runtime.db.close()
+          },
+        },
       },
     ],
   })
@@ -39,7 +49,7 @@ export async function createApplication(config: ApiConfig) {
   const adapter = new FastifyAdapter({
     logger: false,
     allowErrorHandlerOverride: false,
-    trustProxy: false,
+    trustProxy: config.trustedProxies.length ? config.trustedProxies : false,
     bodyLimit: 15 * 1024 * 1024,
     requestTimeout: 15000,
     connectionTimeout: 10000,
@@ -58,17 +68,40 @@ export async function createApplication(config: ApiConfig) {
       origin: config.origins,
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "X-CSRF-Token", "Idempotency-Key"],
+      allowedHeaders: [
+        "Content-Type",
+        "X-CSRF-Token",
+        "Idempotency-Key",
+        "X-Order-Token",
+      ],
       maxAge: 600,
     })
     adapter.getInstance().addHook("onRoute", (route) => {
       const acceptsImages =
-        /^\/api\/v1\/restaurants\/[^/]+\/(settings|products(?:\/[^/]+)?)$/.test(route.url)
-      route.bodyLimit = acceptsImages ? 15 * 1024 * 1024 : 32 * 1024
+        /^\/api\/v1\/restaurants\/[^/]+\/(settings|combos|products(?:\/[^/]+)?)$/.test(
+          route.url,
+        )
+      route.bodyLimit = acceptsImages
+        ? 15 * 1024 * 1024
+        : route.url.endsWith("/delivery")
+          ? 256 * 1024
+          : 32 * 1024
+    })
+    const capacity = new Bulkhead(config.maxInFlight)
+    const releases = new WeakMap<object, () => void>()
+    adapter.getInstance().addHook("onResponse", async (request) => {
+      releases.get(request)?.()
+      releases.delete(request)
+    })
+    adapter.getInstance().addHook("onRequestAbort", async (request) => {
+      releases.get(request)?.()
+      releases.delete(request)
     })
     adapter.getInstance().addHook("onRequest", async (request, reply) => {
       reply.header("Cache-Control", "no-store")
       try {
+        if (!request.url.startsWith("/api/v1/health/"))
+          releases.set(request, capacity.enter())
         const origin = request.headers.origin
         const unsafe = !["GET", "HEAD", "OPTIONS"].includes(request.method)
         if (
@@ -82,9 +115,15 @@ export async function createApplication(config: ApiConfig) {
         )
           throw new Failure("VALIDATION", "Envie os dados no formato JSON.")
         if (request.method !== "OPTIONS" && !request.url.startsWith("/api/v1/health/"))
-          await runtime.limiter.consume("http:" + request.ip, 300, 60)
+          await runtime.limiter.consume("http:" + request.ip, config.httpRateLimit, 60)
       } catch (cause) {
         const error = runtime.operation.error("http.boundary", cause)
+        if (
+          ["RATE_LIMITED", "CAPABILITY_UNAVAILABLE", "STORAGE_UNAVAILABLE"].includes(
+            error.code,
+          )
+        )
+          reply.header("Retry-After", "5")
         await reply.status(errorStatus(error)).send({ ok: false, error })
       }
     })
@@ -102,11 +141,13 @@ export async function createApplication(config: ApiConfig) {
       runtime,
       close: async () => {
         await app.close()
+        runtime.redis.close()
         await runtime.db.close()
       },
     }
   } catch (cause) {
     await app.close()
+    runtime.redis.close()
     await runtime.db.close()
     throw cause
   }

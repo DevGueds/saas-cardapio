@@ -4,7 +4,8 @@ import type { OrderStatus, OrderView } from "@cardapio/contracts"
 import { Failure, requireValid } from "@cardapio/domain/failure"
 const transitions: Record<OrderStatus, readonly OrderStatus[]> = {
   NEW: ["PREPARING", "CANCELLED"],
-  PREPARING: ["OUT_FOR_DELIVERY", "CANCELLED"],
+  PREPARING: ["READY", "OUT_FOR_DELIVERY", "CANCELLED"],
+  READY: ["OUT_FOR_DELIVERY", "COMPLETED", "CANCELLED"],
   OUT_FOR_DELIVERY: ["COMPLETED"],
   COMPLETED: [],
   CANCELLED: [],
@@ -32,9 +33,10 @@ export function assertOrderSnapshot(order: OrderView) {
     return sum + item.unitPrice * item.quantity
   }, 0)
   assertCents(subtotal, "subtotal", true)
-  assertCents(order.total, "total", true)
+  assertCents(order.total, "total")
   requireValid(
-    subtotal === order.subtotal && order.total === subtotal + order.deliveryFee,
+    subtotal === order.subtotal &&
+      order.total === subtotal + order.deliveryFee - (order.discount ?? 0),
     "Valores do pedido inconsistentes.",
   )
   if (order.customer.payment === "Dinheiro" && order.customer.cashChange)

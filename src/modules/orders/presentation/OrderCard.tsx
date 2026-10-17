@@ -1,7 +1,9 @@
+import { canAdvance } from "@cardapio/domain/permissions"
+import { useAccount } from "../../identity/presentation/AccountContext"
 import type { OrderStatus, OrderView } from "@cardapio/contracts"
 import { Clock3, ArrowRight } from "lucide-react"
 import { formatMoney } from "../../../shared/domain/money"
-import { nextStep, orderTime, shortOrder } from "./order-labels"
+import { orderAction, orderTime, shortOrder } from "./order-labels"
 export default function OrderCard({
   order,
   disabled,
@@ -13,7 +15,10 @@ export default function OrderCard({
   onDetails(): void
   onTransition(status: OrderStatus): void
 }) {
-  const action = nextStep[order.status]
+  const account = useAccount()
+  const next = orderAction(order)
+  const action =
+    next && account && canAdvance(account.restaurant.role, next.status) ? next : null
   return (
     <article className="live-order-card">
       <header>
@@ -24,9 +29,15 @@ export default function OrderCard({
         </span>
       </header>
       <h3>{order.customer.name}</h3>
+      <p className="order-fulfillment">
+        {order.fulfillment?.mode === "PICKUP"
+          ? "Retirada no balcão"
+          : order.region || "Entrega"}
+        {order.eta && <small>Previsão: {order.eta}</small>}
+      </p>
       <ul>
-        {order.items.slice(0, 3).map((item) => (
-          <li key={item.productId}>
+        {order.items.slice(0, 3).map((item, index) => (
+          <li key={index}>
             <strong>{item.quantity}×</strong> {item.name}
           </li>
         ))}

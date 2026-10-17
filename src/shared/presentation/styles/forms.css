@@ -318,3 +318,31 @@
     padding: 1.15rem;
   }
 }
+
+/* Validation feedback shares the form layout and remains readable at mobile widths. */
+.field-error {
+  color: #a32626;
+  font-size: 0.83rem;
+  line-height: 1.45;
+  display: block;
+  overflow-wrap: anywhere;
+}
+.field-validation-summary {
+  padding: 0.85rem 1rem;
+  border: 1px solid #e3b3b3;
+  border-radius: 12px;
+  background: #fff2f2;
+  color: #852323;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+select[aria-invalid="true"] {
+  border-color: #b22d2d;
+}
+input[aria-invalid="true"]:focus,
+textarea[aria-invalid="true"]:focus,
+select[aria-invalid="true"]:focus {
+  outline-color: #b22d2d;
+}

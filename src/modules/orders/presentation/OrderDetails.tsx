@@ -1,3 +1,6 @@
+import { can, canAdvance } from "@cardapio/domain/permissions"
+import { useAccount } from "../../identity/presentation/AccountContext"
+import CourierAssignment from "./CourierAssignment"
 import { useState } from "react"
 import type { OrderView } from "@cardapio/contracts"
 import type { AppError } from "../../../shared/application/result"
@@ -23,7 +26,11 @@ export default function OrderDetails({
   onCancel(): void
 }) {
   const [confirming, setConfirming] = useState(false)
-  const cancellable = ["NEW", "PREPARING"].includes(order.status)
+  const account = useAccount()
+  const cancellable =
+    ["NEW", "PREPARING", "READY"].includes(order.status) &&
+    !!account &&
+    canAdvance(account.restaurant.role, "CANCELLED")
   return (
     <Dialog title={`Pedido #${shortOrder(order.id)}`} onClose={onClose} busy={busy}>
       <div className="order-details">
@@ -43,14 +50,19 @@ export default function OrderDetails({
         <section>
           <h3>Itens do pedido</h3>
           <ul>
-            {order.items.map((item) => (
-              <li key={item.productId}>
+            {order.items.map((item, index) => (
+              <li key={index}>
                 <div>
                   <strong>
                     {item.quantity}× {item.name}
                   </strong>
                   <span>{formatMoney(item.quantity * item.unitPrice)}</span>
                 </div>
+                {item.components?.map((c, n) => (
+                  <small className="combo-component" key={n}>
+                    {c}
+                  </small>
+                ))}
                 {item.note && <p>{item.note}</p>}
               </li>
             ))}
@@ -65,6 +77,12 @@ export default function OrderDetails({
             <dt>Entrega</dt>
             <dd>{formatMoney(order.deliveryFee)}</dd>
           </div>
+          {!!order.discount && (
+            <div>
+              <dt>{order.promotionName ?? "Desconto"}</dt>
+              <dd>−{formatMoney(order.discount)}</dd>
+            </div>
+          )}
           <div>
             <dt>Total</dt>
             <dd>
@@ -80,6 +98,29 @@ export default function OrderDetails({
           )}
           <p className="field-help">O sistema não processa nem confirma pagamentos.</p>
         </section>
+        {account &&
+          can(account.restaurant.role, "orders:dispatch") &&
+          order.fulfillment?.mode !== "PICKUP" &&
+          ["NEW", "PREPARING", "READY"].includes(order.status) && (
+            <CourierAssignment
+              key={`${order.id}:${order.revision}`}
+              order={order}
+              onSaved={onRetry}
+            />
+          )}
+        {order.history && (
+          <section>
+            <h3>Histórico</h3>
+            <ul className="order-history">
+              {order.history.map((event, index) => (
+                <li key={index}>
+                  <strong>{orderLabels[event.status]}</strong>
+                  <time>{orderTime(event.at)}</time>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {cancellable &&
           (confirming ? (
             <div className="info-notice">

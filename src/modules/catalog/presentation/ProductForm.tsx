@@ -1,3 +1,11 @@
+import { moneyField } from "@cardapio/contracts"
+import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
+import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
+import ValidatedTextarea from "../../../shared/presentation/form-validation/ValidatedTextarea"
+import ValidatedSelect from "../../../shared/presentation/form-validation/ValidatedSelect"
+import { useFormDraft } from "../../../app/presentation/use-form-draft"
+import DraftNotice from "../../../shared/presentation/DraftNotice"
+import { productDraftSchema } from "../application/product-draft"
 import { useState, type FormEvent } from "react"
 
 import { useMenu } from "../../../app/presentation/MenuScope"
@@ -31,29 +39,54 @@ export default function ProductForm({
 
   const mutation = useMutation()
 
-  const [revision, setRevision] = useState(menu.revision)
-
-  const [name, setName] = useState(product?.name ?? "")
-
-  const [description, setDescription] = useState(product?.description ?? "")
-
-  const [price, setPrice] = useState(product ? moneyInput(product.price) : "")
-
-  const [categoryId, setCategoryId] = useState(
-    product?.categoryId ?? menu.categories[0]?.id ?? "",
+  const draft = useFormDraft(
+    `product:${product?.id ?? "new"}`,
+    {
+      revision: menu.revision,
+      name: product?.name ?? "",
+      description: product?.description ?? "",
+      price: product ? moneyInput(product.price) : "",
+      categoryId: product?.categoryId ?? menu.categories[0]?.id ?? "",
+      newCategory: false,
+      categoryName: "",
+      available: product?.available ?? true,
+      popular: product?.popular ?? false,
+      imageRemoved: false,
+    },
+    productDraftSchema.parse,
   )
-
-  const [newCategory, setNewCategory] = useState(false)
-
-  const [categoryName, setCategoryName] = useState("")
-
-  const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "")
-
+  const {
+    revision,
+    name,
+    description,
+    price,
+    categoryId,
+    newCategory,
+    categoryName,
+    available,
+    popular,
+  } = draft.value
+  const field =
+    <K extends keyof typeof draft.value>(key: K) =>
+    (value: (typeof draft.value)[K]) =>
+      draft.set((current) => ({ ...current, [key]: value }))
+  const setRevision = field("revision"),
+    setName = field("name"),
+    setDescription = field("description"),
+    setPrice = field("price"),
+    setCategoryId = field("categoryId"),
+    setNewCategory = field("newCategory"),
+    setCategoryName = field("categoryName"),
+    setAvailable = field("available"),
+    setPopular = field("popular")
+  const [pickedImage, setPickedImage] = useState<string | null>(null)
+  const imageUrl =
+    pickedImage ?? (draft.value.imageRemoved ? "" : (product?.imageUrl ?? ""))
+  const setImageUrl = (value: string) => {
+    setPickedImage(value)
+    field("imageRemoved")(value === "")
+  }
   const [imageBusy, setImageBusy] = useState(false)
-
-  const [available, setAvailable] = useState(product?.available ?? true)
-
-  const [popular, setPopular] = useState(product?.popular ?? false)
 
   const blocked = mutation.pending || imageBusy || loading || !!loadError
 
@@ -80,7 +113,10 @@ export default function ProductForm({
       }),
     )
 
-    if (result?.ok) onSaved()
+    if (result?.ok) {
+      draft.clear()
+      onSaved()
+    }
   }
 
   async function refresh() {
@@ -98,7 +134,8 @@ export default function ProductForm({
       onClose={onClose}
       busy={mutation.pending || imageBusy}
     >
-      <form className="editor-form" onSubmit={(event) => void submit(event)}>
+      <ValidatedForm className="editor-form" onSubmit={(event) => void submit(event)}>
+        <DraftNotice draft={draft} />
         {loadError && <ErrorNotice error={loadError} onRetry={() => void refresh()} />}
         {mutation.error && (
           <ErrorNotice error={mutation.error} onRetry={() => void refresh()} />
@@ -115,10 +152,11 @@ export default function ProductForm({
         <fieldset disabled={mutation.pending || !!loadError}>
           <label className="field">
             <span>Nome do produto *</span>
-            <input
+            <ValidatedInput
               required
               placeholder="Ex.: Smash Clássico"
               maxLength={120}
+              validation="name"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
@@ -126,7 +164,7 @@ export default function ProductForm({
           <div className="form-row">
             <label className="field">
               <span>Categoria *</span>
-              <select
+              <ValidatedSelect
                 value={newCategory ? "__new__" : categoryId}
                 onChange={(event) => {
                   setNewCategory(event.target.value === "__new__")
@@ -142,14 +180,17 @@ export default function ProductForm({
                   </option>
                 ))}
                 <option value="__new__">+ Nova categoria</option>
-              </select>
+              </ValidatedSelect>
             </label>
             <label className="field">
               <span>Preço de venda *</span>
-              <input
+              <ValidatedInput
                 required
                 inputMode="decimal"
                 placeholder="28,90"
+                validation="money"
+                schema={moneyField(true)}
+                maxLength={20}
                 value={price}
                 onChange={(event) => setPrice(event.target.value)}
               />
@@ -158,9 +199,10 @@ export default function ProductForm({
           {newCategory && (
             <label className="field">
               <span>Nome da nova categoria *</span>
-              <input
+              <ValidatedInput
                 required
                 maxLength={80}
+                validation="name"
                 value={categoryName}
                 onChange={(event) => setCategoryName(event.target.value)}
               />
@@ -168,7 +210,7 @@ export default function ProductForm({
           )}
           <label className="field">
             <span>Descrição</span>
-            <textarea
+            <ValidatedTextarea
               placeholder="Ingredientes, tamanho e o que torna este produto especial."
               rows={3}
               maxLength={2000}
@@ -183,10 +225,14 @@ export default function ProductForm({
             reader={services.images}
             onBusyChange={setImageBusy}
           />
+          <p className="field-help">
+            Textos e opções são preservados. Fotos novas precisam ser selecionadas
+            novamente após recarregar.
+          </p>
           <div className="product-options">
             <h3>Como aparece no cardápio</h3>
             <label className="check-field">
-              <input
+              <ValidatedInput
                 type="checkbox"
                 checked={available}
                 onChange={(event) => setAvailable(event.target.checked)}
@@ -194,7 +240,7 @@ export default function ProductForm({
               Disponível no cardápio
             </label>
             <label className="check-field">
-              <input
+              <ValidatedInput
                 type="checkbox"
                 checked={popular}
                 onChange={(event) => setPopular(event.target.checked)}
@@ -216,7 +262,7 @@ export default function ProductForm({
             {mutation.pending ? "Salvando…" : "Salvar produto"}
           </button>
         </div>
-      </form>
+      </ValidatedForm>
     </Dialog>
   )
 }

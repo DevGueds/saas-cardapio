@@ -1,3 +1,6 @@
+import { passwordField, currentPasswordField } from "@cardapio/contracts"
+import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
+import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
 import { useEffect, useState, type FormEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router"
 import { ArrowRight, UtensilsCrossed } from "lucide-react"
@@ -10,7 +13,10 @@ export default function LoginPage() {
   const { auth } = useServices()
   const navigate = useNavigate(),
     location = useLocation()
-  const [signup, setSignup] = useState(false),
+  const [accountOnly, setAccountOnly] = useState(
+    new URLSearchParams(location.search).get("equipe") === "1",
+  )
+  const [signup, setSignup] = useState(accountOnly),
     [signupEnabled, setSignupEnabled] = useState(false)
   const [configError, setConfigError] = useState<AppError | null>(null)
   const mutation = useMutation()
@@ -46,6 +52,7 @@ export default function LoginPage() {
         ? auth.register({
             ...credentials,
             name: get("name"),
+            accountOnly,
             restaurantName: get("restaurantName"),
             slug: get("slug"),
           })
@@ -86,25 +93,40 @@ export default function LoginPage() {
         <div className="account-card">
           <p className="eyebrow">Área da loja</p>
           <h2 id="account-title">
-            {signup ? "Vamos abrir sua loja?" : "Bom ter você por aqui"}
+            {signup
+              ? accountOnly
+                ? "Vamos entrar na equipe?"
+                : "Vamos abrir sua loja?"
+              : "Bom ter você por aqui"}
           </h2>
           <p className="page-description">
             {signup
-              ? "Crie sua conta e comece com um cardápio vazio. Você abre a loja quando estiver tudo pronto."
+              ? accountOnly
+                ? "Crie sua conta pessoal. O proprietário poderá liberar seu acesso pelo e-mail cadastrado."
+                : "Crie sua conta e comece com um cardápio vazio. Você abre a loja quando estiver tudo pronto."
               : "Entre para cuidar do cardápio e acompanhar os pedidos."}
           </p>
           {configError && <ErrorNotice error={configError} />}
-          <form className="account-form" onSubmit={(event) => void submit(event)}>
+          <ValidatedForm
+            className="account-form"
+            onSubmit={(event) => void submit(event)}
+          >
             <fieldset disabled={mutation.pending}>
               {signup && (
                 <label className="field">
                   <span>Seu nome *</span>
-                  <input name="name" required maxLength={120} autoComplete="name" />
+                  <ValidatedInput
+                    name="name"
+                    validation="personName"
+                    required
+                    maxLength={120}
+                    autoComplete="name"
+                  />
                 </label>
               )}
               <label className="field">
                 <span>E-mail *</span>
-                <input
+                <ValidatedInput
                   name="email"
                   type="email"
                   required
@@ -115,13 +137,13 @@ export default function LoginPage() {
               </label>
               <label className="field">
                 <span id="auth-password-label">Senha *</span>
-                <input
+                <ValidatedInput
                   aria-labelledby="auth-password-label"
                   name="password"
+                  schema={signup ? passwordField : currentPasswordField}
                   type="password"
                   required
                   minLength={signup ? 8 : 1}
-                  maxLength={signup ? 128 : 512}
                   autoComplete={signup ? "new-password" : "current-password"}
                   aria-describedby={signup ? "password-help" : undefined}
                 />
@@ -131,18 +153,30 @@ export default function LoginPage() {
                   </small>
                 )}
               </label>
-              {signup && <StoreFields />}
+              {signup && (
+                <label className="check-field">
+                  <ValidatedInput
+                    type="checkbox"
+                    checked={accountOnly}
+                    onChange={(e) => setAccountOnly(e.target.checked)}
+                  />{" "}
+                  Faço parte de uma equipe; não quero criar uma loja
+                </label>
+              )}
+              {signup && !accountOnly && <StoreFields />}
             </fieldset>
             {mutation.error && <ErrorNotice error={mutation.error} />}
             <button className="primary-button" disabled={mutation.pending}>
               {mutation.pending
                 ? "Aguarde…"
                 : signup
-                  ? "Criar conta e loja"
+                  ? accountOnly
+                    ? "Criar minha conta de equipe"
+                    : "Criar conta e loja"
                   : "Entrar na minha conta"}
               <ArrowRight size={18} aria-hidden="true" />
             </button>
-          </form>
+          </ValidatedForm>
           {signupEnabled && (
             <button
               className="text-button"

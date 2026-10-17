@@ -1,3 +1,6 @@
+import { webcrypto } from "node:crypto"
+import { createReduxDrafts } from "../src/shared/infrastructure/redux-drafts"
+import { TestStorage } from "./helpers"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { Executor } from "../src/shared/application/execute"
@@ -81,8 +84,15 @@ describe("HTTP adapters fail closed", () => {
       .mockRejectedValueOnce(new Error("offline"))
       .mockImplementation(async () => response(result))
     vi.stubGlobal("fetch", fetcher)
+    vi.stubGlobal("crypto", webcrypto)
+    const storage = new TestStorage()
     const client = new ApiClient("http://localhost:3001/api/v1", executor()),
-      checkout = new HttpCheckout(client, (id) => id, executor())
+      checkout = new HttpCheckout(
+        client,
+        (id) => id,
+        executor(),
+        createReduxDrafts(() => storage),
+      )
     const details = {
       name: "Teste",
       phone: "11999999999",
@@ -93,11 +103,47 @@ describe("HTTP adapters fail closed", () => {
     }
     const cart = { restaurantId: "store-a", lines: [] }
     await checkout.execute("store-a", 1, cart, details)
-    await checkout.execute("store-a", 1, cart, details)
+    await new HttpCheckout(
+      client,
+      (id) => id,
+      executor(),
+      createReduxDrafts(() => storage),
+    ).execute("store-a", 1, cart, details)
     await checkout.execute("store-b", 1, { ...cart, restaurantId: "store-b" }, details)
     const headers = fetcher.mock.calls.map((call) => call[1].headers)
     expect(headers[0]["Idempotency-Key"]).toBe(headers[1]["Idempotency-Key"])
     expect(headers[1]["Idempotency-Key"]).not.toBe(headers[2]["Idempotency-Key"])
+    vi.unstubAllGlobals()
+  })
+  it("recovers a pending receipt independently of cart validity and rejects corrupt attempts", async () => {
+    const storage = new TestStorage(),
+      drafts = createReduxDrafts(() => storage)
+    const key = "api:customer:store-a:attempt",
+      attempt = { signature: "a".repeat(64), key: webcrypto.randomUUID() }
+    drafts.set(key, attempt)
+    const receipt = {
+      orderId: webcrypto.randomUUID(),
+      url: "",
+      revision: 2,
+      trackingToken: "b".repeat(64),
+    }
+    const fetcher = vi
+      .fn()
+      .mockImplementation(async () => response({ ok: true, value: receipt }))
+    vi.stubGlobal("fetch", fetcher)
+    const checkout = new HttpCheckout(
+      new ApiClient("http://localhost:3001/api/v1", executor()),
+      (id) => id,
+      executor(),
+      drafts,
+    )
+    expect(checkout.hasPending("store-a")).toBe(true)
+    expect(await checkout.recover("store-a")).toEqual({ ok: true, value: receipt })
+    expect(fetcher.mock.calls[0][1].method).toBe("GET")
+    expect(fetcher.mock.calls[0][1].headers["Idempotency-Key"]).toBe(attempt.key)
+    drafts.set(key, { key: "invalid" })
+    expect((await checkout.recover("store-a")).ok).toBe(false)
+    expect(fetcher).toHaveBeenCalledTimes(1)
     vi.unstubAllGlobals()
   })
   it("settings serialize only the command fields, excluding entity identity and state", async () => {

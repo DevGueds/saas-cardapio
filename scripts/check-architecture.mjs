@@ -33,6 +33,17 @@ for (const file of files(root)) {
   )
 
   function inspect(node) {
+    if (
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+      ["input", "textarea", "select", "form"].includes(node.tagName.getText(ast)) &&
+      !relative.startsWith("shared/presentation/form-validation/") &&
+      !(
+        relative === "shared/presentation/ImagePicker.tsx" &&
+        node.tagName.getText(ast) === "input"
+      )
+    ) {
+      failures.push(`${relative}: use os controles compartilhados com validação Zod`)
+    }
     if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
       const specifier = node.moduleSpecifier
 

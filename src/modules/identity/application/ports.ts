@@ -4,6 +4,7 @@ export interface IdentityService {
   session(): Promise<Result<SessionView>>
   login(input: { email: string; password: string }): Promise<Result<SessionView>>
   register(input: {
+    accountOnly?: boolean
     name: string
     email: string
     password: string

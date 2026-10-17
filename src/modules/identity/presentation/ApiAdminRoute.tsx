@@ -1,3 +1,4 @@
+import { can, roleLabels } from "@cardapio/domain/permissions"
 import { useCallback, useEffect, useState } from "react"
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router"
 import { ArrowRight, Plus, Store } from "lucide-react"
@@ -125,18 +126,12 @@ export default function ApiAdminRoute() {
           <Link
             className="account-store-card"
             key={store.id}
-            to={`/admin/${store.role === "STAFF" ? "orders" : "menu"}?restaurant=${store.id}`}
+            to={`/admin/${!can(store.role, "catalog:write") ? "orders" : "menu"}?restaurant=${store.id}`}
           >
             <Store size={28} aria-hidden="true" />
             <h2>{store.name}</h2>
             <span>/menu/{store.slug}</span>
-            <small>
-              {store.role === "OWNER"
-                ? "Proprietário"
-                : store.role === "MANAGER"
-                  ? "Gerente"
-                  : "Atendimento"}
-            </small>
+            <small>{roleLabels[store.role]}</small>
             <strong>
               Abrir painel <ArrowRight size={18} aria-hidden="true" />
             </strong>
@@ -145,9 +140,14 @@ export default function ApiAdminRoute() {
       </div>
       {!data.stores.length && (
         <p className="info-notice">
-          Sua conta ainda não tem lojas disponíveis. Crie uma loja para começar.
+          Sua conta ainda não tem lojas disponíveis. Se você faz parte de uma equipe,
+          informe seu e-mail ao proprietário para ele liberar o acesso. Você também pode
+          criar sua própria loja.
         </p>
       )}
+      <button className="secondary-button" onClick={() => void reload()}>
+        Atualizar meus acessos
+      </button>
       <button className="primary-button" onClick={() => setCreating(true)}>
         <Plus size={18} aria-hidden="true" />
         Criar nova loja

@@ -2,6 +2,7 @@ import { Failure } from "@cardapio/domain/failure"
 import {
   loginSchema,
   registrationSchema,
+  accountRegistrationSchema,
   passwordChangeSchema,
   type SessionView,
 } from "@cardapio/contracts"
@@ -46,7 +47,7 @@ export class Authentication {
     }
     return { token, csrfToken, record }
   }
-  register(input: unknown, ip: string) {
+  register(input: unknown, ip: string, accountOnly = false) {
     return this.operation.run("identity.register", async () => {
       if (!this.policy.signupEnabled)
         throw new Failure(
@@ -54,7 +55,9 @@ export class Authentication {
           "Novos cadastros estão desabilitados neste ambiente.",
         )
       await this.limiter.consume("register:" + ip, 5, 900)
-      const data = validate(registrationSchema, input)
+      const data = accountOnly
+        ? { ...validate(accountRegistrationSchema, input), restaurantName: "", slug: "" }
+        : validate(registrationSchema, input)
       const user = {
         id: this.ids.next(),
         name: data.name,
@@ -66,12 +69,14 @@ export class Authentication {
       try {
         await this.repository.createAccount(
           user,
-          {
-            tenantId: this.ids.next(),
-            restaurantId: this.ids.next(),
-            name: data.restaurantName,
-            slug: data.slug,
-          },
+          accountOnly
+            ? null
+            : {
+                tenantId: this.ids.next(),
+                restaurantId: this.ids.next(),
+                name: data.restaurantName,
+                slug: data.slug,
+              },
           session.record,
         )
       } catch (error) {

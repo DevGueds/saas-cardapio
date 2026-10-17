@@ -1,3 +1,6 @@
+import { can } from "@cardapio/domain/permissions"
+import { useAccount } from "../../modules/identity/presentation/AccountContext"
+import { PackagePlus, Bike, Users } from "lucide-react"
 import { useServices } from "./ServicesProvider"
 import AccountActions from "../../modules/identity/presentation/AccountActions"
 import { NavLink, Link } from "react-router"
@@ -15,6 +18,7 @@ import ImageWithFallback from "../../shared/presentation/ImageWithFallback"
 import { useMenu } from "./MenuScope"
 
 export default function AdminNavigation({ onNavigate }: { onNavigate?: () => void }) {
+  const account = useAccount()
   const { menu } = useMenu()
   const { mode } = useServices()
   const api = mode === "api"
@@ -65,6 +69,36 @@ export default function AdminNavigation({ onNavigate }: { onNavigate?: () => voi
           <Settings size={20} aria-hidden="true" />
           <span>Configurações</span>
         </NavLink>
+        {(!account || can(account.restaurant.role, "catalog:write")) && (
+          <>
+            <NavLink
+              to={`/admin/offers${query}`}
+              onClick={onNavigate}
+              className={({ isActive }) => (isActive ? "is-active" : "")}
+            >
+              <PackagePlus size={20} />
+              <span>Combos e promoções</span>
+            </NavLink>
+            <NavLink
+              to={`/admin/delivery${query}`}
+              onClick={onNavigate}
+              className={({ isActive }) => (isActive ? "is-active" : "")}
+            >
+              <Bike size={20} />
+              <span>Entregas e retirada</span>
+            </NavLink>
+          </>
+        )}
+        {can(account?.restaurant.role, "members:write") && (
+          <NavLink
+            to={`/admin/team${query}`}
+            onClick={onNavigate}
+            className={({ isActive }) => (isActive ? "is-active" : "")}
+          >
+            <Users size={20} />
+            <span>Equipe e permissões</span>
+          </NavLink>
+        )}
         <button type="button" disabled>
           <BarChart3 size={20} aria-hidden="true" />
           <span>

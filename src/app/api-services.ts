@@ -1,3 +1,7 @@
+import { HttpTeam } from "../modules/identity/infrastructure/http-team"
+import { quoteSchema, trackingSchema } from "@cardapio/contracts"
+import { HttpCommerce } from "../modules/commerce/infrastructure/http-commerce"
+import { browserDrafts } from "./drafts"
 import type { ApplicationServices } from "./presentation/ServicesProvider"
 import { Executor } from "../shared/application/execute"
 import { ApiClient } from "../shared/infrastructure/api-client"
@@ -11,16 +15,36 @@ import { HttpOrders } from "../modules/orders/infrastructure/http-orders"
 export function apiServices(): ApplicationServices {
   const executor = new Executor(consoleDiagnostics, browserIds)
   const client = new ApiClient(import.meta.env.VITE_API_BASE_URL, executor)
-  const auth = new HttpIdentity(client)
-  const catalog = new HttpCatalog(client, new MenuRefresh())
+  const drafts = browserDrafts()
+  const auth = new HttpIdentity(client, drafts)
+  client.subscribeExpired(() => drafts.clearPrefix("api:admin:"))
+  const refresh = new MenuRefresh()
+  const catalog = new HttpCatalog(client, refresh)
+  const commerce = new HttpCommerce(client, refresh)
   return {
     mode: "api",
+    drafts,
     auth,
+    team: new HttpTeam(client),
+    commerce,
+    maps: commerce,
+    quote: (slug, revision, cart, options) =>
+      client.request(
+        `/public/restaurants/${encodeURIComponent(slug)}/checkout/quote`,
+        quoteSchema,
+        { method: "POST", body: { expectedRevision: revision, cart, options } },
+      ),
+    tracking: (slug, id, token) =>
+      client.request(
+        `/public/restaurants/${encodeURIComponent(slug)}/orders/${encodeURIComponent(id)}`,
+        trackingSchema,
+        { trackingToken: token },
+      ),
     orders: new HttpOrders(client),
     menu: catalog,
     catalog,
     restaurant: catalog,
-    checkout: new HttpCheckout(client, (id) => catalog.slug(id), executor),
+    checkout: new HttpCheckout(client, (id) => catalog.slug(id), executor, drafts),
     images: new BrowserImageReader(executor),
     checkAdmin: async () => {
       const result = await auth.session()

@@ -1,7 +1,8 @@
+import { quoteOrder, type CheckoutOptions } from "./quote.js"
 import { Failure, requireValid } from "./failure.js"
 import { assertCents, parseMoney } from "./money.js"
 import { brazilianPhone, text } from "./validation.js"
-import { validateCart, type Cart } from "./cart.js"
+import { type Cart } from "./cart.js"
 import { orderMessage, type DeliveryDetails } from "./order-message.js"
 import type { MenuDocument } from "./menu-document.js"
 
@@ -11,7 +12,7 @@ export function validateCheckout(
   expectedRevision: number,
   cart: Cart,
   input: DeliveryDetails,
-  options: { requireWhatsapp?: boolean } = {},
+  options: CheckoutOptions & { requireWhatsapp?: boolean; now?: number } = {},
 ) {
   if (menu.revision !== expectedRevision)
     throw new Failure(
@@ -24,7 +25,9 @@ export function validateCheckout(
     "A loja está fechada e não está recebendo pedidos.",
   )
 
-  const subtotal = validateCart(cart, restaurantId, menu.products)
+  requireValid(restaurantId === menu.restaurant.id, "Carrinho de outra loja.")
+  const quote = quoteOrder(menu, cart, options, options.now)
+  const { subtotal, total } = quote
 
   requireValid(
     subtotal >= menu.restaurant.minOrder,
@@ -46,7 +49,10 @@ export function validateCheckout(
     name: text(input.name, "name", 120, true),
     phone: brazilianPhone(input.phone, "phone"),
 
-    address: text(input.address, "address", 500, true),
+    address:
+      quote.fulfillment.mode === "PICKUP"
+        ? "Retirada na loja"
+        : text(input.address, "address", 500, true),
     notes: text(input.notes, "notes", 500),
 
     cashChange: text(input.cashChange, "cashChange", 30),
@@ -59,8 +65,6 @@ export function validateCheckout(
   )
 
   cart.lines.forEach((line) => text(line.note, "note", 500))
-
-  const total = subtotal + menu.restaurant.deliveryFee
 
   assertCents(total, "total")
 
@@ -76,11 +80,12 @@ export function validateCheckout(
   )
 
   return {
+    quote,
     customer,
     subtotal,
     total,
     change,
     phone,
-    message: orderMessage(menu, cart, customer, subtotal, total, change),
+    message: orderMessage(menu, cart, customer, subtotal, total, change, quote),
   }
 }

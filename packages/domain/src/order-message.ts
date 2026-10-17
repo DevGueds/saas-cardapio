@@ -1,3 +1,4 @@
+import type { Quote } from "./quote.js"
 import type { Restaurant } from "./restaurant.js"
 
 import type { Product } from "./catalog.js"
@@ -25,14 +26,19 @@ export function orderMessage(
   subtotal: number,
   total: number,
   change?: number,
+  quote?: Quote,
 ): string {
-  const items = cart.lines.map((line) => {
-    const product = menu.products.find((item) => item.id === line.productId)!
-
-    return `${line.quantity}x ${product.name} — ${formatMoney(product.price * line.quantity)}${
-      line.note.trim() ? `\n  Obs.: ${line.note.trim()}` : ""
-    }`
-  })
+  const lines =
+    quote?.items ??
+    cart.lines.map((line) => ({
+      ...line,
+      name: menu.products.find((p) => p.id === line.productId)!.name,
+      components: [] as string[],
+    }))
+  const items = lines.map(
+    (line) =>
+      `${line.quantity}x ${line.name} — ${formatMoney(line.unitPrice * line.quantity)}${line.components?.length ? "\n  " + line.components.join("; ") : ""}${line.note.trim() ? `\n  Obs.: ${line.note.trim()}` : ""}`,
+  )
 
   return [
     `NOVO PEDIDO — ${menu.restaurant.name}`,
@@ -42,8 +48,18 @@ export function orderMessage(
     "",
 
     `Subtotal: ${formatMoney(subtotal)}`,
-    `Taxa de entrega: ${formatMoney(menu.restaurant.deliveryFee)}`,
+    `Taxa de entrega: ${formatMoney(quote?.deliveryFee ?? menu.restaurant.deliveryFee)}`,
 
+    ...(quote?.discount
+      ? [`Desconto (${quote.promotionName}): -${formatMoney(quote.discount)}`]
+      : []),
+    ...(quote
+      ? [
+          `Modalidade: ${quote.fulfillment.mode === "PICKUP" ? "Retirada" : "Entrega"}`,
+          `Região: ${quote.region}`,
+          `Prazo estimado: ${quote.eta}`,
+        ]
+      : []),
     `TOTAL: ${formatMoney(total)}`,
     "",
     "Dados para entrega:",

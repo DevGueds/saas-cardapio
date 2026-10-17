@@ -33,7 +33,7 @@ export default [
           patterns: [
             {
               group: ["*supabase*", "@prisma/*", "pg", "mysql*"],
-              message: "Persist?ncia remota pertence a uma etapa futura e ao backend.",
+              message: "Persistência remota deve ser acessada somente pelo backend.",
             },
           ],
         },
