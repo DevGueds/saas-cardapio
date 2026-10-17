@@ -13,7 +13,7 @@ flowchart LR
   DEMO --> CORE
   USE --> PORTS[Portas de repositório e autorização]
   PRISMA[Adaptadores Prisma] -. implementam .-> PORTS
-  PRISMA --> MYSQL[(MySQL)]
+  PRISMA --> POSTGRES[(PostgreSQL / Supabase)]
 ```
 
 ## Mapa de responsabilidades
@@ -59,6 +59,8 @@ Casos de uso retornam `Result<T, AppError>` discriminado por `ok`. O erro conté
 
 Tenant é a organização; restaurant é a unidade/loja. Uma sessão identifica o usuário, não autoriza um tenant por si só. `AccessPolicy` consulta sessão ativa, membership ativo e tenant ativo antes de liberar o escopo `{ tenantId, restaurantId }`. Acesso a loja alheia devolve 404. Roles limitam operações dentro do escopo autorizado.
 
+O banco de dados relacional oficial da aplicação é o **PostgreSQL (via Supabase)**. O Prisma ORM é utilizado para abstrair o acesso, mapeando os modelos com a convenção de letras minúsculas e plurais (ex: `@@map("restaurants")`). Consultas de baixo nível (`$queryRaw`), utilizadas para concorrência e bloqueios transacionais (`FOR UPDATE`), respeitam estritamente o *case sensitivity* do PostgreSQL: nomes de tabelas em minúsculo, colunas *camelCase* envelopadas em aspas duplas (ex: `"tenantId"`) e *cast* explícito para UUID (ex: `::uuid`).
+
 O cliente envia a loja na rota. A API deriva o tenant pelo vínculo no banco, sem confiar em tenant/role do corpo. O slug público resolve uma loja ativa. Relações de produtos/categorias usam chaves estrangeiras compostas, incluindo tenant e restaurante.
 
 A atualização de catálogo/configurações compara revisão, incrementa-a e grava categoria/produto na mesma transação serializável. Conflitos exigem recarregar. Checkout bloqueia a linha do restaurante, relê o agregado e valida os dados atuais antes de criar o pedido. O pedido conserva snapshot dos itens/preços e dados de entrega, mesmo após excluir um produto.
@@ -75,7 +77,7 @@ A migração das chaves antigas roda apenas na demo e quando falta o documento n
 
 1. Implemente as portas de `backend/src/modules/*/application/ports.ts` com o mesmo isolamento, erros, atomicidade e revisão.
 2. Injete a implementação em `backend/src/app/composition.ts`; controllers e regras permanecem.
-3. Execute testes de domínio, integração e browser. Confirme especialmente transação composta, concorrência e isolamento de tenants.
+3. Execute testes de domínio, integração e browser. Confirme especialmente transação composta, concorrência e isolamento de tenants no PostgreSQL.
 4. Para alterar o transporte da API, preserve os contratos ou versione `/api/v2`; adapte `src/modules/*/infrastructure/http-*.ts` e o cliente genérico, sem duplicar regras.
 5. Para object storage, adicione uma porta de mídia e adapte imagens; não coloque credenciais do provedor no React.
 

@@ -2,7 +2,7 @@
 
 ## Stack e execução
 
-NestJS 11 com Fastify 5, TypeScript estrito, Prisma **7.10** e MySQL **8.4 LTS**. Prisma 7 foi fixado porque esta implementação usa seu adaptador MySQL/MariaDB. Não atualizar automaticamente para Prisma 8 RC, cuja compatibilidade precisa de nova avaliação.
+NestJS 11 com Fastify 5, TypeScript estrito, Prisma **7.10** e **PostgreSQL (Supabase)**. Prisma 7 foi fixado porque esta implementação usa seu adaptador PostgreSQL nativo. Não atualizar automaticamente para Prisma 8 RC, cuja compatibilidade precisa de nova avaliação.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -22,9 +22,9 @@ Depois de `pnpm setup:local`, execute `pnpm docker:up` e abra http://localhost:8
 
 `docker/Dockerfile` compila os workspaces e cria imagens separadas: API apenas com dependências de execução, frontend estático com Caddy. As imagens base estão fixadas por digest; atualizações exigem nova validação. A API e o frontend usam usuários sem root, filesystem somente leitura, tmpfs limitado, nenhuma capability Linux e `no-new-privileges`. Segredos e artefatos locais ficam fora do contexto de build pelo `.dockerignore`.
 
-Somente o frontend publica 8080 e o MySQL publica 3307, ambos em loopback. A API fica na rede interna. Caddy entrega a SPA e encaminha `/api/*` para a API; não registra access logs. O navegador usa `VITE_API_BASE_URL=/api/v1`. O proxy fornece CSP, proteção contra iframes, nosniff e política de referrer. A API continua verificando sessão, origem, CSRF e escopo.
+Somente o frontend publica 8080 e o PostgreSQL publica 5432 (se rodando localmente via Compose), ambos em loopback. A API fica na rede interna. Caddy entrega a SPA e encaminha `/api/*` para a API; não registra access logs. O navegador usa `VITE_API_BASE_URL=/api/v1`. O proxy fornece CSP, proteção contra iframes, nosniff e política de referrer. A API continua verificando sessão, origem, CSRF e escopo.
 
-O perfil `tools` entrega a credencial DDL somente ao processo de migrations. O perfil `app` recebe somente a credencial DML da aplicação. O Compose é de desenvolvimento: HTTP local, cadastro habilitado e TLS do banco desabilitado. Publicação em produção precisa de HTTPS, MySQL com TLS verificado, gestão de segredos e configuração de origens e proxy próprias. Não exponha este Compose diretamente à internet.
+O perfil `tools` entrega a credencial DDL somente ao processo de migrations. O perfil `app` recebe somente a credencial DML da aplicação. O Compose é de desenvolvimento: HTTP local, cadastro habilitado e TLS do banco desabilitado. Publicação em produção precisa de HTTPS, PostgreSQL com TLS verificado, gestão de segredos e configuração de origens e proxy próprias. Não exponha este Compose diretamente à internet.
 
 ## Ambiente
 
@@ -32,7 +32,7 @@ O perfil `tools` entrega a credencial DDL somente ao processo de migrations. O p
 | -------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `NODE_ENV`                                         | Obrigatória: development, test ou production                                  |
 | `HOST`, `PORT`                                     | Padrões 127.0.0.1:3001; configure bind de container explicitamente            |
-| `DATABASE_URL`                                     | URL mysql com usuário/senha e banco; sem query parameters                     |
+| `DATABASE_URL`                                     | URL postgresql:// com usuário/senha e banco; pgBouncer requer pgbouncer=true  |
 | `DATABASE_TLS`                                     | Obrigatória: true/false; produção exige true                                  |
 | `DATABASE_CA_FILE`                                 | CA opcional para verificação TLS do banco                                     |
 | `MIGRATION_DATABASE_URL`                           | Credencial separada para DDL, usada somente pelo CLI Prisma                   |
@@ -47,7 +47,7 @@ O perfil `tools` entrega a credencial DDL somente ao processo de migrations. O p
 
 As variáveis `VITE_*` são públicas e incorporadas ao bundle. Nunca contêm senha, segredo de sessão ou URL do banco. `backend/.env` é ignorado pelo Git; `.env.example` contém somente placeholders. Em produção forneça segredos pelo ambiente/gerenciador de segredos. Frontend e API devem compartilhar o mesmo site para cookies SameSite=Lax (ex.: `app.exemplo.com` e `api.exemplo.com`).
 
-O Compose é **local**, com porta vinculada a loopback, volume persistente e healthcheck. O init cria `cardapio`/`cardapio_test` e dá ao usuário da aplicação apenas SELECT/INSERT/UPDATE/DELETE. O root é utilizado exclusivamente nas migrations locais. Em produção, crie um usuário de migrations com DDL no banco específico, um usuário de execução com DML e configure TLS/backup/restore no MySQL gerenciado.
+O Compose é **local**, com porta vinculada a loopback, volume persistente e healthcheck. O init cria os bancos de desenvolvimento e testes e dá ao usuário da aplicação apenas SELECT/INSERT/UPDATE/DELETE. O root/postgres é utilizado exclusivamente nas migrations locais. Em produção, crie um usuário de migrations com DDL no banco específico, um usuário de execução com DML e configure TLS/backup/restore no seu PostgreSQL gerenciado (Supabase).
 
 ## Autenticação e autorização
 
@@ -63,7 +63,7 @@ O Fastify usa `trustProxy: false`. Headers `X-Forwarded-*` enviados pelo cliente
 
 ## Persistência, pedidos e concorrência
 
-- Repositórios usam Prisma e parâmetros vinculados; não há interpolação SQL de valores em strings. As consultas SQL tagged-template são para rate limiting e lock de checkout.
+- Repositórios usam Prisma e parâmetros vinculados; não há interpolação SQL de valores em strings. As consultas SQL de baixo nível (`$queryRaw`) exigem mapeamento exato de case sensitivity (nomes de tabelas em minúsculo e colunas camelCase entre aspas duplas, ex: `"tenantId"`) e conversões explícitas de tipos (ex: `::uuid`).
 - Chaves estrangeiras compostas garantem categoria/produto no mesmo tenant/restaurante. Normalização de nomes remove acentos/case/espaços redundantes para evitar duplicatas.
 - Alterações exigem `expectedRevision`. Categoria + produto são atômicos. Revisão obsoleta e transação concorrente retornam CONFLICT; nenhuma confirmação é exibida antes do commit.
 - Checkout revalida loja aberta, loja do carrinho, itens, disponibilidade, quantidade, preço, mínimo, total, telefone e troco. O servidor calcula os valores. Não confia no preço recebido como total autorizado.
@@ -78,7 +78,7 @@ Imagens continuam como referência HTTPS ou data URL PNG/JPEG/WebP; o navegador 
 
 Helmet configura headers de segurança na API. `Cache-Control: no-store` protege respostas autenticadas. O corpo é limitado a 32 KiB, exceto produto/configurações com imagens (15 MiB). Há limites de tempo de conexão/requisição, paginação, schemas estritos e limites de tamanho/quantidade. Exceções e erros do parser são convertidos para mensagens seguras em português.
 
-Rate limiting usa MySQL e chaves HMAC, sem IP/e-mail bruto persistido: limite global de 300/minuto/IP, login 20/15min/IP e 10/15min/conta, cadastro 5/15min/IP, pedidos 20/15min/IP, preparação 30/minuto/IP e senha 5/15min/conta. Falha no armazenamento do limitador impede a operação; não há fallback em memória. Planeje proteção de borda/limites por rede para tráfego público maior.
+Rate limiting usa PostgreSQL e chaves HMAC, sem IP/e-mail bruto persistido: limite global de 300/minuto/IP, login 20/15min/IP e 10/15min/conta, cadastro 5/15min/IP, pedidos 20/15min/IP, preparação 30/minuto/IP e senha 5/15min/conta. Falha no armazenamento do limitador impede a operação; não há fallback em memória. Planeje proteção de borda/limites por rede para tráfego público maior.
 
 Cada falha gera diagnosticId, módulo, operação, código, horário e causa técnica controlada. Não são registrados corpo, cookies, tokens, senha, e-mail, nome, endereço, imagem ou mensagem do pedido. Não habilite logs de query Prisma ou logging bruto de requisições Fastify. Eventos podem ser enviados a outro sink implementando `DiagnosticLogger`.
 
@@ -92,8 +92,6 @@ Cada falha gera diagnosticId, módulo, operação, código, horário e causa té
 | RATE_LIMITED                                       | 429  | Aguardar a janela do limite                                  |
 | STORAGE_UNAVAILABLE / CORRUPT_DATA / CONFIGURATION | 503  | Recuperar dependência/dados; informar diagnóstico ao suporte |
 | UNEXPECTED                                         | 500  | Investigar diagnóstico sem expor detalhes internos           |
-
-Em uma falha de conexão durante envio, não afirme que o pedido não foi criado: repita a mesma tentativa/chave. Não apague dados ou gere exemplos para recuperar erro de armazenamento.
 
 ## Endpoints
 
@@ -126,16 +124,16 @@ pnpm test:e2e:api:cleanup
 pnpm audit --prod
 ```
 
-Use o comando `migrate:dev` somente em banco descartável de desenvolvimento com shadow database configurado; produção usa exclusivamente `migrate deploy` (`pnpm db:migrate`). Nunca use `db push` como substituto de migrations versionadas. Faça backup antes de mudanças de schema em ambientes com dados reais.
+Use o comando `migrate:dev` somente em banco descartável de desenvolvimento com shadow database configurado (se aplicável ao ambiente local); produção usa exclusivamente `migrate deploy` (`pnpm db:migrate`). Nunca use `db push` como substituto de migrations versionadas. Faça backup antes de mudanças de schema em ambientes com dados reais.
 
-Testes unitários não dependem do banco. Integração/browser recusam conexão de teste sem sufixo `_test`; a limpeza remove somente IDs gerados pela execução. Nunca fazem truncate nem limpam o banco da aplicação. Dados de clientes dos testes são fictícios. CI executa os mesmos comandos com MySQL real via Compose.
+Testes unitários não dependem do banco. Integração/browser recusam conexão de teste sem sufixo `_test`; a limpeza remove somente IDs gerados pela execução. Nunca fazem truncate nem limpam o banco da aplicação. Dados de clientes dos testes são fictícios. CI executa os mesmos comandos com PostgreSQL real via Compose.
 
 Após `pnpm api:build`, sessões expiradas/revogadas e contadores expirados podem ser limpos com `pnpm api:maintenance` (ou `docker compose --env-file backend/.env exec api node dist/maintenance.js`); pedidos não são apagados por esse comando. Rotina de retenção de pedidos/dados pessoais e backups deve ser definida antes da operação pública.
 
-Overrides de `fastify`, `mariadb`, `mysql2` e `deepmerge-ts` no workspace corrigem advisories de versões transitivas da stack fixada. Mantenha-os até versões upstream incorporarem as correções e reexecute migrations, testes de MySQL e navegação ao atualizar. `pnpm audit` complementa testes; ausência de advisories não constitui auditoria completa da aplicação.
+Overrides de `fastify`, `pg` (caso configurado) e `deepmerge-ts` no workspace corrigem advisories de versões transitivas da stack fixada. Mantenha-os até versões upstream incorporarem as correções e reexecute migrations, testes de PostgreSQL e navegação ao atualizar. `pnpm audit` complementa testes; ausência de advisories não constitui auditoria completa da aplicação.
 
 ## Próximas etapas delimitadas
 
 Verificação/recuperação de e-mail, MFA, convite de equipe pela interface, auditoria administrativa persistente, cobrança e quotas comerciais, armazenamento de imagens, observabilidade externa, política de retenção e infraestrutura de produção. O checkout atual é entrega com valor fixo: não calcula cobertura geográfica nem distância. Cadastros públicos devem continuar restritos aos ambientes previstos até implementar o ciclo de verificação de conta.
 
-Referências de implementação: [NestJS/Fastify](https://docs.nestjs.com/techniques/performance), [Prisma 7 e MySQL](https://www.prisma.io/docs/orm/v7/core-concepts/supported-databases/mysql), [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html), [Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) e [Logging](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html).
+Referências de implementação: [NestJS/Fastify](https://docs.nestjs.com/techniques/performance), [Prisma 7 e PostgreSQL](https://www.prisma.io/docs/orm/overview/databases/postgresql), [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html), [Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) e [Logging](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html).

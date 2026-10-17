@@ -2,6 +2,9 @@
   "name": "@cardapio/api",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "type": "module",
   "scripts": {
     "dev": "node --watch --import tsx src/main.ts",

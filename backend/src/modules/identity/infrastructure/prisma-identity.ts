@@ -1,12 +1,12 @@
 import { Failure } from "@cardapio/domain/failure"
 import type { Database, Transaction } from "../../../shared/infrastructure/database.js"
-import type { Actor } from "../domain/identity.js"
 import type {
   Account,
-  IdentityRepository,
   FirstStore,
+  IdentityRepository,
   SessionInput,
 } from "../application/ports.js"
+import type { Actor } from "../domain/identity.js"
 
 export function restaurantDefaults(store: {
   id: string
@@ -25,6 +25,7 @@ export function restaurantDefaults(store: {
     isOpen: false,
   }
 }
+
 export async function createFirstStore(
   tx: Transaction,
   userId: string,
@@ -42,11 +43,14 @@ export async function createFirstStore(
     }),
   })
 }
+
 export class PrismaIdentity implements IdentityRepository {
   constructor(private readonly db: Database) {}
+
   findAccount(email: string) {
     return this.db.run((client) => client.user.findUnique({ where: { email } }))
   }
+
   createAccount(account: Account, store: FirstStore, session: SessionInput) {
     return this.db.transaction(async (tx) => {
       await tx.user.create({ data: account })
@@ -59,11 +63,13 @@ export class PrismaIdentity implements IdentityRepository {
       await tx.session.create({ data: session })
     })
   }
+
   createSession(session: SessionInput) {
     return this.db.run(async (client) => {
       await client.session.create({ data: session })
     })
   }
+
   sessionByToken(tokenHash: string, now: Date) {
     return this.db.run((client) =>
       client.session.findFirst({
@@ -77,6 +83,7 @@ export class PrismaIdentity implements IdentityRepository {
       }),
     )
   }
+
   sessionByActor(actor: Actor, now: Date) {
     return this.db.run((client) =>
       client.session.findFirst({
@@ -91,6 +98,7 @@ export class PrismaIdentity implements IdentityRepository {
       }),
     )
   }
+
   revoke(actor: Actor, now: Date) {
     return this.db.run(async (client) => {
       await client.session.updateMany({
@@ -99,6 +107,7 @@ export class PrismaIdentity implements IdentityRepository {
       })
     })
   }
+
   changePassword(actor: Actor, previousHash: string, nextHash: string, now: Date) {
     return this.db.transaction(async (tx) => {
       const updated = await tx.user.updateMany({

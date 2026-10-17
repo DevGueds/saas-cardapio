@@ -1,5 +1,5 @@
-import { z } from "zod"
 import { Failure } from "@cardapio/domain/failure"
+import { z } from "zod"
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
@@ -14,7 +14,9 @@ const schema = z.object({
   SIGNUP_ENABLED: z.enum(["true", "false"]).default("false"),
   DOCS_ENABLED: z.enum(["true", "false"]).default("false"),
 })
+
 export type ApiConfig = ReturnType<typeof loadConfig>
+
 export function loadConfig(input: Record<string, unknown>) {
   const result = schema.safeParse(input)
   if (!result.success)
@@ -29,14 +31,18 @@ export function loadConfig(input: Record<string, unknown>) {
   let origins: string[]
   try {
     database = new URL(env.DATABASE_URL)
+    
+    // PERMITE POSTGRESQL E POSTGRES (SUPABASE)
+    const allowedProtocols = ["postgres:", "postgresql:", "mysql:"]
+    
     if (
-      database.protocol !== "mysql:" ||
+      !allowedProtocols.includes(database.protocol) ||
       !database.username ||
       !database.password ||
-      !/^\/[a-zA-Z0-9_]+$/.test(database.pathname) ||
-      database.search
+      !/^\/[a-zA-Z0-9_]+$/.test(database.pathname)
     )
       throw new Error()
+
     origins = env.CORS_ORIGINS.split(",").map((value) => {
       const url = new URL(value.trim())
       if (
@@ -51,6 +57,7 @@ export function loadConfig(input: Record<string, unknown>) {
       if (env.NODE_ENV === "production" && url.protocol !== "https:") throw new Error()
       return url.origin
     })
+
     if (
       env.NODE_ENV === "production" &&
       (env.DATABASE_TLS !== "true" || env.DOCS_ENABLED === "true")
@@ -64,6 +71,7 @@ export function loadConfig(input: Record<string, unknown>) {
       "unsafe_environment",
     )
   }
+
   return {
     environment: env.NODE_ENV,
     host: env.HOST,

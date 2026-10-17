@@ -1,6 +1,6 @@
-import { z } from "zod"
 import { errorCodes, type ErrorCode } from "@cardapio/domain/failure"
 import { parseMenuDocument, type MenuDocument } from "@cardapio/domain/menu-document"
+import { z } from "zod"
 
 export const API_VERSION = "v1"
 export const uuid = z.uuid()

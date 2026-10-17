@@ -1,9 +1,11 @@
 import "dotenv/config"
-import { loadConfig } from "./app/config.js"
 import { createApplication } from "./app/bootstrap.js"
+import { loadConfig } from "./app/config.js"
 import { Operation } from "./shared/application/operation.js"
 import { clock, diagnostics, ids } from "./shared/infrastructure/runtime.js"
+
 let server: Awaited<ReturnType<typeof createApplication>> | undefined
+
 try {
   const config = loadConfig(process.env)
   server = await createApplication(config)

@@ -1,7 +1,9 @@
 import fs from "node:fs"
 import path from "node:path"
 import ts from "typescript"
+
 const failures = []
+
 function files(dir) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
@@ -15,6 +17,7 @@ function files(dir) {
             : [],
     )
 }
+
 for (const file of [...files("src"), ...files("../packages/domain/src")]) {
   const normalized = file.replaceAll("\\", "/")
   const core = normalized.includes("/domain/") || normalized.includes("/application/")
@@ -25,6 +28,7 @@ for (const file of [...files("src"), ...files("../packages/domain/src")]) {
     ts.ScriptTarget.Latest,
     true,
   )
+
   function visit(node) {
     if (
       (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
@@ -41,7 +45,7 @@ for (const file of [...files("src"), ...files("../packages/domain/src")]) {
       if (
         core &&
         (/infrastructure|presentation|generated|app\//.test(name) ||
-          /^(?:@nestjs|@prisma|fastify|node:|react)/.test(name))
+          /^(?:@nestjs|@prisma|fastify|node:|react|pg|@supabase)/.test(name))
       )
         failures.push(`${file}: núcleo depende do adaptador ${name}`)
       if (normalized.includes("/domain/") && /\/application\//.test(name))
@@ -57,6 +61,7 @@ for (const file of [...files("src"), ...files("../packages/domain/src")]) {
   }
   visit(ast)
 }
+
 if (failures.length) {
   console.error(failures.join("\n"))
   process.exitCode = 1

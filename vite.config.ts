@@ -284,9 +284,9 @@ function figmaErrorOverlayReplay(): Plugin {
       let lastError: object | null = null
 
       const origSend = server.ws.send.bind(server.ws) as (
-        ...args: any[]
+        ...args: unknown[]
       ) => void
-      server.ws.send = (((...args: any[]) => {
+      server.ws.send = (((...args: unknown[]) => {
         const payload = args[0]
         if (payload && typeof payload === "object" && !Array.isArray(payload)) {
           const type = (payload as { type?: string }).type

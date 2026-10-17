@@ -41,8 +41,8 @@ A demonstração permanece independente. No modo API, a autorização, as revis�
 
 1. Confira o estado com `docker compose --env-file backend/.env --profile app ps` e a prontidão em `http://localhost:8080/api/v1/health/ready`.
 2. Consulte `docker compose --env-file backend/.env logs api` e procure o `diagnosticId` exibido. A API registra somente metadados sanitizados; não habilite logs de payload ou queries para investigar.
-3. Em falha de inicialização, confira se `backend/.env` existe e as migrations foram aplicadas. `setup:local` preserva os segredos existentes. Trocar a senha no arquivo não altera automaticamente a senha de um volume MySQL já inicializado.
+3. Em falha de inicialização, confira se `backend/.env` existe e as migrations foram aplicadas. `setup:local` preserva os segredos existentes. Trocar a senha no arquivo não altera automaticamente a senha de um volume/banco (PostgreSQL/Supabase) já inicializado.
 4. Em conflito, atualize o catálogo/pedido e confira a alteração antes de reenviar. Em erro de envio, preserve a tentativa: a mesma chave de idempotência recupera o resultado sem duplicar o pedido.
 5. Nunca use exclusão de volume, seeds, dados demo ou limpeza de banco como recuperação automática. Faça backup antes de intervir em dados persistidos.
 
-Verificações completas: `pnpm check:all`, `pnpm api:test:db`, `pnpm test:e2e` e `pnpm test:e2e:api`. A API fora do Docker usa `localhost:3001`; os testes usam banco `_test` e portas próprias.
+Verificações completas: `pnpm check:all`, `pnpm api:test:db`, `pnpm test:e2e` e `pnpm test:e2e:api`. A API fora do Docker usa `localhost:3001`; os testes usam o banco PostgreSQL configurado para testes com portas próprias.

@@ -1,5 +1,6 @@
-import { z } from "zod"
 import * as contracts from "@cardapio/contracts"
+import { z } from "zod"
+
 const requestSchemas = {
   Login: contracts.loginSchema,
   Registration: contracts.registrationSchema,
@@ -15,6 +16,7 @@ const requestSchemas = {
   Delete: contracts.deleteSchema,
   Open: contracts.openSchema,
 }
+
 const operations = [
   ["/auth/register", "post", "Registration", true],
   ["/auth/login", "post", "Login", true],
@@ -44,7 +46,9 @@ const operations = [
   ["/restaurants/{restaurantId}/orders", "get"],
   ["/restaurants/{restaurantId}/orders/{orderId}/status", "put", "Transition"],
 ] as const
+
 const paths: Record<string, Record<string, unknown>> = {}
+
 for (const entry of operations) {
   const [path, method] = entry
   const schema = entry.length > 2 ? entry[2] : null
@@ -101,6 +105,7 @@ for (const entry of operations) {
     },
   }
 }
+
 export const openApi = {
   openapi: "3.1.0",
   info: {

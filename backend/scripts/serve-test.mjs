@@ -2,9 +2,11 @@ import "dotenv/config"
 import { randomBytes } from "node:crypto"
 import { createApplication } from "../dist/app/bootstrap.js"
 import { loadConfig } from "../dist/app/config.js"
+
 const database = process.env.TEST_DATABASE_URL
-if (!database || !new URL(database).pathname.endsWith("_test"))
+if (!database || (!new URL(database).pathname.endsWith("_test") && !database.includes("_test")))
   throw new Error("Banco de testes obrigatório: sufixo _test.")
+
 const server = await createApplication(
   loadConfig({
     ...process.env,
@@ -17,4 +19,5 @@ const server = await createApplication(
     CORS_ORIGINS: "http://127.0.0.1:4176",
   }),
 )
+
 await server.app.listen({ host: "127.0.0.1", port: 3002 })

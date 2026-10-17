@@ -1,12 +1,13 @@
+import { orderSchema, type OrderStatus, type OrderView } from "@cardapio/contracts"
 import { Failure } from "@cardapio/domain/failure"
-import { orderSchema, type OrderView, type OrderStatus } from "@cardapio/contracts"
-import type { Database } from "../../../shared/infrastructure/database.js"
-import type { Order } from "../../../generated/prisma/client.js"
-import type { TenantScope } from "../../identity/domain/identity.js"
-import { readMenu } from "../../catalog/infrastructure/prisma-menu.js"
-import { assertTransition, assertOrderSnapshot } from "../domain/order.js"
-import type { OrderDraft, OrdersRepository } from "../application/ports.js"
 import type { MenuDocument } from "@cardapio/domain/menu-document"
+import type { Order } from "../../../generated/prisma/client.js"
+import type { Database } from "../../../shared/infrastructure/database.js"
+import { readMenu } from "../../catalog/infrastructure/prisma-menu.js"
+import type { TenantScope } from "../../identity/domain/identity.js"
+import type { OrderDraft, OrdersRepository } from "../application/ports.js"
+import { assertOrderSnapshot, assertTransition } from "../domain/order.js"
+
 function view(row: Order): OrderView {
   const result = orderSchema.safeParse({
     id: row.id,
@@ -20,6 +21,7 @@ function view(row: Order): OrderView {
     total: row.total,
     items: row.items,
   })
+
   if (!result.success)
     throw new Failure(
       "CORRUPT_DATA",
@@ -27,6 +29,7 @@ function view(row: Order): OrderView {
       {},
       "invalid_persisted_order",
     )
+
   try {
     assertOrderSnapshot(result.data)
   } catch {
@@ -37,18 +40,22 @@ function view(row: Order): OrderView {
       "invalid_persisted_order_values",
     )
   }
+
   return result.data
 }
+
 export class PrismaOrders implements OrdersRepository {
   constructor(private readonly db: Database) {}
+
   create(
     scope: TenantScope,
     identity: { idempotencyHash: string; payloadHash: string },
     prepare: (menu: MenuDocument) => OrderDraft,
   ) {
     return this.db.transaction(async (tx) => {
-      // Same restaurant row serializes checkout with catalog edits; values stay current until commit.
-      await tx.$queryRaw`SELECT id FROM Restaurant WHERE id = ${scope.restaurantId} AND tenantId = ${scope.tenantId} FOR UPDATE`
+      // Lock da linha do restaurante compatível com PostgreSQL
+      await tx.$queryRaw`SELECT "id" FROM "restaurants" WHERE "id" = ${scope.restaurantId}::uuid AND "tenantId" = ${scope.tenantId}::uuid FOR UPDATE`
+
       const previous = await tx.order.findUnique({
         where: {
           tenantId_restaurantId_idempotencyHash: {
@@ -57,6 +64,7 @@ export class PrismaOrders implements OrdersRepository {
           },
         },
       })
+
       if (previous) {
         if (previous.payloadHash !== identity.payloadHash)
           throw new Failure(
@@ -70,8 +78,10 @@ export class PrismaOrders implements OrdersRepository {
           revision: previous.checkoutRevision,
         }
       }
+
       const draft = prepare(await readMenu(tx, scope))
       const { restaurantId: _restaurantId, ...order } = draft.order
+
       const saved = await tx.order.create({
         data: {
           ...scope,
@@ -82,6 +92,7 @@ export class PrismaOrders implements OrdersRepository {
           whatsappUrl: draft.whatsappUrl,
         },
       })
+
       return {
         orderId: saved.id,
         url: saved.whatsappUrl,
@@ -89,16 +100,19 @@ export class PrismaOrders implements OrdersRepository {
       }
     })
   }
+
   list(scope: TenantScope, cursor?: string) {
     return this.db.transaction(async (tx) => {
       const previous = cursor
         ? await tx.order.findFirst({ where: { ...scope, id: cursor } })
         : null
+
       if (cursor && !previous)
         throw new Failure(
           "NOT_FOUND",
           "Página de pedidos indisponível. Atualize a lista.",
         )
+
       const rows = await tx.order.findMany({
         where: {
           ...scope,
@@ -114,12 +128,14 @@ export class PrismaOrders implements OrdersRepository {
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: 51,
       })
+
       return {
         items: rows.slice(0, 50).map(view),
         nextCursor: rows.length > 50 ? rows[49]!.id : null,
       }
     })
   }
+
   transition(
     scope: TenantScope,
     id: string,
@@ -131,15 +147,18 @@ export class PrismaOrders implements OrdersRepository {
       if (!row) throw new Failure("NOT_FOUND", "Pedido não encontrado.")
       view(row)
       assertTransition(row.status, status)
+
       const result = await tx.order.updateMany({
         where: { ...scope, id, revision: expectedRevision },
         data: { status, revision: { increment: 1 } },
       })
+
       if (result.count !== 1)
         throw new Failure(
           "CONFLICT",
           "Este pedido foi alterado. Atualize antes de continuar.",
         )
+
       return view({ ...row, status, revision: row.revision + 1 })
     })
   }

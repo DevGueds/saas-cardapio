@@ -1,7 +1,7 @@
 import { Failure } from "@cardapio/domain/failure"
 import type { Database } from "../../../shared/infrastructure/database.js"
-import type { Actor } from "../domain/identity.js"
 import type { AccessRepository, FirstStore } from "../application/ports.js"
+import type { Actor } from "../domain/identity.js"
 import { createFirstStore, restaurantDefaults } from "./prisma-identity.js"
 
 export class PrismaAccess implements AccessRepository {

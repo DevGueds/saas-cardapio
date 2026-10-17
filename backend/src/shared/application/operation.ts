@@ -1,5 +1,5 @@
+import type { AppError, Result } from "@cardapio/contracts"
 import { Failure } from "@cardapio/domain/failure"
-import type { Result, AppError } from "@cardapio/contracts"
 import type { Clock, DiagnosticLogger, IdGenerator } from "./ports.js"
 
 export class Operation {
@@ -8,7 +8,13 @@ export class Operation {
     private readonly ids: IdGenerator,
     private readonly clock: Clock,
   ) {}
+
   error(operation: string, cause: unknown): AppError {
+    // 🔍 Imprime a exceção bruta no terminal para identificar causas de UNEXPECTED no ambiente dev
+    if (!(cause instanceof Failure)) {
+      console.error(`\n🔥 [UNHANDLED ERROR - ${operation}]:`, cause, "\n")
+    }
+
     const failure =
       cause instanceof Failure
         ? cause
@@ -16,7 +22,9 @@ export class Operation {
             "UNEXPECTED",
             "Não foi possível concluir a operação. Tente novamente.",
           )
+
     const diagnosticId = this.ids.next()
+
     try {
       this.logger.record({
         diagnosticId,
@@ -26,11 +34,16 @@ export class Operation {
         timestamp: this.clock.now().toISOString(),
         cause:
           failure.technicalCause ??
-          (cause instanceof Failure ? "controlled_failure" : "unhandled_failure"),
+          (cause instanceof Failure
+            ? "controlled_failure"
+            : cause instanceof Error
+              ? cause.message
+              : "unhandled_failure"),
       })
     } catch {
       /* A failed diagnostic sink cannot authorize or confirm an operation. */
     }
+
     return {
       code: failure.code,
       message: failure.message,
@@ -38,6 +51,7 @@ export class Operation {
       diagnosticId,
     }
   }
+
   async run<T>(name: string, action: () => Promise<T>): Promise<Result<T>> {
     try {
       return { ok: true, value: await action() }

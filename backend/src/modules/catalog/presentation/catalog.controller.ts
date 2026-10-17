@@ -18,11 +18,16 @@ import {
 @Controller()
 export class CatalogController {
   constructor(@Inject(RUNTIME) private readonly app: Runtime) {}
-  @Public() @Get("public/restaurants/:slug/menu") publicMenu(
-    @Param("slug") slug: string,
-  ) {
-    return this.app.catalog.publicMenu(slug)
+  @Public() 
+ @Get("public/restaurants/:slug/menu") 
+async publicMenu(@Param("slug") slug: string) {
+  try {
+    return await this.app.catalog.publicMenu(slug)
+  } catch (err) {
+    console.error("🔥 ERRO DETALHADO DO PUBLIC MENU:", err)
+    throw err
   }
+}
   @Get("restaurants/:restaurantId/menu") menu(
     @Req() request: SessionRequest,
     @Param("restaurantId") id: string,

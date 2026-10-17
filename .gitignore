@@ -30,3 +30,11 @@ backend/src/generated/
 backend/.test-build/
 !backend/.env.example
 !/.env.api
+
+
+test.mjs
+.vscode/
+backend/.agents/
+backend/.claude/
+backend/.windsurf/
+backend/skills-lock.json

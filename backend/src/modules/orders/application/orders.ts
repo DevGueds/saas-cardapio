@@ -1,9 +1,6 @@
 import { checkoutSchema, orderTransitionSchema, uuid } from "@cardapio/contracts"
 import { validateCheckout } from "@cardapio/domain/checkout"
 import { requireValid } from "@cardapio/domain/failure"
-import type { AccessPolicy } from "../../identity/application/ports.js"
-import type { Actor } from "../../identity/domain/identity.js"
-import type { MenuRepository } from "../../catalog/application/ports.js"
 import type { Operation } from "../../../shared/application/operation.js"
 import type {
   Clock,
@@ -12,6 +9,9 @@ import type {
   SecretTokens,
 } from "../../../shared/application/ports.js"
 import { validate } from "../../../shared/application/validate.js"
+import type { MenuRepository } from "../../catalog/application/ports.js"
+import type { AccessPolicy } from "../../identity/application/ports.js"
+import type { Actor } from "../../identity/domain/identity.js"
 import type { OrdersRepository } from "./ports.js"
 export class Orders {
   constructor(
