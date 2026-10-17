@@ -1,3 +1,4 @@
+import type { CheckoutOptions } from "@cardapio/domain/quote"
 import type { Result } from "../../../shared/application/result"
 import type { Executor } from "../../../shared/application/execute"
 
@@ -12,6 +13,8 @@ import type { Cart } from "../domain/cart"
 import type { DeliveryDetails } from "../domain/order-message"
 
 export interface PreparedOrder {
+  recovered?: boolean
+  trackingToken?: string
   orderId?: string
   url: string
   revision: number
@@ -29,6 +32,7 @@ export class PrepareOrder {
     expectedRevision: number,
     cart: Cart,
     input: DeliveryDetails,
+    options?: CheckoutOptions,
   ): Promise<Result<PreparedOrder>> {
     return this.executor.run("checkout", "prepare-order", async () => {
       this.access.assertRead()
@@ -41,6 +45,7 @@ export class PrepareOrder {
         expectedRevision,
         cart,
         input,
+        options,
       )
 
       return {

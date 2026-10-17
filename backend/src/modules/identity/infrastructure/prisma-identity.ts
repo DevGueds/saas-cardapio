@@ -47,15 +47,16 @@ export class PrismaIdentity implements IdentityRepository {
   findAccount(email: string) {
     return this.db.run((client) => client.user.findUnique({ where: { email } }))
   }
-  createAccount(account: Account, store: FirstStore, session: SessionInput) {
+  createAccount(account: Account, store: FirstStore | null, session: SessionInput) {
     return this.db.transaction(async (tx) => {
       await tx.user.create({ data: account })
-      await createFirstStore(
-        tx,
-        account.id,
-        { id: store.tenantId, name: store.name },
-        store,
-      )
+      if (store)
+        await createFirstStore(
+          tx,
+          account.id,
+          { id: store.tenantId, name: store.name },
+          store,
+        )
       await tx.session.create({ data: session })
     })
   }

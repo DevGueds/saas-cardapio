@@ -29,6 +29,7 @@ try {
     })
     const tenantId = { in: memberships.map((row) => row.tenantId) }
     await tx.order.deleteMany({ where: { tenantId } })
+    await tx.storeCommerce.deleteMany({ where: { tenantId } })
     await tx.product.deleteMany({ where: { tenantId } })
     await tx.category.deleteMany({ where: { tenantId } })
     await tx.restaurant.deleteMany({ where: { tenantId } })

@@ -1,10 +1,12 @@
+import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
 export default function StoreFields() {
   return (
     <>
       <label className="field">
         <span>Nome da loja *</span>
-        <input
+        <ValidatedInput
           name="restaurantName"
+          validation="name"
           required
           maxLength={120}
           autoComplete="organization"
@@ -13,9 +15,10 @@ export default function StoreFields() {
       </label>
       <label className="field">
         <span id="store-slug-label">Endereço do cardápio *</span>
-        <input
+        <ValidatedInput
           aria-labelledby="store-slug-label"
           name="slug"
+          validation="slug"
           required
           minLength={3}
           maxLength={80}

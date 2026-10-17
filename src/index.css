@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap");
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 @import "./shared/presentation/styles/base.css";
 @import "./modules/catalog/presentation/public-menu.css";
 @import "./app/presentation/admin-layout.css";
@@ -13,3 +14,5 @@
 
 @import "./modules/identity/presentation/account.css";
 @import "./modules/orders/presentation/orders.css";
+
+@import "./modules/commerce/presentation/commerce.css";

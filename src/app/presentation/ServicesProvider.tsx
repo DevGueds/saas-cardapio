@@ -1,3 +1,15 @@
+import type { TeamService } from "../../modules/identity/application/team"
+import type {
+  CommerceService,
+  MapsService,
+} from "../../modules/commerce/application/ports"
+import type { Quote, CheckoutOptions } from "@cardapio/domain/quote"
+import type { Cart } from "@cardapio/domain/cart"
+import type { TrackingView, PreparedOrderView } from "@cardapio/contracts"
+import { browserDrafts } from "../drafts"
+import DraftsProvider from "../../shared/presentation/DraftsProvider"
+import type { DraftManager } from "../../shared/application/drafts"
+import { useState } from "react"
 import type { IdentityService } from "../../modules/identity/application/ports"
 import type { OrdersService } from "../../modules/orders/application/ports"
 import { createContext, useContext, type ReactNode } from "react"
@@ -15,13 +27,28 @@ import type { Result } from "../../shared/application/result"
 import type { ImageReader } from "../../shared/application/image-reader"
 
 export interface ApplicationServices {
+  drafts?: DraftManager
   mode?: "demo" | "api"
   auth?: IdentityService
+  team?: TeamService
   orders?: OrdersService
+  commerce?: CommerceService
+  maps?: MapsService
+  quote?(
+    slug: string,
+    revision: number,
+    cart: Cart,
+    options: CheckoutOptions,
+  ): Promise<Result<Quote>>
+  tracking?(slug: string, id: string, token: string): Promise<Result<TrackingView>>
   menu: Pick<LoadMenu, "execute" | "subscribe"> & { loadAdmin?: LoadMenu["execute"] }
   catalog: Pick<CatalogCommands, "save" | "setAvailability" | "delete">
   restaurant: Pick<RestaurantCommands, "update" | "setOpen">
-  checkout: Pick<PrepareOrder, "execute"> & { reset?(restaurantId: string): void }
+  checkout: Pick<PrepareOrder, "execute"> & {
+    reset?(restaurantId: string): void
+    hasPending?(restaurantId: string): boolean
+    recover?(restaurantId: string): Promise<Result<PreparedOrderView | null>>
+  }
 
   images: ImageReader
   checkAdmin(): Promise<Result<void>>
@@ -37,7 +64,12 @@ export default function ServicesProvider({
   services: ApplicationServices
   children: ReactNode
 }) {
-  return <ServicesContext.Provider value={services}>{children}</ServicesContext.Provider>
+  const [drafts] = useState(() => services.drafts ?? browserDrafts())
+  return (
+    <ServicesContext.Provider value={services}>
+      <DraftsProvider manager={drafts}>{children}</DraftsProvider>
+    </ServicesContext.Provider>
+  )
 }
 
 export function useServices() {

@@ -1,3 +1,4 @@
+import { Bulkhead } from "../application/bulkhead.js"
 import {
   createHash,
   createHmac,
@@ -44,6 +45,7 @@ export class NodeSecrets implements SecretTokens {
   }
 }
 export class ArgonPasswords implements PasswordHasher {
+  private readonly capacity = new Bulkhead(4)
   private constructor(public readonly dummyHash: string) {}
   static async create() {
     return new ArgonPasswords(
@@ -60,13 +62,15 @@ export class ArgonPasswords implements PasswordHasher {
     })
   }
   hash(password: string) {
-    return ArgonPasswords.encode(password)
+    return this.capacity.run(() => ArgonPasswords.encode(password))
   }
   async verify(hash: string, password: string) {
-    try {
-      return await argon2.verify(hash, password)
-    } catch {
-      return false
-    }
+    return this.capacity.run(async () => {
+      try {
+        return await argon2.verify(hash, password)
+      } catch {
+        return false
+      }
+    })
   }
 }

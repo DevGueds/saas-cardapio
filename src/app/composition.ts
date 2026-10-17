@@ -1,3 +1,4 @@
+import { LocalCommerce } from "../modules/commerce/application/local-commerce"
 import type { ApplicationServices } from "./presentation/ServicesProvider"
 import { apiServices } from "./api-services"
 import { Executor } from "../shared/application/execute"
@@ -40,6 +41,7 @@ const repository = new LocalMenuRepository(
 
 const demoServices: ApplicationServices = {
   mode: "demo",
+  commerce: new LocalCommerce(repository, access, executor),
   menu: new LoadMenu(repository, demoDirectory, access, executor),
 
   catalog: new CatalogCommands(repository, access, browserIds, executor),

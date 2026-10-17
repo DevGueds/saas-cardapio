@@ -1,3 +1,4 @@
+import { can } from "@cardapio/domain/permissions"
 import { useAccount } from "../../modules/identity/presentation/AccountContext"
 import { useEffect, useRef, useState } from "react"
 import { Outlet, useLocation } from "react-router"
@@ -13,19 +14,25 @@ export default function AdminLayout() {
   const { menu, error: loadError, loading, reload } = useMenu()
   const services = useServices()
   const account = useAccount()
-  const canManage = account?.restaurant.role !== "STAFF"
+  const canManage = !account || can(account.restaurant.role, "catalog:write")
   const mutation = useMutation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const main = useRef<HTMLElement>(null)
   const location = useLocation()
   const { restaurant } = menu
-  const section = location.pathname.endsWith("settings")
-    ? "Configurações"
-    : location.pathname.endsWith("orders")
-      ? services.mode === "api"
-        ? "Pedidos"
-        : "Pedidos demonstrativos"
-      : "Cardápio"
+  const section = location.pathname.endsWith("offers")
+    ? "Combos e promoções"
+    : location.pathname.endsWith("delivery")
+      ? "Entregas e retirada"
+      : location.pathname.endsWith("team")
+        ? "Equipe e permissões"
+        : location.pathname.endsWith("settings")
+          ? "Configurações"
+          : location.pathname.endsWith("orders")
+            ? services.mode === "api"
+              ? "Pedidos"
+              : "Pedidos demonstrativos"
+            : "Cardápio"
 
   useEffect(() => {
     document.title = `${section} · ${restaurant.name}`

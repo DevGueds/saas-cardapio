@@ -1,9 +1,13 @@
+import type { DraftManager } from "../../../shared/application/drafts"
 import { z } from "zod"
 import { restaurantAccessSchema, sessionSchema, uuid } from "@cardapio/contracts"
 import type { ApiClient } from "../../../shared/infrastructure/api-client"
 import type { IdentityService } from "../application/ports"
 export class HttpIdentity implements IdentityService {
-  constructor(private readonly client: ApiClient) {}
+  constructor(
+    private readonly client: ApiClient,
+    private readonly drafts?: DraftManager,
+  ) {}
   private async establish(path: string, body?: unknown) {
     const result = await this.client.request(
       path,
@@ -16,7 +20,7 @@ export class HttpIdentity implements IdentityService {
   configuration() {
     return this.client.request(
       "/configuration",
-      z.strictObject({ signupEnabled: z.boolean() }),
+      z.strictObject({ signupEnabled: z.boolean(), mapTileUrl: z.string().optional() }),
     )
   }
   session() {
@@ -26,11 +30,20 @@ export class HttpIdentity implements IdentityService {
     return this.establish("/auth/login", input)
   }
   register(input: Parameters<IdentityService["register"]>[0]) {
-    return this.establish("/auth/register", input)
+    const { accountOnly, ...data } = input
+    return this.establish(
+      accountOnly ? "/auth/register-account" : "/auth/register",
+      accountOnly
+        ? { name: data.name, email: data.email, password: data.password }
+        : data,
+    )
   }
   async logout() {
     const result = await this.client.request("/auth/logout", z.null(), { method: "POST" })
-    if (result.ok) this.client.setCsrf("")
+    if (result.ok) {
+      this.client.setCsrf("")
+      this.drafts?.clearPrefix("api:admin:")
+    }
     return result
   }
   async changePassword(input: Parameters<IdentityService["changePassword"]>[0]) {
@@ -38,7 +51,10 @@ export class HttpIdentity implements IdentityService {
       method: "PUT",
       body: input,
     })
-    if (result.ok) this.client.setCsrf("")
+    if (result.ok) {
+      this.client.setCsrf("")
+      this.drafts?.clearPrefix("api:admin:")
+    }
     return result
   }
   restaurants() {

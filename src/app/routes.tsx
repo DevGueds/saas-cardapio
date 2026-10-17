@@ -24,6 +24,13 @@ export const router = createBrowserRouter(
       children: [
         { path: "/", Component: PublicRoute },
         { path: "/login", Component: LoginPage },
+        {
+          path: "/pedido/:slug/:orderId",
+          lazy: async () => ({
+            Component: (await import("../modules/orders/presentation/TrackingPage"))
+              .default,
+          }),
+        },
 
         { path: "/menu/:slug?", Component: PublicRoute },
 
@@ -32,6 +39,28 @@ export const router = createBrowserRouter(
           Component: AdminRoute,
           children: [
             { index: true, Component: AdminAlias },
+            {
+              path: "offers",
+              lazy: async () => ({
+                Component: (await import("../modules/commerce/presentation/OffersPage"))
+                  .default,
+              }),
+            },
+            {
+              path: "delivery",
+              lazy: async () => ({
+                Component: (
+                  await import("../modules/commerce/presentation/DeliverySettingsPage")
+                ).default,
+              }),
+            },
+            {
+              path: "team",
+              lazy: async () => ({
+                Component: (await import("../modules/identity/presentation/TeamPage"))
+                  .default,
+              }),
+            },
 
             {
               path: "products",

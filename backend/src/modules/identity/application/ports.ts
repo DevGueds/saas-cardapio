@@ -32,7 +32,11 @@ export interface FirstStore {
 }
 export interface IdentityRepository {
   findAccount(email: string): Promise<Account | null>
-  createAccount(account: Account, store: FirstStore, session: SessionInput): Promise<void>
+  createAccount(
+    account: Account,
+    store: FirstStore | null,
+    session: SessionInput,
+  ): Promise<void>
   createSession(session: SessionInput): Promise<void>
   sessionByToken(tokenHash: string, now: Date): Promise<SessionRecord | null>
   sessionByActor(actor: Actor, now: Date): Promise<SessionRecord | null>
@@ -60,11 +64,16 @@ export interface AccessRepository {
     tenantId: string,
     restaurant: { id: string; name: string; slug: string },
   ): Promise<void>
-  addMember(tenantId: string, email: string, role: "MANAGER" | "STAFF"): Promise<void>
+  addMember(tenantId: string, email: string, role: Exclude<Role, "OWNER">): Promise<void>
   removeMember(tenantId: string, userId: string): Promise<void>
   members(tenantId: string): Promise<{ userId: string; name: string; role: Role }[]>
 }
 export interface AccessPolicy {
+  grant(
+    actor: Actor,
+    restaurantId: string,
+    permission: Permission,
+  ): Promise<{ scope: TenantScope; role: Role }>
   restaurant(
     actor: Actor,
     restaurantId: string,

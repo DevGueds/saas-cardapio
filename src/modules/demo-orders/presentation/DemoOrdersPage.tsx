@@ -1,3 +1,4 @@
+import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
 import { useEffect, useRef, useState } from "react"
 import {
   Banknote,
@@ -157,7 +158,7 @@ export default function DemoOrdersPage() {
         </div>
         <label className="search-field">
           <Search size={18} aria-hidden="true" />
-          <input
+          <ValidatedInput
             aria-label="Buscar pedidos"
             placeholder="Número ou nome do cliente"
             value={search}

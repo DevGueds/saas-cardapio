@@ -12,11 +12,16 @@ enum Role {
   OWNER
   MANAGER
   STAFF
+  CASHIER
+  KITCHEN
+  COURIER
+  VIEWER
 }
 
 enum OrderStatus {
   NEW
   PREPARING
+  READY
   OUT_FOR_DELIVERY
   COMPLETED
   CANCELLED
@@ -88,6 +93,7 @@ model Restaurant {
   categories         Category[]
   products           Product[]
   orders             Order[]
+  commerce           StoreCommerce?
 
   @@unique([tenantId, id])
   @@index([tenantId, createdAt])
@@ -135,6 +141,16 @@ model Order {
   subtotal         Int
   deliveryFee      Int
   total            Int
+  discount         Int         @default(0)
+  fulfillment      Json?
+  promotionId      String?     @db.Char(36)
+  promotionName    String?     @db.VarChar(120)
+  region           String      @default("") @db.VarChar(300)
+  eta              String      @default("") @db.VarChar(80)
+  courierId        String?     @db.Char(36)
+  history          Json?
+  trackingHash     String?     @db.Char(64)
+  trackingExpiresAt DateTime?
   checkoutRevision Int
   whatsappUrl      String      @db.MediumText
   idempotencyHash  String      @db.Char(64)
@@ -144,6 +160,7 @@ model Order {
 
   @@unique([tenantId, restaurantId, idempotencyHash])
   @@index([tenantId, restaurantId, createdAt, id])
+  @@index([tenantId, restaurantId, courierId, createdAt])
 }
 
 model RateLimit {
@@ -152,4 +169,14 @@ model RateLimit {
   expiresAt DateTime
 
   @@index([expiresAt])
+}
+
+model StoreCommerce {
+  restaurantId String @id @db.Char(36)
+  tenantId String @db.Char(36)
+  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict)
+  combos Json
+  promotions Json
+  delivery Json
+  @@unique([tenantId, restaurantId])
 }

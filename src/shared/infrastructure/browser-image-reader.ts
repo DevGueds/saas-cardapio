@@ -1,3 +1,4 @@
+import { imageUploadSchema, validationMessage } from "@cardapio/contracts"
 import type { Executor } from "../application/execute"
 
 import type { ImageReader, ImageSource } from "../application/image-reader"
@@ -9,17 +10,11 @@ export class BrowserImageReader implements ImageReader {
 
   read(file: ImageSource) {
     return this.executor.run("images", "read-image", async () => {
-      requireValid(
-        ["image/png", "image/jpeg", "image/webp"].includes(file.type),
-        "Selecione uma imagem PNG, JPEG ou WebP.",
-        "imageUrl",
-      )
-
-      requireValid(
-        file.size > 0 && file.size <= 5 * 1024 * 1024,
-        "A imagem deve ter no máximo 5 MB.",
-        "imageUrl",
-      )
+      const metadata = imageUploadSchema.safeParse({ type: file.type, size: file.size })
+      if (!metadata.success) {
+        const message = validationMessage(metadata.error.issues[0]!)
+        throw new Failure("VALIDATION", message, { imageUrl: message })
+      }
 
       let bytes: ArrayBuffer
 

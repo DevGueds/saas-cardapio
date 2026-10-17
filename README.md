@@ -1,6 +1,6 @@
 # SaaS Cardápio
 
-SaaS multitenant de cardápio digital, com frontend React 19/TypeScript/Vite/Tailwind e API NestJS/Fastify/TypeScript. Persistência MySQL 8.4 com Prisma 7. Domínio e validações compartilhados, arquitetura DDD/hexagonal e falhas explícitas, sem fallback para dados fictícios.
+SaaS multitenant de cardápio digital, com frontend React 19/TypeScript/Vite/Tailwind e API NestJS/Fastify/TypeScript. Persistência MySQL 8.4 com Prisma 7 e Redis para cache e proteção compartilhada. Domínio e validações compartilhados, arquitetura DDD/hexagonal e falhas explícitas, sem fallback para dados fictícios.
 
 ## Começar com Docker
 
@@ -14,9 +14,9 @@ pnpm docker:up
 
 Abra **http://localhost:8080**. Crie sua conta com senha de **no mínimo 8 caracteres**, escolha a loja, cadastre produtos e configure a entrega. A loja começa **fechada e vazia**. Abra-a quando estiver pronta. O link público será `/menu/<slug-escolhido>`.
 
-`setup:local` gera `backend/.env` com segredos aleatórios, sem sobrescrever arquivos existentes. Esse arquivo não vai para o Git. O MySQL escuta apenas em `127.0.0.1:3307`; os dados ficam em volume Docker. Frontend e API ficam na mesma origem: Caddy encaminha `/api/` internamente, sem publicar a porta da API. `pnpm docker:down` para os serviços e preserva o volume. Não há senha padrão compartilhada entre instalações.
+`setup:local` gera `backend/.env` com segredos aleatórios, sem sobrescrever arquivos existentes. Esse arquivo não vai para o Git. MySQL e Redis escutam apenas em `127.0.0.1:3307` e `127.0.0.1:6380`; os dados ficam em volume Docker. Frontend e API ficam na mesma origem: Caddy balanceia `/api/` entre duas instâncias internas da API, sem publicar a porta da API. `pnpm docker:down` para os serviços e preserva o volume. Não há senha padrão compartilhada entre instalações.
 
-O comando `docker:up` aplica migrations explicitamente e aguarda os healthchecks de MySQL, API e frontend. As imagens são fixadas por digest. API e frontend executam sem root, sem capabilities e com filesystem somente leitura. O Compose usa configuração **local de desenvolvimento**, acessível apenas neste computador.
+O comando `docker:up` aplica migrations explicitamente e aguarda os healthchecks de MySQL, Redis, APIs e frontend. As imagens são fixadas por digest. API e frontend executam sem root, sem capabilities e com filesystem somente leitura. O Compose usa configuração **local de desenvolvimento**, acessível apenas neste computador.
 
 ### Desenvolvimento com recarga automática
 
@@ -29,7 +29,11 @@ Com o Docker instalado, use `pnpm db:up`, `pnpm db:migrate` e `pnpm dev:full`. A
 - Configurações da loja, taxa, pedido mínimo, prazo e abertura/fechamento.
 - Cardápio público pelo slug, carrinho isolado por loja e atualização explícita de itens removidos/preços alterados.
 - **Enviar pedido para a loja** registra um pedido real no MySQL, com validação dos valores atuais e proteção contra repetição da tentativa.
-- Painel de pedidos: novos → em preparo → em entrega → concluídos; cancelamento de pedidos novos/em preparo, detalhes e paginação. Atualização a cada 15 segundos.
+- Painel de pedidos: novos → em preparo → prontos → em entrega → concluídos; cancelamento antes da saída, detalhes e paginação. Atualização a cada 15 segundos.
+- Combos com produtos fixos, grupos de escolha e adicionais; promoções automáticas/cupons com período, teto, mínimo e limite de usos.
+- Entrega com taxa por cidade/bairro, retirada, atribuição de entregador e acompanhamento público das etapas por link privado. Leaflet/OpenStreetMap e busca explícita de CEP pela BrasilAPI auxiliam o endereço.
+- Equipe com proprietário, gerente, caixa, cozinha, entregador e consulta. Cadastro de equipe separado da criação de loja.
+- Rascunhos Redux persistidos: carrinho, checkout e formulários administrativos; isolamento por loja/usuário, expiração e aviso de conflito entre abas.
 - WhatsApp opcional após o envio. Registrar o pedido não confirma aceitação pelo restaurante nem pagamento. A API não envia mensagens automaticamente.
 
 ## Demonstração independente
@@ -44,26 +48,26 @@ O modo API usa `.env.api` e nunca importa automaticamente os dados de demonstra�
 
 ## Comandos
 
-| Comando                               | Finalidade                                                                       |
-| ------------------------------------- | -------------------------------------------------------------------------------- |
-| `pnpm docker:up` / `pnpm docker:down` | Iniciar/parar frontend, API e MySQL em containers, preservando dados             |
-| `pnpm docker:migrate`                 | Aplicar migrations pelo container de ferramentas                                 |
-| `pnpm dev:full`                       | Frontend em modo API + backend com recarga                                       |
-| `pnpm setup:local`                    | Gerar segredos locais, preservando configuração existente                        |
-| `pnpm db:up` / `pnpm db:down`         | Iniciar/parar MySQL local, preservando dados                                     |
-| `pnpm db:migrate`                     | Aplicar migrations explicitamente                                                |
-| `pnpm api:build`                      | Gerar Prisma Client e compilar API                                               |
-| `pnpm build:api`                      | Compilar frontend conectado à API                                                |
-| `pnpm build:demo`                     | Compilar demonstração local explícita                                            |
-| `pnpm dev:restricted` / `pnpm build`  | Executar/compilar com acesso bloqueado por falta de modo válido                  |
-| `pnpm check:all`                      | Tipagem, lint, fronteiras arquiteturais, UTF-8, testes unitários e builds        |
-| `pnpm api:test:db`                    | Migrations e testes de integração exclusivamente no banco `_test`                |
-| `pnpm test:e2e`                       | Regressões da demonstração no Chromium                                           |
-| `pnpm test:e2e:api`                   | Fluxo completo React → API → MySQL no Chromium                                   |
-| `pnpm test:e2e:docker`                | Validar bundle, proxy, headers e bloqueios de acesso com os containers iniciados |
-| `pnpm test:e2e:api:cleanup`           | Limpar somente as contas criadas na última execução de testes do navegador       |
-| `pnpm format:check`                   | Conferir formatação                                                              |
-| `pnpm audit --prod`                   | Auditar dependências de produção                                                 |
+| Comando                               | Finalidade                                                                        |
+| ------------------------------------- | --------------------------------------------------------------------------------- |
+| `pnpm docker:up` / `pnpm docker:down` | Iniciar/parar frontend, duas APIs, Redis e MySQL em containers, preservando dados |
+| `pnpm docker:migrate`                 | Aplicar migrations pelo container de ferramentas                                  |
+| `pnpm dev:full`                       | Frontend em modo API + backend com recarga                                        |
+| `pnpm setup:local`                    | Gerar segredos locais, preservando configuração existente                         |
+| `pnpm db:up` / `pnpm db:down`         | Iniciar/parar MySQL e Redis locais, preservando dados                             |
+| `pnpm db:migrate`                     | Aplicar migrations explicitamente                                                 |
+| `pnpm api:build`                      | Gerar Prisma Client e compilar API                                                |
+| `pnpm build:api`                      | Compilar frontend conectado à API                                                 |
+| `pnpm build:demo`                     | Compilar demonstração local explícita                                             |
+| `pnpm dev:restricted` / `pnpm build`  | Executar/compilar com acesso bloqueado por falta de modo válido                   |
+| `pnpm check:all`                      | Tipagem, lint, fronteiras arquiteturais, UTF-8, testes unitários e builds         |
+| `pnpm api:test:db`                    | Migrations e testes de integração exclusivamente no banco `_test`                 |
+| `pnpm test:e2e`                       | Regressões da demonstração no Chromium                                            |
+| `pnpm test:e2e:api`                   | Fluxo completo React → API → MySQL no Chromium                                    |
+| `pnpm test:e2e:docker`                | Validar bundle, proxy, headers e bloqueios de acesso com os containers iniciados  |
+| `pnpm test:e2e:api:cleanup`           | Limpar somente as contas criadas na última execução de testes do navegador        |
+| `pnpm format:check`                   | Conferir formatação                                                               |
+| `pnpm audit --prod`                   | Auditar dependências de produção                                                  |
 
 Instale o navegador antes dos testes: `pnpm exec playwright install chromium`. Os testes da API usam portas 3002/4176 e o banco `cardapio_test`. Os testes da demonstração usam 4173/4174. Screenshots e traces ficam em diretórios ignorados pelo Git.
 
@@ -77,10 +81,12 @@ Instale o navegador antes dos testes: `pnpm exec playwright install chromium`. O
 - `packages/contracts/`: schemas e tipos de entrada/saída compartilhados.
 - `.agents/skills/ux-ui-design-principles/`: skill de revisão de interface, referenciada no `AGENTS.md`.
 
-Leia [Arquitetura](docs/architecture.md), [Backend, segurança e desenvolvimento](docs/backend.md), [Diagnóstico](docs/diagnostics.md) e [UI/UX](docs/ui-ux.md).
+Leia [Arquitetura](docs/architecture.md), [Backend, segurança e desenvolvimento](docs/backend.md), [Diagnóstico](docs/diagnostics.md), [UI/UX](docs/ui-ux.md), [Combos, entrega, equipe e rascunhos](docs/mvp-expansion.md) e [Resiliência e benchmark](docs/resilience.md).
 
 ## Limites desta etapa
 
-É uma base de desenvolvimento com persistência e autorização no servidor. Ainda não inclui verificação de e-mail, recuperação de senha por e-mail, MFA, cobrança de assinaturas, gateway de pagamento, notificações, upload em object storage ou publicação em produção. O cadastro público pode ser desabilitado por configuração. Permissões de equipe já existem na API; a administração de membros ainda não tem tela.
+É uma base de desenvolvimento com persistência e autorização no servidor. Ainda não inclui verificação de e-mail, recuperação de senha por e-mail, MFA, cobrança de assinaturas, gateway de pagamento, notificações, upload em object storage ou publicação em produção. O cadastro público pode ser desabilitado por configuração. A gestão de equipe já tem tela; convites por e-mail continuam fora do escopo. Não há rastreio de entregador nem cálculo de rota/distância.
 
 Os arquivos usam UTF-8. No PowerShell, configure `$OutputEncoding = [System.Text.UTF8Encoding]::new($false)` antes de enviar texto acentuado por pipe. `pnpm check:text` verifica os textos do frontend, backend e domínio. Não há Supabase nem conexão do navegador com banco de dados.
+
+Formulários: consulte [formatação e validação com Zod](docs/form-validation.md) para contratos, mensagens por campo e preservação de rascunhos.

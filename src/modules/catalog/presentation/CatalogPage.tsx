@@ -1,3 +1,7 @@
+import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
+import ValidatedSelect from "../../../shared/presentation/form-validation/ValidatedSelect"
+import { useSearchParams } from "react-router"
+import { can } from "@cardapio/domain/permissions"
 import { useAccount } from "../../identity/presentation/AccountContext"
 import PageHeading from "../../../shared/presentation/PageHeading"
 import { useState } from "react"
@@ -44,7 +48,21 @@ export default function CatalogPage() {
 
   const [view, setView] = useState<"grid" | "table">("grid")
 
-  const [editor, setEditor] = useState<{ product?: Product } | null>(null)
+  const [params, setParams] = useSearchParams()
+  const editorId = params.get("edit")
+  const editor =
+    editorId === "new"
+      ? {}
+      : editorId && menu.products.some((p) => p.id === editorId)
+        ? { product: menu.products.find((p) => p.id === editorId)! }
+        : null
+  const setEditor = (value: { product?: Product } | null) =>
+    setParams((previous) => {
+      const next = new URLSearchParams(previous)
+      if (value) next.set("edit", value.product?.id ?? "new")
+      else next.delete("edit")
+      return next
+    })
 
   const [deleting, setDeleting] = useState<{
     product: Product
@@ -54,7 +72,10 @@ export default function CatalogPage() {
   const [notice, setNotice] = useState("")
 
   const blocked =
-    loading || !!loadError || mutation.pending || account?.restaurant.role === "STAFF"
+    loading ||
+    !!loadError ||
+    mutation.pending ||
+    (!!account && !can(account.restaurant.role, "catalog:write"))
 
   const products = menu.products.filter(
     (product) =>
@@ -161,14 +182,14 @@ export default function CatalogPage() {
         <div className="catalog-filters">
           <label className="search-field">
             <Search size={18} />
-            <input
+            <ValidatedInput
               aria-label="Buscar produtos"
               placeholder="Buscar por nome ou ingrediente…"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
-          <select
+          <ValidatedSelect
             aria-label="Filtrar categoria"
             value={categoryId}
             onChange={(event) => setCategoryId(event.target.value)}
@@ -179,7 +200,7 @@ export default function CatalogPage() {
                 {category.name}
               </option>
             ))}
-          </select>
+          </ValidatedSelect>
           <div className="view-toggle">
             <button
               type="button"

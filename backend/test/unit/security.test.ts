@@ -12,6 +12,7 @@ import { Operation } from "../../src/shared/application/operation.js"
 import { ArgonPasswords, NodeSecrets } from "../../src/shared/infrastructure/runtime.js"
 const env = {
   NODE_ENV: "test",
+  REDIS_URL: "redis://:test@localhost:6380/0",
   DATABASE_URL: "mysql://test:local@127.0.0.1/cardapio_test",
   DATABASE_TLS: "false",
   SESSION_SECRET: randomBytes(32).toString("hex"),
@@ -44,6 +45,7 @@ test("configuration has no implicit environment or insecure production defaults"
       NODE_ENV: "production",
       CORS_ORIGINS: "https://menu.example",
       DATABASE_TLS: "true",
+      REDIS_URL: "rediss://:test@localhost:6380/0",
     }).secureCookies,
     true,
   )
@@ -111,4 +113,27 @@ test("inline images enforce type signatures and the five MiB byte limit", () => 
     () => imageReference("data:image/png;base64," + bytes.toString("base64")),
     Failure,
   )
+})
+
+test("Zod validation returns detailed safe errors for every invalid field", async () => {
+  const { validate } = await import("../../src/shared/application/validate.js")
+  try {
+    validate(registrationSchema, {
+      name: "123",
+      email: "invalid",
+      password: "1234567",
+      restaurantName: "",
+      slug: "Bad slug",
+    })
+    assert.fail("Invalid registration must fail closed")
+  } catch (error) {
+    assert.ok(error instanceof Failure)
+    assert.equal(error.code, "VALIDATION")
+    assert.match(error.fields.name!, /Use letras/)
+    assert.match(error.fields.email!, /e-mail válido/)
+    assert.match(error.fields.password!, /8 caracteres/)
+    assert.match(error.fields.restaurantName!, /Preencha/)
+    assert.match(error.fields.slug!, /minúsculas/)
+    assert.ok(!JSON.stringify(error.fields).includes("Bad slug"))
+  }
 })

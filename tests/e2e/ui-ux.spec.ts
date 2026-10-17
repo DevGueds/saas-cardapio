@@ -170,5 +170,65 @@ test("configurações mantêm campos visíveis ao navegar por teclado e salvam n
   await page.getByRole("button", { name: "Salvar configurações" }).click()
   await expect(page.getByText("Configurações salvas.")).toBeVisible()
   await page.reload()
-  await expect(phone).toHaveValue("5511999998888")
+  await expect(phone).toHaveValue("+55 (11) 99999-8888")
 })
+
+for (const width of [320, 390, 768]) {
+  test(`menu móvel mantém contraste e formato de gaveta em ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto("/admin/delivery")
+    await page.getByRole("button", { name: "Abrir menu", exact: true }).click()
+    const dialog = page.getByRole("dialog", { name: "Navegação da loja" })
+    await expect(dialog).toHaveCSS("background-color", "rgb(23, 47, 39)")
+    await expect(dialog).toHaveCSS("color", "rgb(244, 247, 239)")
+    const bounds = await dialog.boundingBox()
+    expect(bounds!.x).toBe(0)
+    expect(bounds!.y).toBe(0)
+    expect(bounds!.width).toBeLessThanOrEqual(320)
+    expect(bounds!.height).toBe(844)
+    const contrasts = await dialog.evaluate((root) => {
+      function rgb(value: string) {
+        return value
+          .match(/[\d.]+/g)!
+          .slice(0, 3)
+          .map(Number)
+      }
+      function luminance(color: number[]) {
+        return color
+          .map((v) => v / 255)
+          .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+          .reduce((total, v, i) => total + v * [0.2126, 0.7152, 0.0722][i]!, 0)
+      }
+      return [
+        ...root.querySelectorAll(
+          ".dialog-heading h2, .restaurant-switcher strong, .restaurant-switcher small, .nav-section-label, .admin-nav a > span",
+        ),
+      ].map((element) => {
+        let parent: Element | null = element
+        let background = "rgb(23, 47, 39)"
+        while (parent) {
+          const candidate = getComputedStyle(parent).backgroundColor
+          if (candidate !== "rgba(0, 0, 0, 0)" && candidate !== "transparent") {
+            background = candidate
+            break
+          }
+          parent = parent.parentElement
+        }
+        const fore = luminance(rgb(getComputedStyle(element).color)),
+          back = luminance(rgb(background))
+        return (Math.max(fore, back) + 0.05) / (Math.min(fore, back) + 0.05)
+      })
+    })
+    expect(contrasts.length).toBeGreaterThan(6)
+    for (const contrast of contrasts) expect(contrast).toBeGreaterThanOrEqual(4.5)
+    if (width === 390)
+      await page.screenshot({ path: ".cache/mobile-navigation-contrast.png" })
+    await dialog.getByRole("link", { name: "Configurações", exact: true }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(
+      page.getByRole("heading", { name: "Configurações da loja" }),
+    ).toBeVisible()
+  })
+}

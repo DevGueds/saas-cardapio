@@ -49,6 +49,7 @@ export class ApiClient {
       method?: "GET" | "POST" | "PUT" | "DELETE"
       body?: unknown
       idempotencyKey?: string
+      trackingToken?: string
     } = {},
   ): Promise<Result<T>> {
     const outcome = await this.executor.run("http", "request", async () => {
@@ -65,6 +66,7 @@ export class ApiClient {
             ...(options.method && options.method !== "GET"
               ? { "Content-Type": "application/json" }
               : {}),
+            ...(options.trackingToken ? { "X-Order-Token": options.trackingToken } : {}),
             ...(this.csrf ? { "X-CSRF-Token": this.csrf } : {}),
             ...(options.idempotencyKey
               ? { "Idempotency-Key": options.idempotencyKey }

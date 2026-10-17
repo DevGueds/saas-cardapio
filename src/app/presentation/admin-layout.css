@@ -305,7 +305,7 @@
   color: var(--muted);
   font-size: 0.75rem;
 }
-.navigation-dialog {
+.app-dialog.navigation-dialog {
   margin: 0 auto 0 0;
   height: 100dvh;
   max-height: 100dvh;

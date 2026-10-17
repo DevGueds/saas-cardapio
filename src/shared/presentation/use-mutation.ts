@@ -1,3 +1,4 @@
+import { browserExecutor } from "../browser-executor"
 import { useRef, useState } from "react"
 
 import type { AppError, Result } from "../application/result"
@@ -19,7 +20,8 @@ export function useMutation() {
     setError(null)
 
     try {
-      const result = await action()
+      const outcome = await browserExecutor.run("presentation", "mutation", action)
+      const result = outcome.ok ? outcome.value : outcome
 
       if (!result.ok) setError(result.error)
 

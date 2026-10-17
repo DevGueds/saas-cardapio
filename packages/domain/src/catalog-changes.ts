@@ -76,6 +76,14 @@ export function changeAvailability(
   }
 }
 export function deleteProduct(current: MenuDocument, productId: string): MenuDocument {
+  requireValid(
+    !current.commerce?.combos.some(
+      (c) =>
+        c.items.some((i) => i.productId === productId) ||
+        c.groups.some((g) => g.options.some((o) => o.productId === productId)),
+    ),
+    "Este produto faz parte de um combo. Remova-o do combo antes de excluir.",
+  )
   if (!current.products.some((product) => product.id === productId))
     throw new Failure("NOT_FOUND", "Produto não encontrado.")
   return {

@@ -11,12 +11,19 @@ export class SystemController {
   }
   @Public() @Get("health/ready") ready() {
     return this.app.operation.run("health.ready", async () => {
+      await this.app.redis.ping()
       await this.app.db.run((client) => client.$queryRaw`SELECT 1`)
       return { status: "ready" }
     })
   }
   @Public() @Get("configuration") configuration() {
-    return { ok: true, value: { signupEnabled: this.app.config.signupEnabled } }
+    return {
+      ok: true,
+      value: {
+        signupEnabled: this.app.config.signupEnabled,
+        mapTileUrl: this.app.config.mapTileUrl,
+      },
+    }
   }
   @Public() @Get("openapi.json") docs() {
     if (!this.app.config.docsEnabled)

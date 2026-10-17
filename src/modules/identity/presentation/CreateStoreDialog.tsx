@@ -1,3 +1,4 @@
+import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
 import { type FormEvent } from "react"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import { useMutation } from "../../../shared/presentation/use-mutation"
@@ -29,7 +30,7 @@ export default function CreateStoreDialog({
   }
   return (
     <Dialog title="Criar nova loja" onClose={onClose} busy={mutation.pending}>
-      <form className="editor-form" onSubmit={(event) => void submit(event)}>
+      <ValidatedForm className="editor-form" onSubmit={(event) => void submit(event)}>
         <p className="form-intro">
           A nova loja terá cardápio e pedidos próprios. Ela começa fechada para você
           configurar com tranquilidade.
@@ -51,7 +52,7 @@ export default function CreateStoreDialog({
             {mutation.pending ? "Criando…" : "Criar loja"}
           </button>
         </div>
-      </form>
+      </ValidatedForm>
     </Dialog>
   )
 }

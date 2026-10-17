@@ -1,3 +1,7 @@
+import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
+import PublicOffers from "../../commerce/presentation/PublicOffers"
+import RecentOrders from "../../checkout/presentation/RecentOrders"
+import { useSearchParams } from "react-router"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import PublicProductCard from "./PublicProductCard"
 import { useEffect, useMemo, useState } from "react"
@@ -38,11 +42,19 @@ export default function PublicMenuPage() {
     document.title = `${store.name} · Cardápio digital`
   }, [store.name])
 
-  const controller = useCart(store.id, products)
+  const controller = useCart(menu)
 
   const { subtotal, itemCount } = controller
 
-  const [cartOpen, setCartOpen] = useState(false)
+  const [params, setParams] = useSearchParams()
+  const cartOpen = params.get("cart") === "1"
+  const setCartOpen = (open: boolean) =>
+    setParams((previous) => {
+      const next = new URLSearchParams(previous)
+      if (open) next.set("cart", "1")
+      else next.delete("cart")
+      return next
+    })
 
   const [search, setSearch] = useState("")
 
@@ -137,7 +149,11 @@ export default function PublicMenuPage() {
                 <Bike size={18} aria-hidden="true" />
                 <span>
                   <small>Taxa de entrega</small>
-                  <strong>{formatMoney(store.deliveryFee)}</strong>
+                  <strong>
+                    {menu.commerce?.delivery.mode === "ZONES"
+                      ? "Por bairro"
+                      : formatMoney(store.deliveryFee)}
+                  </strong>
                 </span>
               </span>
               <span>
@@ -167,10 +183,16 @@ export default function PublicMenuPage() {
           </div>
         )}
         <div className="content">
+          <RecentOrders restaurantId={store.id} slug={store.slug} />
+          <PublicOffers
+            controller={controller}
+            disabled={loading || !!loadError}
+            search={search}
+          />
           <div className="menu-discovery">
             <div className="search-box">
               <Search size={20} aria-hidden="true" />
-              <input
+              <ValidatedInput
                 aria-label="Buscar no cardápio"
                 type="search"
                 placeholder="O que você quer comer hoje?"

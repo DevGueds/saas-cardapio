@@ -7,7 +7,7 @@ React 19, TypeScript, Vite 8 e Tailwind CSS v4. Frontend demo/API e backend Nest
 - `src/main.tsx`: montagem React e CSS global.
 - `src/app/composition.ts`: injeção manual de dependências e adaptadores.
 - `src/app/routes.tsx`: rotas públicas e administrativas.
-- `src/modules`: identidade, restaurante, catálogo, checkout, pedidos reais e demonstrativos.
+- `src/modules`: identidade/equipe, restaurante, catálogo, comércio (combos/promoções/entrega), checkout, pedidos reais e demonstrativos.
 - `src/shared`: domínio comum, contratos técnicos, infraestrutura de navegador e UI reutilizável.
 - `src/index.css`: imports dos estilos separados por responsabilidade e Tailwind v4.
 
@@ -19,7 +19,7 @@ React 19, TypeScript, Vite 8 e Tailwind CSS v4. Frontend demo/API e backend Nest
 - `pnpm check` executa tipos, lint, limites arquiteturais, integridade UTF-8, testes e build demonstrativo.
 - `pnpm test:e2e` usa Chromium e servidores nas portas 4173 e 4174. Instale o navegador com `pnpm exec playwright install chromium` quando necessário.
 - `pnpm build` mantém operações bloqueadas sem modo válido. `pnpm build:demo` e `pnpm build:api` selecionam explicitamente os adaptadores.
-- `pnpm docker:up` inicia frontend, API e MySQL em http://localhost:8080 após `pnpm setup:local`; `pnpm docker:down` preserva o volume.
+- `pnpm docker:up` inicia frontend, duas APIs, Redis e MySQL em http://localhost:8080 após `pnpm setup:local`; `pnpm docker:down` preserva o volume.
 - Formatação: Prettier com `.prettierrc.json`. O antigo oxfmt 0.2 removia separadores obrigatórios de tipos TypeScript e foi substituído.
 
 ## Regras de código
@@ -47,3 +47,7 @@ React 19, TypeScript, Vite 8 e Tailwind CSS v4. Frontend demo/API e backend Nest
 - Não introduza alterações estéticas que prejudiquem os fluxos. Priorize componentes reutilizáveis e evite duplicações.
 - Trate violações relevantes de usabilidade como problemas de qualidade, com gravidade e correção concreta.
 - Esta revisão não se aplica a tarefas exclusivamente backend, infraestrutura ou documentação sem impacto na interface.
+
+- Resiliência e ensaios locais: consulte `docs/resilience.md`; `compose.benchmark.yaml` usa exclusivamente `_test` e limites próprios. Restaure com `pnpm benchmark:restore`.
+
+- Formulários: use os controles em `shared/presentation/form-validation` e os contratos Zod de `packages/contracts/src/fields.ts`. Consulte `docs/form-validation.md`; mantenha schemas de rascunho permissivos para entradas incompletas e nunca normalize senhas.

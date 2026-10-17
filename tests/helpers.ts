@@ -19,6 +19,16 @@ import type { StorageEvents } from "../src/modules/catalog/infrastructure/local-
 import type { MenuDocument } from "../src/modules/catalog/application/menu-document"
 
 export class TestStorage {
+  get length() {
+    return this.values.size
+  }
+  key(index: number) {
+    return [...this.values.keys()][index] ?? null
+  }
+  removeItem(key: string) {
+    if (this.writeError) throw this.writeError
+    this.values.delete(key)
+  }
   values = new Map<string, string>()
 
   writeError: Error | null = null

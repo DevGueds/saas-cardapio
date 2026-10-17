@@ -1,3 +1,4 @@
+import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
 import { useState } from "react"
 import { RefreshCw, Search, ShoppingBag } from "lucide-react"
 import type { OrderStatus, OrderView } from "@cardapio/contracts"
@@ -9,7 +10,7 @@ import { useOrders } from "./use-orders"
 import { orderLabels, shortOrder } from "./order-labels"
 import OrderCard from "./OrderCard"
 import OrderDetails from "./OrderDetails"
-const active: OrderStatus[] = ["NEW", "PREPARING", "OUT_FOR_DELIVERY"]
+const active: OrderStatus[] = ["NEW", "PREPARING", "READY", "OUT_FOR_DELIVERY"]
 export default function OrdersPage() {
   const { menu, error: menuError } = useMenu(),
     { orders } = useServices()
@@ -76,7 +77,7 @@ export default function OrdersPage() {
         <label className="live-order-search">
           <Search size={18} aria-hidden="true" />
           <span className="sr-only">Buscar pedidos nesta página</span>
-          <input
+          <ValidatedInput
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
