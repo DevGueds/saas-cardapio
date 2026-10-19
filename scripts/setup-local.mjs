@@ -1,5 +1,4 @@
 import { randomBytes, createECDH } from "node:crypto"
-import { networkInterfaces } from "node:os"
 import { writeFile, access, readFile, appendFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 const file = fileURLToPath(new URL("../backend/.env", import.meta.url))
@@ -35,16 +34,6 @@ const existing = await readFile(file, "utf8")
 const redisPassword =
   existing.match(/^REDIS_PASSWORD=(.+)$/m)?.[1] ?? randomBytes(24).toString("hex")
 const additions = []
-const addresses = Object.values(networkInterfaces())
-  .flat()
-  .filter(
-    (v) =>
-      v &&
-      !v.internal &&
-      v.family === "IPv4" &&
-      /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(v.address),
-  )
-  .map((v) => `http://${v.address}:8080`)
 if (!/^VAPID_PUBLIC_KEY=/m.test(existing) && !/^VAPID_PRIVATE_KEY=/m.test(existing)) {
   const keys = createECDH("prime256v1")
   keys.generateKeys()
@@ -61,12 +50,8 @@ for (const [key, value] of Object.entries({
   EVOLUTION_URL: "http://127.0.0.1:8081",
   EVOLUTION_API_KEY: randomBytes(32).toString("hex"),
   EVOLUTION_DATABASE_PASSWORD: randomBytes(24).toString("hex"),
-  DOCKER_CORS_ORIGINS: [
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    ...addresses,
-  ].join(","),
-  WEB_BIND_ADDRESS: "0.0.0.0",
+  DOCKER_CORS_ORIGINS: ["http://localhost:8080", "http://127.0.0.1:8080"].join(","),
+  WEB_BIND_ADDRESS: "127.0.0.1",
 }))
   if (!new RegExp(`^${key}=`, "m").test(existing)) additions.push(`${key}=${value}`)
 if (!/^REDIS_PASSWORD=/m.test(existing)) additions.push(`REDIS_PASSWORD=${redisPassword}`)

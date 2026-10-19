@@ -46,3 +46,14 @@ A demonstração permanece independente. No modo API, a autorização, as revis�
 5. Nunca use exclusão de volume, seeds, dados demo ou limpeza de banco como recuperação automática. Faça backup antes de intervir em dados persistidos.
 
 Verificações completas: `pnpm check:all`, `pnpm api:test:db`, `pnpm test:e2e` e `pnpm test:e2e:api`. A API fora do Docker usa `localhost:3001`; os testes usam banco `_test` e portas próprias.
+
+## Acesso pelo IP no celular
+
+- **A página não abre:** confirme computador/celular na mesma rede, IPv4 atual e porta 8080. Execute `pnpm setup:lan --host <IP>` e `pnpm docker:up`; mudar somente o `.env` não recria containers existentes. Confira `docker compose --env-file backend/.env --profile app ps`. O firewall deve permitir a porta na rede usada, sem expor MySQL/Redis.
+- **A página abre, mas salvar/enviar retorna ACCESS_DENIED:** confira `DOCKER_CORS_ORIGINS` (Docker) ou `CORS_ORIGINS` (Vite) em `backend/.env`. Inclua exatamente protocolo, IP e porta usados no navegador. `setup:lan` realiza essa configuração de desenvolvimento. Nunca use `*` nem remova CSRF. Causas sanitizadas `origin_not_allowed` e `origin_missing` distinguem esses bloqueios nos logs sem registrar o endereço de origem.
+- **Recursos disponíveis apenas em localhost:** `crypto.randomUUID` e `crypto.subtle` dependem de contexto seguro. Identificadores e hash da tentativa agora passam por adaptadores portáteis; não habilite flags de navegador para mascarar o problema. Push e Web Locks (gravações da demonstração local) continuam requerendo HTTPS/localhost. Essas limitações não impedem pedidos pela API.
+- **A resposta do pedido se perdeu:** preserve o carrinho/rascunho. Recarregar e recuperar a tentativa consulta o pedido já registrado; não apague armazenamento nem crie outra tentativa para resolver um timeout.
+
+A porta 8080 é desenvolvimento HTTP. Produção exige HTTPS; os testes de rede local não reduzem validações de origem, sessão, tenant, CSRF ou TLS de produção. O ambiente E2E usa uma origem HTTP por IP, banco `_test` e testa checkout, recuperação, combos, adicionais, pagamentos, persistência e acompanhamento.
+
+Referências técnicas: [MDN — randomUUID](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID), [MDN — getRandomValues](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues), [SHA-256 portátil](https://github.com/paulmillr/noble-hashes).

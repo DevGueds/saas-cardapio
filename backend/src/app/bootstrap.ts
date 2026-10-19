@@ -127,7 +127,12 @@ export async function createApplication(config: ApiConfig) {
           (origin !== undefined && !config.origins.includes(origin)) ||
           (unsafe && !origin)
         )
-          throw new Failure("ACCESS_DENIED", "Origem da requisição não autorizada.")
+          throw new Failure(
+            "ACCESS_DENIED",
+            "Este endereço não está autorizado a acessar a loja. Peça ao responsável para conferir a configuração de acesso.",
+            {},
+            origin ? "origin_not_allowed" : "origin_missing",
+          )
         if (
           unsafe &&
           !/^application\/json(?:\s*;|$)/i.test(request.headers["content-type"] ?? "")

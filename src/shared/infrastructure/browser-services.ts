@@ -1,9 +1,4 @@
-import type {
-  AccessPolicy,
-  DiagnosticLogger,
-  ExclusiveLock,
-  IdGenerator,
-} from "../application/ports"
+import type { AccessPolicy, DiagnosticLogger, ExclusiveLock } from "../application/ports"
 
 import { Failure } from "../domain/failure"
 
@@ -27,14 +22,7 @@ export class DemoAccessPolicy implements AccessPolicy {
   }
 }
 
-export const browserIds: IdGenerator = {
-  next: () =>
-    typeof crypto.randomUUID === "function"
-      ? crypto.randomUUID()
-      : Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
-          byte.toString(16).padStart(2, "0"),
-        ).join(""),
-}
+export { browserIds } from "./browser-ids"
 
 export const consoleDiagnostics: DiagnosticLogger = {
   record: (event) => console.error("[cardapio]", JSON.stringify(event)),

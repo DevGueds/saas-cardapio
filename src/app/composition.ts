@@ -42,6 +42,7 @@ const repository = new LocalMenuRepository(
 
 const demoServices: ApplicationServices = {
   mode: "demo",
+  ids: browserIds,
   documents: new PdfDocuments(executor),
   commerce: new LocalCommerce(repository, access, executor),
   menu: new LoadMenu(repository, demoDirectory, access, executor),

@@ -1,6 +1,6 @@
 import { before, after, test } from "node:test"
 import assert from "node:assert/strict"
-import { randomUUID, randomInt } from "node:crypto"
+import { randomUUID, randomInt, createECDH, randomBytes } from "node:crypto"
 import type {
   ChannelSettings,
   Inbox,
@@ -90,7 +90,21 @@ async function order(consent = true) {
     ).body,
   )
 }
+function pushFixture() {
+  const keys = createECDH("prime256v1")
+  keys.generateKeys()
+  return {
+    endpoint: `https://fcm.googleapis.com/fcm/send/test-${suffix}`,
+    keys: {
+      p256dh: keys.getPublicKey().toString("base64url"),
+      auth: randomBytes(16).toString("base64url"),
+    },
+  }
+}
+
 before(async () => {
+  const vapid = createECDH("prime256v1")
+  vapid.generateKeys()
   server = await createApplication(
     loadConfig({
       ...process.env,
@@ -99,6 +113,9 @@ before(async () => {
       CORS_ORIGINS: origin,
       SIGNUP_ENABLED: "true",
       LOG_LEVEL: "silent",
+      VAPID_PUBLIC_KEY: vapid.getPublicKey().toString("base64url"),
+      VAPID_PRIVATE_KEY: vapid.getPrivateKey().toString("base64url"),
+      VAPID_SUBJECT: "mailto:test@example.test",
     }),
   )
   const response = await request("POST", "/auth/register", {
@@ -367,10 +384,7 @@ test("tracking token protects consent; push endpoints are restricted and encrypt
     (await request("PUT", endpoint, { whatsapp: false }, headers)).statusCode,
     200,
   )
-  const subscription = {
-    endpoint: `https://fcm.googleapis.com/fcm/send/test-${suffix}`,
-    keys: { p256dh: "a".repeat(87), auth: "b".repeat(22) },
-  }
+  const subscription = pushFixture()
   for (const bad of [
     "http://127.0.0.1:3001",
     "https://fcm.googleapis.com.evil.test/push",
@@ -445,6 +459,9 @@ test("inbox filters finance by role and read markers never move backward", async
 test("outbox checks consent and session again; ambiguous WhatsApp delivery is never retried", async () => {
   const db = server.runtime.db,
     scope = { tenantId: store.tenantId, restaurantId: store.id }
+  // Set up this test's own subscription, independently of preceding assertions.
+  await db.client.pushSubscription.deleteMany({ where: scope })
+  assert.equal((await request("POST", `${route()}/push`, pushFixture())).statusCode, 201)
   // Bound this fixture to new events; no real network deliveries are made in this test.
   await db.client.notificationEvent.updateMany({
     where: scope,

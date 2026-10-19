@@ -1,3 +1,5 @@
+import { browserIds } from "../src/shared/infrastructure/browser-ids"
+import { sha256Fingerprint } from "../src/shared/infrastructure/sha256-fingerprint"
 import { webcrypto } from "node:crypto"
 import { createReduxDrafts } from "../src/shared/infrastructure/redux-drafts"
 import { TestStorage } from "./helpers"
@@ -84,7 +86,9 @@ describe("HTTP adapters fail closed", () => {
       .mockRejectedValueOnce(new Error("offline"))
       .mockImplementation(async () => response(result))
     vi.stubGlobal("fetch", fetcher)
-    vi.stubGlobal("crypto", webcrypto)
+    vi.stubGlobal("crypto", {
+      getRandomValues: webcrypto.getRandomValues.bind(webcrypto),
+    })
     const storage = new TestStorage()
     const client = new ApiClient("http://localhost:3001/api/v1", executor()),
       checkout = new HttpCheckout(
@@ -92,6 +96,8 @@ describe("HTTP adapters fail closed", () => {
         (id) => id,
         executor(),
         createReduxDrafts(() => storage),
+        browserIds,
+        sha256Fingerprint,
       )
     const details = {
       name: "Teste",
@@ -108,6 +114,8 @@ describe("HTTP adapters fail closed", () => {
       (id) => id,
       executor(),
       createReduxDrafts(() => storage),
+      browserIds,
+      sha256Fingerprint,
     ).execute("store-a", 1, cart, details)
     await checkout.execute("store-b", 1, { ...cart, restaurantId: "store-b" }, details)
     const headers = fetcher.mock.calls.map((call) => call[1].headers)
@@ -136,6 +144,8 @@ describe("HTTP adapters fail closed", () => {
       (id) => id,
       executor(),
       drafts,
+      browserIds,
+      sha256Fingerprint,
     )
     expect(checkout.hasPending("store-a")).toBe(true)
     expect(await checkout.recover("store-a")).toEqual({ ok: true, value: receipt })

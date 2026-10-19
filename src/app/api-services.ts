@@ -1,3 +1,4 @@
+import { sha256Fingerprint } from "../shared/infrastructure/sha256-fingerprint"
 import { HttpTeam } from "../modules/identity/infrastructure/http-team"
 import { HttpEngagement } from "../modules/engagement/infrastructure/http-engagement"
 import { BrowserPush } from "../shared/infrastructure/device-push"
@@ -27,6 +28,7 @@ export function apiServices(): ApplicationServices {
   const commerce = new HttpCommerce(client, refresh)
   return {
     mode: "api",
+    ids: browserIds,
     engagement: new HttpEngagement(client),
     devicePush: new BrowserPush(executor),
     payments: new HttpPayments(client),
@@ -52,7 +54,14 @@ export function apiServices(): ApplicationServices {
     menu: catalog,
     catalog,
     restaurant: catalog,
-    checkout: new HttpCheckout(client, (id) => catalog.slug(id), executor, drafts),
+    checkout: new HttpCheckout(
+      client,
+      (id) => catalog.slug(id),
+      executor,
+      drafts,
+      browserIds,
+      sha256Fingerprint,
+    ),
     images: new BrowserImageReader(executor),
     checkAdmin: async () => {
       const result = await auth.session()

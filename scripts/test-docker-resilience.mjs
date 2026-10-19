@@ -38,14 +38,14 @@ try {
   docker("stop", "api-replica")
   for (let i = 0; i < 20; i++) assert.equal(await status("/configuration"), 200)
   console.log("Failover: 20 reads succeeded with one API stopped")
-  docker("start", "--wait", "api-replica")
+  docker("up", "-d", "--no-deps", "--wait", "api-replica")
   docker("stop", "redis")
   await expectEventually("/configuration", 503)
   await expectEventually("/health/ready", 503)
   console.log("Redis unavailable: application and readiness fail closed (503)")
 } finally {
-  docker("start", "--wait", "redis")
-  docker("start", "--wait", "api", "api-replica")
+  docker("up", "-d", "--no-deps", "--wait", "redis")
+  docker("up", "-d", "--no-deps", "--wait", "api", "api-replica")
   await expectEventually("/health/ready", 200)
 }
 await expectEventually("/configuration", 200)

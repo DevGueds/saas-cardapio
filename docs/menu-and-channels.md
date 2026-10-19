@@ -47,10 +47,16 @@ Push tem até cinco tentativas com espera crescente e elimina endpoints 404/410.
 
 ## Ambiente e validação
 
-`pnpm setup:local` gera chaves VAPID, chave do Evolution e senha do PostgreSQL sem substituir valores existentes. O `.env` não é versionado. Variáveis: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `EVOLUTION_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_DATABASE_PASSWORD`, `DOCKER_CORS_ORIGINS` e `WEB_BIND_ADDRESS`. As duas últimas controlam acesso da rede local; o setup inclui IPv4 privados encontrados e usa `0.0.0.0` para o frontend. Se o IP mudar, atualize as origens e recrie os containers. Firewall/rede precisam permitir a porta 8080. Para restringir novamente ao computador, use `WEB_BIND_ADDRESS=127.0.0.1`.
+`pnpm setup:local` gera chaves VAPID, chave do Evolution e senha do PostgreSQL sem substituir valores existentes. O `.env` não é versionado. Variáveis: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `EVOLUTION_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_DATABASE_PASSWORD`, `DOCKER_CORS_ORIGINS` e `WEB_BIND_ADDRESS`. As duas últimas controlam acesso da rede local; o setup mantém loopback por padrão. Para celular, execute `pnpm setup:lan --host <IP-DO-COMPUTADOR>` e `pnpm docker:up`. Se o IP mudar, repita os comandos com o novo endereço. Firewall/rede precisam permitir a porta 8080. Para restringir novamente ao computador, use `WEB_BIND_ADDRESS=127.0.0.1`.
 
 Migrations são explícitas em `pnpm docker:up`; MySQL continua sendo o banco da aplicação e PostgreSQL atende somente ao provedor. `pnpm docker:down` preserva todos os volumes. Não remova volumes para resolver problemas de configuração.
 
 Os testes de integração usam banco `_test`: preços/revisões, SSE real, deltas, revogação de conexão ativa, privacidade, consentimento, cifragem, permissões, logout e resultados incertos da fila. Playwright percorre o cadastro/seleção de adicionais, publicação, decodifica os três PNGs com logo usando `jsQR`, testa reconexão do painel e registra telas em 320 px. Não substituem homologação do telefone do estabelecimento nem testes em dispositivos físicos de cada sistema operacional.
 
 Referências: [Evolution API](https://github.com/EvolutionAPI/evolution-api), [Web Push](https://github.com/web-push-libs/web-push), [WebKit — push em apps na Tela de Início](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/), [Fetch Event Source](https://github.com/Azure/fetch-event-source), [QR Code Styling](https://github.com/kozakdenys/qr-code-styling).
+
+### Regressões de rede e leitura
+
+O painel sinaliza perda de rede imediatamente, mantém as etapas já recebidas com aviso e aguarda conectividade antes de retomar o stream. A assinatura é cancelada ao sair da tela; reconectar busca um novo snapshot autorizado.
+
+Os três modelos de QR Code mantêm marcadores centrais sólidos e margem branca suficiente para pelo menos quatro módulos, conforme a [orientação da DENSO WAVE](https://www.qrcode.com/en/howto/code.html). Os testes decodificam PNGs exportados com logo e endereço por IP; leitura em câmera física depende também de iluminação, foco e tamanho de impressão.

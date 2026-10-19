@@ -34,6 +34,15 @@ for (const file of files(root)) {
 
   function inspect(node) {
     if (
+      originLayer === "presentation" &&
+      ts.isIdentifier(node) &&
+      node.text === "crypto"
+    ) {
+      failures.push(
+        `${relative}: injete o gerador de identificadores; recursos criptográficos pertencem à infraestrutura`,
+      )
+    }
+    if (
       (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
       ["input", "textarea", "select", "form"].includes(node.tagName.getText(ast)) &&
       !relative.startsWith("shared/presentation/form-validation/") &&

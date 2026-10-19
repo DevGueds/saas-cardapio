@@ -4,6 +4,10 @@ export interface IdGenerator {
   next(): string
 }
 
+export interface ContentFingerprint {
+  digest(value: string): Promise<string>
+}
+
 export interface AccessPolicy {
   assertRead(): void
   assertAdmin(): void

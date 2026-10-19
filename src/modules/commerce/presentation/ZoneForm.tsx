@@ -28,12 +28,12 @@ export default function ZoneForm({
   onClose(): void
   onAdd(zone: DeliveryZone): void
 }) {
-  const { maps } = useServices(),
+  const { maps, ids } = useServices(),
     mutation = useMutation()
   const draft = useFormDraft(
     `zone:${zone?.id ?? "new"}`,
     {
-      id: zone?.id ?? crypto.randomUUID(),
+      id: zone?.id ?? ids.next(),
       state: zone?.state ?? "",
       city: zone?.city ?? "",
       neighborhood: zone?.neighborhood ?? "",
