@@ -22,13 +22,13 @@ export default function AddonForm({
   onClose(): void
 }) {
   const { menu, reload } = useMenu(),
-    { commerce } = useServices(),
+    { commerce, ids } = useServices(),
     mutation = useMutation()
   const draft = useFormDraft(
     `addon:${group?.id ?? "new"}`,
     {
       revision: menu.revision,
-      id: group?.id ?? crypto.randomUUID(),
+      id: group?.id ?? ids.next(),
       name: group?.name ?? "",
       active: group?.active ?? true,
       min: String(group?.min ?? 0),
@@ -40,7 +40,7 @@ export default function AddonForm({
         maxQuantity: String(o.maxQuantity),
       })) ?? [
         {
-          id: crypto.randomUUID(),
+          id: ids.next(),
           name: "",
           price: "0,00",
           available: true,
@@ -210,7 +210,7 @@ export default function AddonForm({
                 field("options", [
                   ...v.options,
                   {
-                    id: crypto.randomUUID(),
+                    id: ids.next(),
                     name: "",
                     price: "0,00",
                     available: true,

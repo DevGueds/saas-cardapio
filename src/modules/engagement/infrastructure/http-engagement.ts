@@ -11,6 +11,7 @@ import {
   customerPreferencesSchema,
 } from "@cardapio/contracts"
 import type { ApiClient } from "../../../shared/infrastructure/api-client"
+import { waitForNetworkRetry } from "../../../shared/infrastructure/network-retry"
 import type { EngagementService, PushTarget } from "../application/ports"
 const done = z.unknown().transform(() => undefined)
 const storePath = (id: string) => `/restaurants/${encodeURIComponent(id)}`
@@ -82,9 +83,25 @@ export class HttpEngagement implements EngagementService {
   ) {
     let fatal = false
     while (!signal.aborted && !fatal) {
+      if (!navigator.onLine) {
+        callbacks.status(
+          false,
+          "Sem conexão. O painel será atualizado quando a rede voltar.",
+        )
+        await waitForNetworkRetry(signal, 3000)
+        continue
+      }
       const attempt = new AbortController(),
-        abort = () => attempt.abort()
+        abort = () => attempt.abort(),
+        offline = () => {
+          callbacks.status(
+            false,
+            "Sem conexão. O painel será atualizado quando a rede voltar.",
+          )
+          attempt.abort()
+        }
       signal.addEventListener("abort", abort, { once: true })
+      window.addEventListener("offline", offline)
       let lastMessage = Date.now()
       const watchdog = setInterval(() => {
         if (Date.now() - lastMessage > 20000) {
@@ -121,6 +138,7 @@ export class HttpEngagement implements EngagementService {
               lastMessage = Date.now()
             },
             onmessage: (event) => {
+              if (signal.aborted || attempt.signal.aborted || !navigator.onLine) return
               lastMessage = Date.now()
               if (event.event === "snapshot") {
                 callbacks.snapshot(boardSnapshotSchema.parse(JSON.parse(event.data)))
@@ -148,21 +166,11 @@ export class HttpEngagement implements EngagementService {
           callbacks.status(false, "Conexão interrompida. Reconectando…")
       } finally {
         clearInterval(watchdog)
+        window.removeEventListener("offline", offline)
         signal.removeEventListener("abort", abort)
         attempt.abort()
       }
-      if (!signal.aborted && !fatal)
-        await new Promise<void>((resolve) => {
-          const cancel = () => {
-              clearTimeout(timer)
-              resolve()
-            },
-            timer = setTimeout(() => {
-              signal.removeEventListener("abort", cancel)
-              resolve()
-            }, 3000)
-          signal.addEventListener("abort", cancel, { once: true })
-        })
+      if (!signal.aborted && !fatal) await waitForNetworkRetry(signal, 3000)
     }
   }
 }

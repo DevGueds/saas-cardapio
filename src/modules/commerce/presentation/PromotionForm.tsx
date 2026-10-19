@@ -27,13 +27,13 @@ export default function PromotionForm({
   onSaved(): void
 }) {
   const { menu, reload } = useMenu(),
-    { commerce } = useServices(),
+    { commerce, ids } = useServices(),
     mutation = useMutation()
   const draft = useFormDraft(
     `promotion:${promotion?.id ?? "new"}`,
     {
       revision: menu.revision,
-      id: promotion?.id ?? crypto.randomUUID(),
+      id: promotion?.id ?? ids.next(),
       name: promotion?.name ?? "",
       code: promotion?.code ?? "",
       kind: promotion?.kind ?? "PERCENT",

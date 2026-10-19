@@ -14,7 +14,7 @@ const server = await createApplication(
     HOST: "127.0.0.1",
     SIGNUP_ENABLED: "true",
     SESSION_SECRET: randomBytes(32).toString("hex"),
-    CORS_ORIGINS: "http://127.0.0.1:4176",
+    CORS_ORIGINS: process.env.TEST_BROWSER_ORIGIN ?? "http://127.0.0.1:4176",
   }),
 )
 await server.app.listen({ host: "127.0.0.1", port: 3002 })
