@@ -13,7 +13,18 @@ const result = await operation.run("maintenance.expired-records", async () => {
         where: { OR: [{ expiresAt: { lte: now } }, { revokedAt: { not: null } }] },
       })
       const limits = await tx.rateLimit.deleteMany({ where: { expiresAt: { lte: now } } })
-      return { expiredSessions: sessions.count, expiredLimits: limits.count }
+      const subscriptions = await tx.pushSubscription.deleteMany({
+        where: { expiresAt: { lte: now } },
+      })
+      const events = await tx.notificationEvent.deleteMany({
+        where: { createdAt: { lt: new Date(now.getTime() - 30 * 86400000) } },
+      })
+      return {
+        expiredSessions: sessions.count,
+        expiredLimits: limits.count,
+        expiredSubscriptions: subscriptions.count,
+        expiredNotificationEvents: events.count,
+      }
     })
   } finally {
     await database.close()

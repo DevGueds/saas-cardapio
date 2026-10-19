@@ -25,6 +25,20 @@ export class HttpCommerce implements CommerceService, MapsService {
   combo(...[id, revision, combo]: Parameters<CommerceService["combo"]>) {
     return this.mutate(id, "combos", { expectedRevision: revision, combo })
   }
+  addon(...[id, revision, group]: Parameters<CommerceService["addon"]>) {
+    return this.mutate(id, "addons", { expectedRevision: revision, group })
+  }
+  appearance(...[id, revision, appearance]: Parameters<CommerceService["appearance"]>) {
+    return this.mutate(id, "appearance", { expectedRevision: revision, appearance })
+  }
+  removeAddon(...[id, revision, groupId]: Parameters<CommerceService["removeAddon"]>) {
+    return this.mutate(
+      id,
+      `addons/${encodeURIComponent(groupId)}`,
+      { expectedRevision: revision },
+      "DELETE",
+    )
+  }
   promotion(...[id, revision, promotion]: Parameters<CommerceService["promotion"]>) {
     return this.mutate(id, "promotions", { expectedRevision: revision, promotion })
   }

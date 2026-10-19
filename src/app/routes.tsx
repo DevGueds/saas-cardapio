@@ -23,6 +23,13 @@ export const router = createBrowserRouter(
 
       children: [
         { path: "/", Component: PublicRoute },
+        {
+          path: "/painel/:slug",
+          lazy: async () => ({
+            Component: (await import("../modules/engagement/presentation/BoardPage"))
+              .default,
+          }),
+        },
         { path: "/login", Component: LoginPage },
         {
           path: "/pedido/:slug/:orderId",
@@ -39,6 +46,36 @@ export const router = createBrowserRouter(
           Component: AdminRoute,
           children: [
             { index: true, Component: AdminAlias },
+            {
+              path: "channels",
+              lazy: async () => ({
+                Component: (
+                  await import("../modules/engagement/presentation/ChannelsPage")
+                ).default,
+              }),
+            },
+            {
+              path: "addons",
+              lazy: async () => ({
+                Component: (await import("../modules/commerce/presentation/AddonsPage"))
+                  .default,
+              }),
+            },
+            {
+              path: "appearance",
+              lazy: async () => ({
+                Component: (
+                  await import("../modules/commerce/presentation/AppearancePage")
+                ).default,
+              }),
+            },
+            {
+              path: "finance",
+              lazy: async () => ({
+                Component: (await import("../modules/payments/presentation/FinancePage"))
+                  .default,
+              }),
+            },
             {
               path: "offers",
               lazy: async () => ({

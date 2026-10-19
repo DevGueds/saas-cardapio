@@ -10,6 +10,54 @@ import {
   type DeliverySettings,
 } from "./commerce.js"
 import type { MenuDocument } from "./menu-document.js"
+import {
+  parseAddonGroup,
+  parseAppearance,
+  type AddonGroup,
+  type MenuAppearance,
+} from "./menu-options.js"
+export function saveAddon(menu: MenuDocument, input: AddonGroup): MenuDocument {
+  const commerce = menu.commerce ?? emptyCommerce()
+  return {
+    ...menu,
+    commerce: parseCommerce(
+      {
+        ...commerce,
+        addonGroups: replace(
+          commerce.addonGroups ?? [],
+          parseAddonGroup(input, menu.products),
+        ),
+      },
+      menu.products,
+    ),
+  }
+}
+export function saveAppearance(
+  menu: MenuDocument,
+  appearance: MenuAppearance,
+): MenuDocument {
+  return {
+    ...menu,
+    commerce: {
+      ...(menu.commerce ?? emptyCommerce()),
+      appearance: parseAppearance(appearance),
+    },
+  }
+}
+export function removeAddon(menu: MenuDocument, id: string): MenuDocument {
+  const commerce = menu.commerce ?? emptyCommerce()
+  requireValid(
+    !!commerce.addonGroups?.some((g) => g.id === id),
+    "Grupo não encontrado. Atualize a lista.",
+  )
+  return {
+    ...menu,
+    commerce: {
+      ...commerce,
+      addonGroups: commerce.addonGroups!.filter((g) => g.id !== id),
+    },
+  }
+}
 function replace<T extends { id: string }>(items: T[], value: T) {
   return items.some((i) => i.id === value.id)
     ? items.map((i) => (i.id === value.id ? value : i))

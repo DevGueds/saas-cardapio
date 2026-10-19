@@ -1,0 +1,226 @@
+.channels-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+.channels-grid .settings-card {
+  min-width: 0;
+  display: grid;
+  gap: 1rem;
+}
+.channels-grid .section-heading {
+  flex-wrap: wrap;
+}
+.whatsapp-pairing {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.whatsapp-pairing p {
+  max-width: 32rem;
+}
+.notification-bell {
+  position: relative;
+}
+.notification-bell > span {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  min-width: 22px;
+  border-radius: 20px;
+  background: #a62f35;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 4px;
+}
+.notifications-dialog {
+  width: min(640px, calc(100% - 2rem));
+}
+.notification-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+.notification-list li {
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+.notification-list a {
+  display: block;
+  padding: 1rem;
+  min-height: 44px;
+}
+.notification-list .is-unread {
+  border-left: 4px solid var(--brand);
+  background: var(--soft-green);
+}
+.notification-list time {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.customer-notifications {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+}
+.customer-notifications h2 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+.push-controls {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+.public-board {
+  min-height: 100dvh;
+  padding: clamp(1rem, 3vw, 3rem);
+  background: #f1f4ef;
+  color: #172f27;
+}
+.public-board > header,
+.public-board > footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.public-board h1 {
+  font-size: clamp(1.7rem, 3vw, 3.5rem);
+}
+.board-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.board-connection {
+  margin-top: 0.6rem;
+  color: #225b45;
+  font-size: 0.9rem;
+}
+.board-connection::before {
+  content: "";
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: currentColor;
+  margin-right: 0.5rem;
+}
+.board-connection.is-offline {
+  color: #9e3c20;
+}
+.public-board-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin: 2rem 0;
+}
+.public-board-column {
+  border: 1px solid #ced8cb;
+  border-radius: 1.25rem;
+  background: #e7ece3;
+  overflow: hidden;
+  min-width: 0;
+}
+.public-board-column h2 {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: #fff;
+  padding: 1.2rem;
+  font-size: clamp(1.1rem, 1.8vw, 1.8rem);
+  border-top: 6px solid #7e8d83;
+}
+.public-board-column--preparing h2 {
+  border-top-color: #ad621d;
+}
+.public-board-column--ready h2 {
+  border-top-color: #225b45;
+}
+.public-board-column--out_for_delivery h2 {
+  border-top-color: #185aa1;
+}
+.public-board-column > div {
+  padding: 1rem;
+  display: grid;
+  gap: 0.8rem;
+}
+.public-order {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 1.1rem;
+  gap: 0.3rem;
+  border: 1px solid #d7e0d2;
+  border-radius: 0.9rem;
+  background: #fff;
+  animation: order-enter 0.2s ease-out;
+}
+.public-order strong {
+  font-family: ui-monospace, monospace;
+  font-size: clamp(1.2rem, 2.4vw, 2.8rem);
+  overflow-wrap: anywhere;
+  letter-spacing: -0.06em;
+}
+.public-order > span,
+.public-order time {
+  color: #58665a;
+  font-size: 0.85rem;
+}
+.public-order--ready {
+  background: #225b45;
+  color: #fff;
+  border-color: #225b45;
+}
+.public-order--ready > span,
+.public-order--ready time {
+  color: #e5efdf;
+}
+.board-empty {
+  color: #596658;
+  padding: 1rem 0.25rem;
+  font-size: 0.9rem;
+}
+.public-board--mobile {
+  max-width: 720px;
+  margin: auto;
+}
+.public-board--mobile .public-board-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.public-board--mobile .public-board-column > div {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+}
+@keyframes order-enter {
+  from {
+    opacity: 0.4;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 1000px) {
+  .public-board-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 500px) {
+  .public-board-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .public-board-column > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .public-order {
+    padding: 0.75rem;
+  }
+  .public-board > footer {
+    font-size: 0.85rem;
+  }
+}

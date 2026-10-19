@@ -12,5 +12,7 @@ coverage
 !/.env.demo
 !/.env.api
 *.log
+**/logs
+.tmp-*
 .plugins
 .opencode-skills

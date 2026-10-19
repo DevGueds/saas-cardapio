@@ -7,6 +7,7 @@ import type { Product } from "./catalog.js"
 export type CartLine = Readonly<{
   kind?: "PRODUCT" | "COMBO"
   selections?: Readonly<Record<string, string>>
+  addons?: Readonly<Record<string, number>>
   productId: string
   quantity: number
   unitPrice: number

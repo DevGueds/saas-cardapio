@@ -11,7 +11,7 @@ import { useDraft } from "../../../shared/presentation/DraftsProvider"
 import DraftNotice from "../../../shared/presentation/DraftNotice"
 import Dialog from "../../../shared/presentation/Dialog"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
-import { InputField } from "../../../shared/presentation/Fields"
+import { InputField, ToggleField } from "../../../shared/presentation/Fields"
 import { useMutation } from "../../../shared/presentation/use-mutation"
 import { checkoutDraftSchema } from "../application/drafts"
 import type { CartController } from "./use-cart"
@@ -47,6 +47,7 @@ export default function CheckoutDrawer({
       zoneId: "",
       couponCode: "",
       cep: "",
+      whatsappConsent: false,
     },
     checkoutDraftSchema.parse,
   )
@@ -54,6 +55,7 @@ export default function CheckoutDrawer({
     details = value.details,
     receipts = useReceipts(menu.restaurant.id)
   const options = {
+    whatsappConsent: api && value.whatsappConsent,
     fulfillment: {
       mode: value.mode,
       ...(value.zoneId && value.mode === "DELIVERY" ? { zoneId: value.zoneId } : {}),
@@ -331,6 +333,22 @@ export default function CheckoutDrawer({
             pickup={value.mode === "PICKUP"}
             total={pricing.quote?.total}
           />
+          {api && (
+            <div className="checkout-consent">
+              <ToggleField
+                label="Quero receber atualizações deste pedido e dos pagamentos pelo WhatsApp"
+                checked={value.whatsappConsent}
+                disabled={blocked}
+                onChange={(whatsappConsent) =>
+                  draft.set((v) => ({ ...v, whatsappConsent }))
+                }
+              />
+              <p className="field-help">
+                Opcional. Se a loja ativou esse canal, enviaremos mensagens ao número
+                informado. Você pode cancelar no acompanhamento do pedido.
+              </p>
+            </div>
+          )}
           {!!menu.commerce?.promotions.length && (
             <InputField
               label="Cupom de desconto"

@@ -1,3 +1,4 @@
+import { notifySuccess } from "../../../shared/presentation/notify"
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
 import { useState, type FormEvent } from "react"
 import { Bike, MapPin, Plus, Pencil, Trash2, Store } from "lucide-react"
@@ -39,7 +40,6 @@ export default function DeliverySettingsPage() {
     set = (next: typeof delivery) => draft.set((v) => ({ ...v, delivery: next }))
   const [editor, setEditor] = useState<{ zone?: DeliveryZone } | null>(null),
     [deleting, setDeleting] = useState<DeliveryZone | null>(null),
-    [notice, setNotice] = useState(""),
     [search, setSearch] = useState("")
   const readOnly = !!account && !can(account.restaurant.role, "catalog:write"),
     blocked = readOnly || loading || !!error || mutation.pending || !commerce
@@ -59,7 +59,7 @@ export default function DeliverySettingsPage() {
         revision: result.value.revision,
         delivery: result.value.commerce!.delivery,
       })
-      setNotice("Entregas e retirada salvas.")
+      notifySuccess("Entregas e retirada salvas.")
     }
   }
   const zones = delivery.zones.filter((z) =>
@@ -76,11 +76,6 @@ export default function DeliverySettingsPage() {
       />
       <ValidatedForm className="delivery-settings" onSubmit={(e) => void submit(e)}>
         <DraftNotice draft={draft} />
-        {notice && (
-          <p className="success-notice" role="status">
-            {notice}
-          </p>
-        )}
         {mutation.error && (
           <ErrorNotice error={mutation.error} onRetry={() => void refresh()} />
         )}
@@ -220,7 +215,7 @@ export default function DeliverySettingsPage() {
                 ? delivery.zones.map((z) => (z.id === zone.id ? zone : z))
                 : [...delivery.zones, zone],
             })
-            setNotice(
+            notifySuccess(
               "Bairro adicionado à lista. Clique em Salvar entregas para publicar.",
             )
           }}

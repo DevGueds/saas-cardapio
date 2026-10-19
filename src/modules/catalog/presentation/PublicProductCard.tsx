@@ -8,11 +8,13 @@ export default function PublicProductCard({
   quantity,
   disabled,
   onQuantityChange,
+  onCustomize,
 }: {
   product: Product
   quantity: number
   disabled: boolean
   onQuantityChange(delta: number): void
+  onCustomize?: () => void
 }) {
   return (
     <article
@@ -38,6 +40,17 @@ export default function PublicProductCard({
           <strong>{formatMoney(product.price)}</strong>
           {!product.available ? (
             <span className="soldout-pill">Indisponível</span>
+          ) : onCustomize ? (
+            <button
+              type="button"
+              className="add-button"
+              disabled={disabled}
+              onClick={onCustomize}
+              aria-label={`Personalizar ${product.name}`}
+            >
+              <Plus size={17} />
+              <span>Personalizar{quantity ? ` (${quantity})` : ""}</span>
+            </button>
           ) : quantity === 0 ? (
             <button
               className="add-button"

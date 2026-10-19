@@ -1,6 +1,6 @@
 import { can } from "@cardapio/domain/permissions"
 import { useAccount } from "../../modules/identity/presentation/AccountContext"
-import { PackagePlus, Bike, Users } from "lucide-react"
+import { PackagePlus, Bike, Users, Layers, Palette, Radio } from "lucide-react"
 import { useServices } from "./ServicesProvider"
 import AccountActions from "../../modules/identity/presentation/AccountActions"
 import { NavLink, Link } from "react-router"
@@ -71,6 +71,32 @@ export default function AdminNavigation({ onNavigate }: { onNavigate?: () => voi
         </NavLink>
         {(!account || can(account.restaurant.role, "catalog:write")) && (
           <>
+            {api && (
+              <NavLink
+                to={`/admin/channels${query}`}
+                onClick={onNavigate}
+                className={({ isActive }) => (isActive ? "is-active" : "")}
+              >
+                <Radio size={20} />
+                <span>Painel ao vivo e mensagens</span>
+              </NavLink>
+            )}
+            <NavLink
+              to={`/admin/addons${query}`}
+              onClick={onNavigate}
+              className={({ isActive }) => (isActive ? "is-active" : "")}
+            >
+              <Layers size={20} />
+              <span>Adicionais e extras</span>
+            </NavLink>
+            <NavLink
+              to={`/admin/appearance${query}`}
+              onClick={onNavigate}
+              className={({ isActive }) => (isActive ? "is-active" : "")}
+            >
+              <Palette size={20} />
+              <span>Aparência e QR Code</span>
+            </NavLink>
             <NavLink
               to={`/admin/offers${query}`}
               onClick={onNavigate}
@@ -99,12 +125,20 @@ export default function AdminNavigation({ onNavigate }: { onNavigate?: () => voi
             <span>Equipe e permissões</span>
           </NavLink>
         )}
-        <button type="button" disabled>
-          <BarChart3 size={20} aria-hidden="true" />
-          <span>
-            Faturamento <small>Em breve</small>
-          </span>
-        </button>
+        {can(account?.restaurant.role, "payments:read") && (
+          <NavLink
+            to={`/admin/finance${query}`}
+            onClick={onNavigate}
+            className={({ isActive }) => (isActive ? "is-active" : "")}
+          >
+            <BarChart3 size={20} aria-hidden="true" />
+            <span>
+              {can(account?.restaurant.role, "reports:read")
+                ? "Caixa e relatórios"
+                : "Recebimentos"}
+            </span>
+          </NavLink>
+        )}
       </nav>
       <div className="sidebar-preview">
         <Store size={23} aria-hidden="true" />

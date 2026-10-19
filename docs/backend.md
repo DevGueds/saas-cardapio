@@ -14,6 +14,10 @@ pnpm dev:full
 
 A API inicia somente com configuração válida, banco e Redis acessíveis. Não executa migrations nem seeds automaticamente ao iniciar. O cadastro cria conta, tenant, membership OWNER, loja fechada/vazia e sessão numa transação. Não há conta administrativa ou senha padrão.
 
+O módulo de pagamentos manuais e relatórios possui autorização própria, idempotência e transações em centavos. Consulte [caixa e diagnóstico](finance.md) para rotas, regras financeiras, permissões e variáveis `LOG_LEVEL`, `LOG_DIRECTORY` e `LOG_INSTANCE`. Os logs Pino usam terminal e volume persistente com rotação no Docker.
+
+Adicionais/aparência e painel público/notificações são descritos em [cardápio e canais](menu-and-channels.md). O módulo `engagement` concentra permissões, consentimento, SSE e portas de push/WhatsApp. Eventos do pedido/pagamento são persistidos na mesma transação e processados por uma fila durável compartilhada entre réplicas. O contrato OpenAPI inclui todas essas rotas.
+
 `pnpm api:build` gera o Prisma Client e `backend/dist`. Para executar o build: `pnpm --filter @cardapio/api start`, com ambiente configurado. Os pacotes `@cardapio/domain` e `@cardapio/contracts` são compilados no postinstall; após editar seus fontes execute `pnpm build:shared` ou reinicie o fluxo de desenvolvimento. Os pacotes de workspace precisam acompanhar a API no artefato de deploy.
 
 ## Aplicação completa em Docker

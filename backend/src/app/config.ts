@@ -4,6 +4,12 @@ import { Failure } from "@cardapio/domain/failure"
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error", "silent"]).default("info"),
+  LOG_DIRECTORY: z.string().max(500).default("logs"),
+  LOG_INSTANCE: z
+    .string()
+    .regex(/^[a-zA-Z0-9_-]{1,60}$/)
+    .default("api"),
   HOST: z.string().default("127.0.0.1"),
   PORT: z.coerce.number().int().min(1024).max(65535).default(3001),
   REDIS_URL: z.string().min(1),
@@ -19,6 +25,11 @@ const schema = z.object({
   CORS_ORIGINS: z.string().min(1),
   SIGNUP_ENABLED: z.enum(["true", "false"]).default("false"),
   DOCS_ENABLED: z.enum(["true", "false"]).default("false"),
+  VAPID_PUBLIC_KEY: z.string().default(""),
+  VAPID_PRIVATE_KEY: z.string().default(""),
+  VAPID_SUBJECT: z.string().default("mailto:admin@localhost.invalid"),
+  EVOLUTION_URL: z.string().default(""),
+  EVOLUTION_API_KEY: z.string().default(""),
 })
 export type ApiConfig = ReturnType<typeof loadConfig>
 export function loadConfig(input: Record<string, unknown>) {
@@ -36,6 +47,27 @@ export function loadConfig(input: Record<string, unknown>) {
   let database: URL
   let origins: string[]
   try {
+    if (
+      !!env.VAPID_PUBLIC_KEY !== !!env.VAPID_PRIVATE_KEY ||
+      (env.VAPID_PUBLIC_KEY &&
+        (!/^[A-Za-z0-9_-]{87}$/.test(env.VAPID_PUBLIC_KEY) ||
+          !/^[A-Za-z0-9_-]{43}$/.test(env.VAPID_PRIVATE_KEY) ||
+          !/^(mailto:[^\s@]+@[^\s@]+|https:\/\/[^\s]+)$/.test(env.VAPID_SUBJECT)))
+    )
+      throw new Error()
+    if (env.EVOLUTION_URL) {
+      const provider = new URL(env.EVOLUTION_URL)
+      if (
+        !["http:", "https:"].includes(provider.protocol) ||
+        provider.username ||
+        provider.password ||
+        provider.search ||
+        provider.hash ||
+        provider.pathname !== "/" ||
+        env.EVOLUTION_API_KEY.length < 32
+      )
+        throw new Error()
+    }
     redis = new URL(env.REDIS_URL)
     if (
       !["redis:", "rediss:"].includes(redis.protocol) ||
@@ -107,6 +139,14 @@ export function loadConfig(input: Record<string, unknown>) {
   }
   return {
     environment: env.NODE_ENV,
+    vapidPublicKey: env.VAPID_PUBLIC_KEY,
+    vapidPrivateKey: env.VAPID_PRIVATE_KEY,
+    vapidSubject: env.VAPID_SUBJECT,
+    evolutionUrl: env.EVOLUTION_URL.replace(/\/$/, ""),
+    evolutionKey: env.EVOLUTION_API_KEY,
+    logLevel: env.LOG_LEVEL,
+    logDirectory: env.NODE_ENV === "test" ? undefined : env.LOG_DIRECTORY || undefined,
+    logInstance: env.LOG_INSTANCE,
     host: env.HOST,
     port: env.PORT,
     database,

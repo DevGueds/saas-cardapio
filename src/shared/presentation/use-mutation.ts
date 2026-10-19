@@ -1,4 +1,5 @@
 import { browserExecutor } from "../browser-executor"
+import { toast } from "react-toastify"
 import { useRef, useState } from "react"
 
 import type { AppError, Result } from "../application/result"
@@ -12,6 +13,7 @@ export function useMutation() {
 
   async function run<T>(
     action: () => Promise<Result<T>>,
+    successMessage?: string,
   ): Promise<Result<T> | undefined> {
     if (gate.current) return undefined
 
@@ -23,7 +25,14 @@ export function useMutation() {
       const outcome = await browserExecutor.run("presentation", "mutation", action)
       const result = outcome.ok ? outcome.value : outcome
 
-      if (!result.ok) setError(result.error)
+      if (!result.ok) {
+        setError(result.error)
+        toast.error("Não foi possível confirmar a ação. Confira os detalhes na tela.", {
+          toastId: result.error.diagnosticId,
+          autoClose: 8000,
+          role: "status",
+        })
+      } else if (successMessage) toast.success(successMessage, { role: "status" })
 
       return result
     } finally {

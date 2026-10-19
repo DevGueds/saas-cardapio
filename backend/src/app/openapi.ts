@@ -1,7 +1,16 @@
 import { z } from "zod"
 import * as contracts from "@cardapio/contracts"
 const requestSchemas = {
+  Addon: contracts.saveAddonSchema,
+  Appearance: contracts.saveAppearanceSchema,
+  Channels: contracts.updateChannelsSchema,
+  Push: contracts.pushSubscriptionSchema,
+  RemovePush: z.strictObject({ endpoint: z.string().url().max(2048) }),
+  Consent: contracts.customerConsentSchema,
+  ReadNotifications: z.strictObject({ before: z.iso.datetime() }),
   Login: contracts.loginSchema,
+  Payment: contracts.paymentInputSchema,
+  PaymentReversal: contracts.reversalSchema,
   AccountRegistration: contracts.accountRegistrationSchema,
   Combo: contracts.saveComboSchema,
   Promotion: contracts.savePromotionSchema,
@@ -22,6 +31,30 @@ const requestSchemas = {
   Open: contracts.openSchema,
 }
 const operations = [
+  ["/restaurants/{restaurantId}/addons", "put", "Addon"],
+  ["/restaurants/{restaurantId}/addons/{groupId}", "delete", "Delete"],
+  ["/restaurants/{restaurantId}/appearance", "put", "Appearance"],
+  ["/restaurants/{restaurantId}/channels", "get"],
+  ["/restaurants/{restaurantId}/channels", "put", "Channels"],
+  ["/restaurants/{restaurantId}/notifications", "get"],
+  ["/restaurants/{restaurantId}/notifications/read", "post", "ReadNotifications"],
+  ["/restaurants/{restaurantId}/notification-deliveries", "get"],
+  ["/restaurants/{restaurantId}/push", "post", "Push"],
+  ["/restaurants/{restaurantId}/push", "delete", "RemovePush"],
+  ["/restaurants/{restaurantId}/whatsapp", "get"],
+  ["/restaurants/{restaurantId}/whatsapp/connect", "post"],
+  ["/restaurants/{restaurantId}/whatsapp", "delete"],
+  ["/public/push/configuration", "get", null, true],
+  ["/public/restaurants/{slug}/board/stream", "get", null, true],
+  ["/public/restaurants/{slug}/orders/{orderId}/notifications", "get", null, true],
+  ["/public/restaurants/{slug}/orders/{orderId}/notifications", "put", "Consent", true],
+  ["/public/restaurants/{slug}/orders/{orderId}/push", "post", "Push", true],
+  ["/public/restaurants/{slug}/orders/{orderId}/push", "delete", "RemovePush", true],
+  ["/restaurants/{restaurantId}/payments", "post", "Payment"],
+  ["/restaurants/{restaurantId}/payments", "get"],
+  ["/restaurants/{restaurantId}/payments/{paymentId}/reverse", "post", "PaymentReversal"],
+  ["/restaurants/{restaurantId}/orders/{orderId}/balance", "get"],
+  ["/restaurants/{restaurantId}/reports/financial", "get"],
   ["/auth/register-account", "post", "AccountRegistration", true],
   ["/public/addresses/{cep}", "get", null, true],
   ["/public/restaurants/{slug}/checkout/quote", "post", "Quote", true],
@@ -81,6 +114,25 @@ for (const entry of operations) {
       required: true,
       schema: { type: "string" },
     })
+  if (
+    method === "get" &&
+    (path.endsWith("/payments") || path.endsWith("/reports/financial"))
+  ) {
+    for (const name of ["from", "to"])
+      parameters.push({
+        name,
+        in: "query",
+        required: true,
+        schema: { type: "string", format: "date-time" },
+      })
+    if (path.endsWith("/payments"))
+      parameters.push({
+        name: "cursor",
+        in: "query",
+        required: false,
+        schema: { type: "string", format: "uuid" },
+      })
+  }
   if (method !== "get" && !isPublic)
     parameters.push({
       name: "X-CSRF-Token",
@@ -88,9 +140,16 @@ for (const entry of operations) {
       required: true,
       schema: { type: "string" },
     })
-  if (path === "/public/restaurants/{slug}/orders/{orderId}")
+  if (path.startsWith("/public/restaurants/{slug}/orders/{orderId}"))
     parameters.push({
       name: "X-Order-Token",
+      in: "header",
+      required: true,
+      schema: { type: "string", pattern: "^[a-f0-9]{64}$" },
+    })
+  if (path.endsWith("/board/stream"))
+    parameters.push({
+      name: "X-Board-Key",
       in: "header",
       required: true,
       schema: { type: "string", pattern: "^[a-f0-9]{64}$" },
@@ -119,7 +178,13 @@ for (const entry of operations) {
         }
       : {}),
     responses: {
-      "200": { description: "Result com ok: true e value." },
+      "200": path.endsWith("/board/stream")
+        ? {
+            description:
+              "SSE: snapshot inicial, delta (upsert/remove), heartbeat e unavailable. Reconexão recebe snapshot completo. Chave revogável pelo gerente.",
+            content: { "text/event-stream": { schema: { type: "string" } } },
+          }
+        : { description: "Result com ok: true e value." },
       "201": { description: "Operação concluída; consulte value." },
       "4XX": {
         description:

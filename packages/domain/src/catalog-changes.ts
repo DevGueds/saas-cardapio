@@ -77,6 +77,10 @@ export function changeAvailability(
 }
 export function deleteProduct(current: MenuDocument, productId: string): MenuDocument {
   requireValid(
+    !current.commerce?.addonGroups?.some((g) => g.productIds.includes(productId)),
+    "Este produto possui grupos de adicionais. Desvincule-o dos grupos antes de excluir.",
+  )
+  requireValid(
     !current.commerce?.combos.some(
       (c) =>
         c.items.some((i) => i.productId === productId) ||

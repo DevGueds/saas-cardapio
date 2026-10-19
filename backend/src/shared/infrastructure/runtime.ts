@@ -1,4 +1,5 @@
 import { Bulkhead } from "../application/bulkhead.js"
+import { createDiagnostics } from "./logging.js"
 import {
   createHash,
   createHmac,
@@ -17,9 +18,10 @@ import type {
 
 export const ids: IdGenerator = { next: randomUUID }
 export const clock: Clock = { now: () => new Date() }
-export const diagnostics: DiagnosticLogger = {
-  record: (event) => process.stderr.write(JSON.stringify(event) + "\n"),
-}
+export const diagnostics: DiagnosticLogger = createDiagnostics({
+  level: "info",
+  instance: "startup",
+})
 
 export class NodeSecrets implements SecretTokens {
   constructor(private readonly secret: string) {}

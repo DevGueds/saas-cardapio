@@ -16,13 +16,15 @@ Abra **http://localhost:8080**. Crie sua conta com senha de **no mínimo 8 carac
 
 `setup:local` gera `backend/.env` com segredos aleatórios, sem sobrescrever arquivos existentes. Esse arquivo não vai para o Git. MySQL e Redis escutam apenas em `127.0.0.1:3307` e `127.0.0.1:6380`; os dados ficam em volume Docker. Frontend e API ficam na mesma origem: Caddy balanceia `/api/` entre duas instâncias internas da API, sem publicar a porta da API. `pnpm docker:down` para os serviços e preserva o volume. Não há senha padrão compartilhada entre instalações.
 
-O comando `docker:up` aplica migrations explicitamente e aguarda os healthchecks de MySQL, Redis, APIs e frontend. As imagens são fixadas por digest. API e frontend executam sem root, sem capabilities e com filesystem somente leitura. O Compose usa configuração **local de desenvolvimento**, acessível apenas neste computador.
+O comando `docker:up` aplica migrations explicitamente e aguarda os healthchecks de MySQL, Redis, duas APIs, frontend, Evolution API e PostgreSQL do provedor de WhatsApp. As imagens são fixadas por digest. API e frontend executam sem root, sem capabilities e com filesystem somente leitura. O Compose usa configuração **local de desenvolvimento**. O setup permite acesso ao frontend pela rede local em `http://IP-DO-COMPUTADOR:8080`; banco, Redis e administração do provedor continuam restritos ao computador. Configure `WEB_BIND_ADDRESS=127.0.0.1` para restringir também o frontend.
 
 ### Desenvolvimento com recarga automática
 
 Com o Docker instalado, use `pnpm db:up`, `pnpm db:migrate` e `pnpm dev:full`. Abra **http://localhost:8443**; a API escuta em `localhost:3001`. Para executar os processos em terminais separados: `pnpm api:dev` e `pnpm dev:api`. Use o mesmo hostname no frontend e na API para que o cookie de sessão funcione; a configuração local usa `localhost`.
 
 ## O que funciona
+
+Novidades: **adicionais reutilizáveis, três modelos de cardápio, QR Codes com logo, painel público TV/celular ao vivo, caixa manual, reversões e relatórios PDF reais**. Notificações React-Toastify, Web Push e integração WhatsApp com consentimento; falhas isoladas por área e logs Pino com rotação. Consulte [operação financeira](docs/finance.md), [cardápio e canais](docs/menu-and-channels.md) e [entregas](docs/evolution-plan.md).
 
 - Cadastro, login, logout, alteração de senha e seleção/criação de lojas. Um usuário pode participar de vários tenants; cada tenant pode ter várias lojas.
 - Catálogo com categorias criadas dentro do produto, preço em centavos, imagens, disponibilidade e destaque.
@@ -34,7 +36,9 @@ Com o Docker instalado, use `pnpm db:up`, `pnpm db:migrate` e `pnpm dev:full`. A
 - Entrega com taxa por cidade/bairro, retirada, atribuição de entregador e acompanhamento público das etapas por link privado. Leaflet/OpenStreetMap e busca explícita de CEP pela BrasilAPI auxiliam o endereço.
 - Equipe com proprietário, gerente, caixa, cozinha, entregador e consulta. Cadastro de equipe separado da criação de loja.
 - Rascunhos Redux persistidos: carrinho, checkout e formulários administrativos; isolamento por loja/usuário, expiração e aviso de conflito entre abas.
-- WhatsApp opcional após o envio. Registrar o pedido não confirma aceitação pelo restaurante nem pagamento. A API não envia mensagens automaticamente.
+- WhatsApp opcional após o envio e mensagens automáticas por Evolution API, após parear o número da loja e ativar o canal. Cada cliente precisa autorizar; a preferência é revogável. Registrar o pedido não confirma aceitação pelo restaurante nem pagamento.
+- Painel público com SSE, deltas por pedido, reconexão e link revogável. Gerente escolhe TV/celular e compartilha link ou QR Code. Dados pessoais ficam fora do painel.
+- Sino de notificações com permissões por perfil, alertas animados e Web Push consentido. Chaves geradas localmente; push em aparelhos externos requer HTTPS. No iPhone/iPad, abra pela Tela de Início.
 
 ## Demonstração independente
 
@@ -85,7 +89,7 @@ Leia [Arquitetura](docs/architecture.md), [Backend, segurança e desenvolvimento
 
 ## Limites desta etapa
 
-É uma base de desenvolvimento com persistência e autorização no servidor. Ainda não inclui verificação de e-mail, recuperação de senha por e-mail, MFA, cobrança de assinaturas, gateway de pagamento, notificações, upload em object storage ou publicação em produção. O cadastro público pode ser desabilitado por configuração. A gestão de equipe já tem tela; convites por e-mail continuam fora do escopo. Não há rastreio de entregador nem cálculo de rota/distância.
+É uma base de desenvolvimento com persistência e autorização no servidor. Ainda não inclui verificação de e-mail, recuperação de senha por e-mail, MFA, cobrança de assinaturas, gateway de pagamento, upload em object storage ou publicação em produção. Pagamentos são registros manuais; não movimentam dinheiro em bancos. WhatsApp exige pareamento do telefone e Web Push em celulares externos exige HTTPS. O cadastro público pode ser desabilitado por configuração. A gestão de equipe já tem tela; convites por e-mail continuam fora do escopo. Não há rastreio de entregador nem cálculo de rota/distância.
 
 Os arquivos usam UTF-8. No PowerShell, configure `$OutputEncoding = [System.Text.UTF8Encoding]::new($false)` antes de enviar texto acentuado por pipe. `pnpm check:text` verifica os textos do frontend, backend e domínio. Não há Supabase nem conexão do navegador com banco de dados.
 

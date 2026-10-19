@@ -17,7 +17,7 @@ export default defineConfig({
       command: "pnpm --filter @cardapio/api exec node scripts/serve-test.mjs",
       url: "http://127.0.0.1:3002/api/v1/health/ready",
       reuseExistingServer: false,
-      timeout: 30000,
+      timeout: 120000,
     },
     {
       command: "pnpm dev:api --host 127.0.0.1 --port 4176",

@@ -1,4 +1,8 @@
 import { HttpTeam } from "../modules/identity/infrastructure/http-team"
+import { HttpEngagement } from "../modules/engagement/infrastructure/http-engagement"
+import { BrowserPush } from "../shared/infrastructure/device-push"
+import { HttpPayments } from "../modules/payments/infrastructure/http-payments"
+import { PdfDocuments } from "../shared/infrastructure/pdf-documents"
 import { quoteSchema, trackingSchema } from "@cardapio/contracts"
 import { HttpCommerce } from "../modules/commerce/infrastructure/http-commerce"
 import { browserDrafts } from "./drafts"
@@ -23,6 +27,10 @@ export function apiServices(): ApplicationServices {
   const commerce = new HttpCommerce(client, refresh)
   return {
     mode: "api",
+    engagement: new HttpEngagement(client),
+    devicePush: new BrowserPush(executor),
+    payments: new HttpPayments(client),
+    documents: new PdfDocuments(executor),
     drafts,
     auth,
     team: new HttpTeam(client),

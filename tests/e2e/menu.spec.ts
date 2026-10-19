@@ -177,6 +177,7 @@ test("checkout prepara o link e o invalida após mudança em outra aba", async (
   await admin.goto("/admin/menu")
 
   await admin.getByRole("switch", { name: "Loja aberta" }).click()
+  await admin.getByRole("button", { name: "Confirmar fechamento", exact: true }).click()
 
   await expect(
     page.getByText("A loja está fechada e não está recebendo pedidos."),

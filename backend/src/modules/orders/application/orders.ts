@@ -124,6 +124,7 @@ export class Orders {
               : "",
             trackingHash: this.secrets.hash(trackingToken(id)),
             trackingExpiresAt: new Date(now.getTime() + 30 * 86400000),
+            whatsappConsentAt: data.options?.whatsappConsent ? now : null,
             order: {
               id,
               restaurantId: scope.restaurantId,

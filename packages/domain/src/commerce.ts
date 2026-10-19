@@ -9,6 +9,13 @@ import {
   text,
 } from "./validation.js"
 import type { Product } from "./catalog.js"
+import {
+  parseAddonGroups,
+  parseAppearance,
+  defaultAppearance,
+  type AddonGroup,
+  type MenuAppearance,
+} from "./menu-options.js"
 
 export interface ComboItem {
   productId: string
@@ -68,11 +75,15 @@ export interface DeliverySettings {
   zones: DeliveryZone[]
 }
 export interface Commerce {
+  addonGroups?: AddonGroup[]
+  appearance?: MenuAppearance
   combos: Combo[]
   promotions: Promotion[]
   delivery: DeliverySettings
 }
 export const emptyCommerce = (): Commerce => ({
+  addonGroups: [],
+  appearance: defaultAppearance(),
   combos: [],
   promotions: [],
   delivery: {
@@ -323,5 +334,11 @@ export function parseCommerce(input: unknown, products: readonly Product[]): Com
     combos.every((c) => !products.some((p) => p.id === c.id)),
     "Identificador de combo em conflito com produto.",
   )
-  return { combos, promotions, delivery: parseDelivery(row.delivery) }
+  return {
+    combos,
+    promotions,
+    delivery: parseDelivery(row.delivery),
+    addonGroups: parseAddonGroups(row.addonGroups, products),
+    appearance: parseAppearance(row.appearance),
+  }
 }

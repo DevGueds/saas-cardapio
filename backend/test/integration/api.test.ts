@@ -150,6 +150,7 @@ after(async () => {
       select: { tenantId: true },
     })
     const tenantId = { in: memberships.map((row) => row.tenantId) }
+    await tx.payment.deleteMany({ where: { tenantId } })
     await tx.order.deleteMany({ where: { tenantId } })
     await tx.storeCommerce.deleteMany({ where: { tenantId } })
     await tx.product.deleteMany({ where: { tenantId } })

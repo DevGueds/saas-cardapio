@@ -8,6 +8,7 @@ import { readMenu } from "../../catalog/infrastructure/prisma-menu.js"
 import { assertTransition, assertOrderSnapshot } from "../domain/order.js"
 import type { OrderDraft, OrdersRepository, OrderOperator } from "../application/ports.js"
 import type { MenuDocument } from "@cardapio/domain/menu-document"
+import { orderEvent } from "../../../shared/infrastructure/order-event.js"
 const json = (value: unknown) => value as Prisma.InputJsonValue
 function view(row: Order): OrderView {
   const result = orderSchema.safeParse({
@@ -122,8 +123,10 @@ export class PrismaOrders implements OrdersRepository {
           whatsappUrl: draft.whatsappUrl,
           trackingHash: draft.trackingHash,
           trackingExpiresAt: draft.trackingExpiresAt,
+          whatsappConsentAt: draft.whatsappConsentAt ?? null,
         },
       })
+      await orderEvent(tx, scope, saved.id, "ORDER", "NEW", saved.createdAt)
       return {
         orderId: saved.id,
         url: saved.whatsappUrl,
@@ -194,6 +197,7 @@ export class PrismaOrders implements OrdersRepository {
           "CONFLICT",
           "Este pedido foi alterado. Atualize antes de continuar.",
         )
+      await orderEvent(tx, scope, id, "ORDER", status, now)
       return view({
         ...row,
         status,

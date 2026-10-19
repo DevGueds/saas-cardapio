@@ -1,9 +1,13 @@
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
+import FeatureBoundary from "../../../shared/presentation/FeatureBoundary"
 import PublicOffers from "../../commerce/presentation/PublicOffers"
 import RecentOrders from "../../checkout/presentation/RecentOrders"
 import { useSearchParams } from "react-router"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import PublicProductCard from "./PublicProductCard"
+import AddonChoice from "../../commerce/presentation/AddonChoice"
+import { defaultAppearance } from "@cardapio/domain/menu-options"
+import { notifySuccess } from "../../../shared/presentation/notify"
 import { useEffect, useMemo, useState } from "react"
 
 import { Link } from "react-router"
@@ -37,6 +41,7 @@ export default function PublicMenuPage() {
   const { mode } = useServices()
 
   const { restaurant: store, categories, products } = menu
+  const appearance = menu.commerce?.appearance ?? defaultAppearance()
 
   useEffect(() => {
     document.title = `${store.name} · Cardápio digital`
@@ -57,6 +62,8 @@ export default function PublicMenuPage() {
     })
 
   const [search, setSearch] = useState("")
+  const [customizing, setCustomizing] = useState<string | null>(null)
+  const selectedProduct = products.find((p) => p.id === customizing)
 
   const [selection, setSelection] = useState("$popular")
 
@@ -95,7 +102,9 @@ export default function PublicMenuPage() {
   }
 
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell menu-theme menu-theme--${appearance.preset.toLowerCase()} menu-color--${appearance.color.toLowerCase()} ${appearance.showImages ? "" : "menu-without-images"}`}
+    >
       <a className="skip-link" href="#cardapio">
         Pular para o cardápio
       </a>
@@ -134,7 +143,7 @@ export default function PublicMenuPage() {
                 {store.isOpen ? "Aberto" : "Fechado"}
               </div>
             </div>
-            <p className="store-eyebrow">Seu próximo pedido começa aqui</p>
+            <p className="store-eyebrow">{appearance.headline}</p>
             <h1 id="store-name">{store.name}</h1>
             <p className="store-description">{store.description}</p>
             <div className="store-meta">
@@ -248,15 +257,27 @@ export default function PublicMenuPage() {
             {visibleProducts.length ? (
               <div className="product-grid">
                 {visibleProducts.map((product) => (
-                  <PublicProductCard
+                  <FeatureBoundary
                     key={product.id}
-                    product={product}
-                    quantity={controller.quantity(product.id)}
-                    disabled={loading || !!loadError}
-                    onQuantityChange={(delta) =>
-                      controller.updateQuantity(product.id, delta)
-                    }
-                  />
+                    label={`Produto ${product.name}`}
+                    resetKeys={[product]}
+                  >
+                    <PublicProductCard
+                      product={product}
+                      quantity={controller.quantity(product.id)}
+                      disabled={loading || !!loadError}
+                      onCustomize={
+                        menu.commerce?.addonGroups?.some(
+                          (g) => g.active && g.productIds.includes(product.id),
+                        )
+                          ? () => setCustomizing(product.id)
+                          : undefined
+                      }
+                      onQuantityChange={(delta) =>
+                        controller.updateQuantity(product.id, delta)
+                      }
+                    />
+                  </FeatureBoundary>
                 ))}
               </div>
             ) : (
@@ -304,7 +325,24 @@ export default function PublicMenuPage() {
         </div>
       )}
       {cartOpen && (
-        <CheckoutDrawer controller={controller} onClose={() => setCartOpen(false)} />
+        <FeatureBoundary label="Carrinho">
+          <CheckoutDrawer controller={controller} onClose={() => setCartOpen(false)} />
+        </FeatureBoundary>
+      )}
+      {selectedProduct && (
+        <FeatureBoundary label="Escolha de adicionais">
+          <AddonChoice
+            key={selectedProduct.id}
+            product={selectedProduct}
+            disabled={loading || !!loadError || controller.cart.lines.length >= 100}
+            onClose={() => setCustomizing(null)}
+            onAdd={(addons) => {
+              controller.addProduct(selectedProduct, addons)
+              notifySuccess(`${selectedProduct.name} adicionado ao carrinho.`)
+              setCustomizing(null)
+            }}
+          />
+        </FeatureBoundary>
       )}
       <footer className="public-footer">
         <span>

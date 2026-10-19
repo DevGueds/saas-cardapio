@@ -26,6 +26,8 @@ export interface DiagnosticLogger {
     code: ErrorCode
     timestamp: string
     cause: string
+    errorType?: string
+    frames?: string[]
   }): void
 }
 export interface RequestLimiter {

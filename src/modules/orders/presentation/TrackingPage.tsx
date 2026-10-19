@@ -6,6 +6,8 @@ import { useServices } from "../../../app/presentation/ServicesProvider"
 import { formatMoney } from "@cardapio/domain/money"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import { orderTime, shortOrder } from "./order-labels"
+import CustomerNotifications from "../../engagement/presentation/CustomerNotifications"
+import FeatureBoundary from "../../../shared/presentation/FeatureBoundary"
 export default function TrackingPage() {
   const { slug = "", orderId = "" } = useParams(),
     location = useLocation(),
@@ -196,6 +198,9 @@ export default function TrackingPage() {
             <button className="text-button" onClick={() => setRetry((v) => v + 1)}>
               Atualizar acompanhamento
             </button>
+            <FeatureBoundary label="Notificações do pedido">
+              <CustomerNotifications slug={slug} orderId={orderId} token={token} />
+            </FeatureBoundary>
           </>
         )}
       </section>

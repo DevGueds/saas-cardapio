@@ -1,4 +1,8 @@
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
+import { Link } from "react-router"
+import { can } from "@cardapio/domain/permissions"
+import { useAccount } from "../../identity/presentation/AccountContext"
+import FeatureBoundary from "../../../shared/presentation/FeatureBoundary"
 import { useState } from "react"
 import { RefreshCw, Search, ShoppingBag } from "lucide-react"
 import type { OrderStatus, OrderView } from "@cardapio/contracts"
@@ -12,6 +16,7 @@ import OrderCard from "./OrderCard"
 import OrderDetails from "./OrderDetails"
 const active: OrderStatus[] = ["NEW", "PREPARING", "READY", "OUT_FOR_DELIVERY"]
 export default function OrdersPage() {
+  const account = useAccount()
   const { menu, error: menuError } = useMenu(),
     { orders } = useServices()
   const listing = useOrders(menu.restaurant.id),
@@ -58,6 +63,14 @@ export default function OrdersPage() {
           {listing.loading ? "Atualizando…" : "Atualizar pedidos"}
         </button>
       </header>
+      {can(account?.restaurant.role, "reports:read") && (
+        <Link
+          className="secondary-button"
+          to={`/admin/finance?restaurant=${menu.restaurant.id}&tab=reports`}
+        >
+          Relatório de pedidos em PDF
+        </Link>
+      )}
       <div className="live-orders-toolbar">
         <div className="live-order-tabs" role="group" aria-label="Situação dos pedidos">
           {[
@@ -118,13 +131,18 @@ export default function OrdersPage() {
                 <div className="live-order-stack">
                   {group.length ? (
                     group.map((order) => (
-                      <OrderCard
+                      <FeatureBoundary
                         key={order.id}
-                        order={order}
-                        disabled={blocked}
-                        onDetails={() => setSelectedId(order.id)}
-                        onTransition={(next) => void transition(order, next)}
-                      />
+                        label={`Pedido #${shortOrder(order.id)}`}
+                        resetKeys={[order.revision]}
+                      >
+                        <OrderCard
+                          order={order}
+                          disabled={blocked}
+                          onDetails={() => setSelectedId(order.id)}
+                          onTransition={(next) => void transition(order, next)}
+                        />
+                      </FeatureBoundary>
                     ))
                   ) : (
                     <div className="live-orders-empty">

@@ -13,6 +13,7 @@
   }
 }
 (api-backends) {
+  flush_interval -1
   to api:3001 api-replica:3001
   lb_policy least_conn
   health_uri /api/v1/health/ready
@@ -33,7 +34,7 @@
     X-Frame-Options DENY
     Referrer-Policy strict-origin-when-cross-origin
     Permissions-Policy "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+    Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     -Server
   }
   handle /api/* {
@@ -53,6 +54,8 @@
     }
   }
   handle {
+    @worker path /notifications-sw.js /manifest.webmanifest
+    header @worker Cache-Control "no-cache"
     root * /srv
     try_files {path} /index.html
     file_server
