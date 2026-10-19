@@ -36,6 +36,11 @@ export default function Dialog({
   }, [])
 
   function keepFocusInside(event: KeyboardEvent<HTMLDialogElement>) {
+    if (
+      event.target instanceof Element &&
+      event.target.closest("dialog") !== event.currentTarget
+    )
+      return
     if (event.key !== "Tab") return
     const controls = Array.from(
       event.currentTarget.querySelectorAll<HTMLElement>(
@@ -68,6 +73,7 @@ export default function Dialog({
       aria-label={title}
       onKeyDown={keepFocusInside}
       onCancel={(event) => {
+        if (event.target !== event.currentTarget) return
         event.preventDefault()
         if (!busy) onClose()
       }}

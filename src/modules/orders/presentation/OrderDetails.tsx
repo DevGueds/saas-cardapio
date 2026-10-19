@@ -1,4 +1,5 @@
 import { can, canAdvance } from "@cardapio/domain/permissions"
+import OrderPayments from "../../payments/presentation/OrderPayments"
 import { useAccount } from "../../identity/presentation/AccountContext"
 import CourierAssignment from "./CourierAssignment"
 import { useState } from "react"
@@ -96,8 +97,12 @@ export default function OrderDetails({
           {order.customer.payment === "Dinheiro" && order.customer.cashChange && (
             <p>Troco para R$ {order.customer.cashChange}</p>
           )}
-          <p className="field-help">O sistema não processa nem confirma pagamentos.</p>
+          <p className="field-help">
+            Forma escolhida pelo cliente. A baixa depende da confirmação manual de quem
+            recebeu.
+          </p>
         </section>
+        <OrderPayments order={order} />
         {account &&
           can(account.restaurant.role, "orders:dispatch") &&
           order.fulfillment?.mode !== "PICKUP" &&
@@ -127,7 +132,8 @@ export default function OrderDetails({
               <strong>Cancelar este pedido?</strong>
               <p>
                 Esta ação encerra o pedido. Combine o cancelamento diretamente com o
-                cliente.
+                cliente. Recebimentos já registrados permanecem no histórico e precisam de
+                reversão pelo gerente, quando cabível.
               </p>
               <div className="form-actions">
                 <button

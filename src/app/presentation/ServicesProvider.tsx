@@ -1,4 +1,8 @@
 import type { TeamService } from "../../modules/identity/application/team"
+import type { EngagementService } from "../../modules/engagement/application/ports"
+import type { DevicePush } from "../../shared/application/push"
+import type { PaymentsService } from "../../modules/payments/application/ports"
+import type { DocumentExporter } from "../../shared/application/documents"
 import type {
   CommerceService,
   MapsService,
@@ -27,10 +31,14 @@ import type { Result } from "../../shared/application/result"
 import type { ImageReader } from "../../shared/application/image-reader"
 
 export interface ApplicationServices {
+  engagement?: EngagementService
+  devicePush?: DevicePush
   drafts?: DraftManager
   mode?: "demo" | "api"
   auth?: IdentityService
   team?: TeamService
+  payments?: PaymentsService
+  documents?: DocumentExporter
   orders?: OrdersService
   commerce?: CommerceService
   maps?: MapsService

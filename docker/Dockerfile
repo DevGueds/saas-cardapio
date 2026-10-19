@@ -8,12 +8,13 @@ RUN --mount=type=cache,id=cardapio-pnpm,target=/root/.local/share/pnpm/store pnp
 RUN pnpm api:build
 
 FROM build AS api-package
-RUN pnpm --filter @cardapio/api deploy --prod --legacy /opt/api
+RUN --mount=type=cache,id=cardapio-pnpm,target=/root/.local/share/pnpm/store pnpm --filter @cardapio/api deploy --prod --legacy /opt/api
 
 FROM node:24-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS api
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=api-package --chown=node:node /opt/api ./
+RUN mkdir -p /app/logs && chown node:node /app/logs
 USER node
 EXPOSE 3001
 CMD ["node", "dist/main.js"]

@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test"
 import { randomUUID } from "node:crypto"
-import { mkdir, writeFile } from "node:fs/promises"
+import { mkdir, readFile, writeFile } from "node:fs/promises"
+import jsQR from "jsqr"
+import { PNG } from "pngjs"
 const users: string[] = []
 test.beforeEach(async ({ context }) => {
   await context.route(/https:\/\//, (route) => route.abort())
@@ -119,11 +121,76 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
     await page.getByRole("button", { name, exact: true }).click()
   await page.getByRole("button", { name: "Concluídos", exact: true }).click()
   await expect(page.getByRole("heading", { name: "Cliente Açaí" })).toBeVisible()
+  await page.getByRole("button", { name: "Ver detalhes", exact: true }).click()
+  await page.getByRole("button", { name: "Registrar pagamento", exact: true }).click()
+  await expect(page.getByLabel("Valor recebido (R$)", { exact: true })).toHaveValue(
+    "34,50",
+  )
+  await page.getByRole("button", { name: "Confirmar recebimento", exact: true }).click()
+  await expect(page.getByText("Pago integralmente", { exact: true })).toBeVisible()
+  await page.getByRole("button", { name: "Reverter", exact: true }).click()
+  const reversal = page.getByRole("dialog", { name: "Reverter recebimento", exact: true })
+  await expect(reversal).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(reversal).toHaveCount(0)
+  await expect(page.getByRole("dialog")).toContainText("Cliente Açaí")
+  await expect(page.getByRole("button", { name: "Reverter", exact: true })).toBeFocused()
+  await page.getByRole("button", { name: "Reverter", exact: true }).click()
+  await reversal
+    .getByLabel("Motivo da reversão", { exact: true })
+    .fill("Conferência do caixa de teste")
+  await reversal.getByRole("button", { name: "Confirmar reversão", exact: true }).click()
+  await expect(page.getByText("Saldo em aberto", { exact: true })).toBeVisible()
+  await page.keyboard.press("Escape")
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: ".cache/api-orders-mobile.png", fullPage: true })
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
   ).toBe(true)
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.getByRole("link", { name: "Caixa e relatórios", exact: true }).click()
+  await page.getByRole("button", { name: "Recebimento avulso", exact: true }).click()
+  await page.getByLabel("Valor recebido (R$)", { exact: true }).fill("12,34")
+  await page
+    .getByLabel("Descrição do recebimento", { exact: true })
+    .fill("Venda avulsa de teste")
+  // Commit on the server, then lose the response. Retry must recover the same receipt.
+  let attempts = 0
+  await page.route("**/payments", async (route) => {
+    if (route.request().method() === "POST" && attempts++ === 0) {
+      await route.fetch()
+      await route.abort()
+    } else await route.continue()
+  })
+  await page.getByRole("button", { name: "Confirmar recebimento", exact: true }).click()
+  await expect(
+    page.getByRole("button", { name: "Verificar recebimento", exact: true }),
+  ).toBeVisible()
+  await page.reload()
+  await page.getByRole("button", { name: "Recebimento avulso", exact: true }).click()
+  await expect(page.getByLabel("Valor recebido (R$)", { exact: true })).toBeDisabled()
+  await page.getByRole("button", { name: "Verificar recebimento", exact: true }).click()
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  await page.unroute("**/payments")
+  await expect(
+    page.getByRole("row").filter({ hasText: "Venda avulsa de teste" }),
+  ).toHaveCount(1)
+  await page.getByRole("button", { name: "Relatórios", exact: true }).click()
+  const download = page.waitForEvent("download")
+  await page.getByRole("button", { name: "Baixar relatório PDF", exact: true }).click()
+  const pdf = await download
+  await pdf.saveAs(".cache/financial-report.pdf")
+  expect((await readFile(".cache/financial-report.pdf")).subarray(0, 5).toString()).toBe(
+    "%PDF-",
+  )
+  await page.getByRole("button", { name: "Baixar relatório PDF", exact: true }).blur()
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.screenshot({ path: ".cache/finance-desktop.png", fullPage: true })
+  await page.setViewportSize({ width: 320, height: 740 })
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true)
+  await page.screenshot({ path: ".cache/finance-mobile.png", fullPage: true })
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.getByRole("link", { name: "Trocar de loja", exact: true }).click()
   await page.getByRole("button", { name: "Criar nova loja", exact: true }).click()
@@ -144,6 +211,220 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
   await expect(page.getByRole("heading", { name: "Bom ter você por aqui" })).toBeVisible()
   await customer.close()
 })
+test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de ponta a ponta", async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(180000)
+  const slug = `extras-${randomUUID().slice(0, 8)}`,
+    api = "http://127.0.0.1:3002/api/v1",
+    origin = "http://127.0.0.1:4176"
+  const registered = await page.request.post(`${api}/auth/register`, {
+    headers: { origin },
+    data: {
+      name: "Gestor Extras",
+      email: `${slug}@browser.example.test`,
+      password: "12345678",
+      restaurantName: "Casa dos Extras",
+      slug,
+    },
+  })
+  const session = await registered.json()
+  expect(session.ok).toBe(true)
+  users.push(session.value.user.id)
+  const stores = await (await page.request.get(`${api}/me/restaurants`)).json(),
+    id = stores.value[0].id
+  const headers = { origin, "x-csrf-token": session.value.csrfToken }
+  let result = await (
+    await page.request.post(`${api}/restaurants/${id}/products`, {
+      headers,
+      data: {
+        expectedRevision: 0,
+        name: "Burger da casa",
+        description: "Preparado na hora",
+        price: "20,00",
+        categoryId: "",
+        newCategoryName: "Lanches",
+        imageUrl: "",
+        available: true,
+        popular: false,
+      },
+    })
+  ).json()
+  expect(result.ok).toBe(true)
+  const logo = new PNG({ width: 64, height: 64 })
+  for (let y = 0; y < 64; y++)
+    for (let x = 0; x < 64; x++) {
+      const offset = (y * 64 + x) * 4,
+        white = (x > 24 && x < 39) || (y > 24 && y < 39)
+      logo.data.set(white ? [255, 255, 255, 255] : [27, 80, 63, 255], offset)
+    }
+  result = await (
+    await page.request.put(`${api}/restaurants/${id}/settings`, {
+      headers,
+      data: {
+        expectedRevision: result.value.revision,
+        name: "Casa dos Extras",
+        description: "Lanches feitos na hora",
+        whatsapp: "",
+        address: "",
+        logoUrl: `data:image/png;base64,${PNG.sync.write(logo).toString("base64")}`,
+        coverUrl: "",
+        deliveryFee: "0,00",
+        minOrder: "0,00",
+        eta: "20–30 minutos",
+      },
+    })
+  ).json()
+  expect(result.ok).toBe(true)
+  result = await (
+    await page.request.put(`${api}/restaurants/${id}/open`, {
+      headers,
+      data: { expectedRevision: result.value.revision, isOpen: true },
+    })
+  ).json()
+  expect(result.ok).toBe(true)
+  await page.goto(`/admin/addons?restaurant=${id}`)
+  await page.getByRole("button", { name: "Novo grupo", exact: true }).click()
+  await page.getByLabel("Nome do grupo", { exact: true }).fill("Turbine seu lanche")
+  await page.getByLabel("Quantidade mínima", { exact: true }).fill("1")
+  await page.getByLabel("Nome da opção 1", { exact: true }).fill("Queijo extra")
+  await page.getByLabel("Preço da opção 1 (R$)", { exact: true }).fill("2,50")
+  await page.getByLabel("Limite da opção 1", { exact: true }).fill("2")
+  await page.getByLabel("Burger da casa", { exact: true }).check()
+  await page.reload()
+  await page.getByRole("button", { name: "Novo grupo", exact: true }).click()
+  await expect(page.getByLabel("Nome do grupo", { exact: true })).toHaveValue(
+    "Turbine seu lanche",
+  )
+  await page.setViewportSize({ width: 320, height: 740 })
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true)
+  await page.screenshot({ path: ".cache/addons-form-mobile.png", fullPage: true })
+  await page.getByRole("button", { name: "Salvar grupo", exact: true }).click()
+  await expect(page.getByRole("dialog")).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Turbine seu lanche" })).toBeVisible()
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.getByRole("link", { name: "Aparência e QR Code", exact: true }).click()
+  await page.getByLabel("Modelo do cardápio", { exact: true }).selectOption("COMPACT")
+  await page.getByLabel("Cor de destaque", { exact: true }).selectOption("PLUM")
+  await page
+    .getByLabel("Mensagem de boas-vindas", { exact: true })
+    .fill("Seu lanche, do seu jeito")
+  await page.getByRole("button", { name: "Publicar aparência", exact: true }).click()
+  await expect(page.getByText("Aparência publicada.", { exact: true })).toBeVisible()
+  await expect(page.getByLabel("Incluir logo da loja", { exact: true })).toBeChecked()
+  for (const style of ["rounded", "square", "dots"]) {
+    await page.getByLabel("Modelo do QR Code", { exact: true }).selectOption(style)
+    await expect(
+      page.getByRole("button", { name: "Baixar PNG", exact: true }),
+    ).toBeEnabled()
+    const pending = page.waitForEvent("download")
+    await page.getByRole("button", { name: "Baixar PNG", exact: true }).click()
+    const download = await pending,
+      path = `.cache/menu-qr-${style}.png`
+    await download.saveAs(path)
+    const png = PNG.sync.read(await readFile(path)),
+      decoded = jsQR(new Uint8ClampedArray(png.data), png.width, png.height)
+    expect(decoded?.data).toBe(`${origin}/menu/${slug}`)
+  }
+  await page.screenshot({ path: ".cache/appearance-desktop.png", fullPage: true })
+  await page.setViewportSize({ width: 320, height: 740 })
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true)
+  await page.screenshot({ path: ".cache/appearance-mobile.png", fullPage: true })
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page
+    .getByRole("link", { name: "Painel ao vivo e mensagens", exact: true })
+    .click()
+  await page.getByLabel("Disponibilizar painel público", { exact: true }).check()
+  await page.getByRole("button", { name: "Confirmar alteração", exact: true }).click()
+  const link = page.getByRole("link", { name: "Abrir painel para TV", exact: true })
+  await expect(link).toBeVisible()
+  const boardContext = await browser.newContext(),
+    board = await boardContext.newPage()
+  await board.goto((await link.getAttribute("href"))!)
+  await expect(board.getByRole("status")).toContainText(/ao vivo/i)
+  const customerContext = await browser.newContext({
+    baseURL: origin,
+    viewport: { width: 320, height: 740 },
+  })
+  const customer = await customerContext.newPage()
+  await customer.goto(`/menu/${slug}`)
+  await expect(customer.locator(".menu-theme--compact.menu-color--plum")).toBeVisible()
+  await customer.getByRole("button", { name: /Personalizar/ }).click()
+  await expect(
+    customer.getByRole("button", { name: "Adicionar ao carrinho", exact: true }),
+  ).toBeDisabled()
+  await customer
+    .getByRole("button", { name: "Adicionar Queijo extra", exact: true })
+    .click()
+  await customer.reload()
+  await customer.getByRole("button", { name: /Personalizar/ }).click()
+  await expect(
+    customer.getByRole("group", { name: "Quantidade de Queijo extra" }),
+  ).toContainText("1")
+  await customer.screenshot({ path: ".cache/addon-customer-mobile.png", fullPage: true })
+  await customer
+    .getByRole("button", { name: "Adicionar ao carrinho", exact: true })
+    .click()
+  await customer.getByRole("button", { name: "Abrir carrinho com 1 item" }).click()
+  await customer.getByLabel("Seu nome completo *").fill("Cliente Privado")
+  await customer.getByLabel("Seu WhatsApp com DDD *").fill("11999999999")
+  await customer.getByLabel("Endereço de entrega completo *").fill("Rua Reservada, 1")
+  await expect(customer.locator(".order-summary__total")).toContainText("22,50")
+  const ordered = customer.waitForResponse(
+    (r) =>
+      r.url().endsWith(`/public/restaurants/${slug}/orders`) &&
+      r.request().method() === "POST",
+  )
+  await customer
+    .getByRole("button", { name: "Enviar pedido para a loja", exact: true })
+    .click()
+  const receipt = await (await ordered).json()
+  expect(receipt.ok).toBe(true)
+  const number = `#${receipt.value.orderId.slice(0, 8).toUpperCase()}`
+  await expect(
+    board.getByRole("region", { name: "Recebidos", exact: true }).getByText(number),
+  ).toBeVisible({ timeout: 15000 })
+  await expect(board.locator("body")).not.toContainText("Cliente Privado")
+  await expect(board.locator("body")).not.toContainText("11999999999")
+  await page.getByRole("link", { name: "Pedidos", exact: true }).click()
+  await page.getByRole("button", { name: "Iniciar preparo", exact: true }).click()
+  await expect(
+    board.getByRole("region", { name: "Em preparo", exact: true }).getByText(number),
+  ).toBeVisible({ timeout: 15000 })
+  await board.screenshot({ path: ".cache/public-board-tv.png", fullPage: true })
+  const key = new URL(board.url()).hash
+  await board.getByRole("button", { name: "Modo celular", exact: true }).click()
+  expect(new URL(board.url()).hash).toBe(key)
+  await board.setViewportSize({ width: 320, height: 740 })
+  expect(
+    await board.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true)
+  await board.screenshot({ path: ".cache/public-board-mobile.png", fullPage: true })
+  await boardContext.setOffline(true)
+  await expect(board.locator(".board-connection")).toHaveClass(/is-offline/, {
+    timeout: 25000,
+  })
+  await boardContext.setOffline(false)
+  await expect(board.getByRole("status")).toContainText(/ao vivo/i, { timeout: 15000 })
+  await page
+    .getByRole("link", { name: "Painel ao vivo e mensagens", exact: true })
+    .click()
+  await page
+    .getByRole("button", { name: "Gerar novo link e invalidar o anterior", exact: true })
+    .click()
+  await page.getByRole("button", { name: "Confirmar alteração", exact: true }).click()
+  await expect(board.getByRole("status")).toContainText(/expirado|desativado/, {
+    timeout: 15000,
+  })
+  await boardContext.close()
+  await customerContext.close()
+})
+
 test("API indisponível não cria demonstração nem libera administração", async ({
   page,
 }) => {
@@ -305,6 +586,7 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   ).toBeVisible()
   await customer.unroute("**/public/restaurants/*/orders")
   await page.getByRole("switch", { name: "Loja aberta" }).click()
+  await page.getByRole("button", { name: "Confirmar fechamento", exact: true }).click()
   await expect(page.getByRole("switch", { name: "Loja aberta" })).not.toBeChecked()
   await customer.reload()
   await expect(

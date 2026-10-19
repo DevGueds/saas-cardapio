@@ -4,6 +4,7 @@ import { cartDraftSchema } from "../application/drafts"
 import type { MenuDocument } from "@cardapio/domain/menu-document"
 import type { Cart, CartLine } from "@cardapio/domain/cart"
 import type { Combo } from "@cardapio/domain/commerce"
+import type { Product } from "@cardapio/domain/catalog"
 import { lineKey, priceLine } from "@cardapio/domain/quote"
 export function useCart(menu: MenuDocument) {
   const { mode } = useServices(),
@@ -80,11 +81,36 @@ export function useCart(menu: MenuDocument) {
       }
     })
   }
+  function addProduct(product: Product, addons: Readonly<Record<string, number>>) {
+    const line: CartLine = {
+      productId: product.id,
+      quantity: 1,
+      unitPrice: product.price,
+      note: "",
+      addons,
+    }
+    const priced = { ...line, unitPrice: priceLine(menu, line).unitPrice }
+    draft.set((current) => {
+      const key = lineKey(priced),
+        existing = current.lines.some((l) => lineKey(l) === key)
+      return {
+        ...current,
+        lines: existing
+          ? current.lines.map((l) =>
+              lineKey(l) === key ? { ...l, quantity: Math.min(999, l.quantity + 1) } : l,
+            )
+          : current.lines.length < 100
+            ? [...current.lines, priced]
+            : current.lines,
+      }
+    })
+  }
   return {
     cart,
     draft,
     describe,
     addCombo,
+    addProduct,
     clear: () => draft.set({ restaurantId, lines: [] }),
     changed,
     unavailable,

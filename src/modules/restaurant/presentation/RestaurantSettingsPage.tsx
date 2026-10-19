@@ -1,4 +1,5 @@
 import { formatField } from "../../../shared/presentation/form-validation/field-formatters"
+import { notifySuccess } from "../../../shared/presentation/notify"
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
 import ValidatedTextarea from "../../../shared/presentation/form-validation/ValidatedTextarea"
@@ -102,6 +103,7 @@ export default function RestaurantSettingsPage() {
     if (result?.ok) {
       draft.reset({ ...draft.value, revision: result.value.revision })
       setSaved(true)
+      notifySuccess("Configurações salvas.")
     }
   }
 
@@ -170,11 +172,6 @@ export default function RestaurantSettingsPage() {
       <div className="settings-layout">
         <ValidatedForm className="settings-form" onSubmit={(event) => void submit(event)}>
           <DraftNotice draft={draft} />
-          {saved && (
-            <p role="status" className="success-notice">
-              Configurações salvas.
-            </p>
-          )}
           {mutation.error && (
             <ErrorNotice error={mutation.error} onRetry={() => void refresh()} />
           )}

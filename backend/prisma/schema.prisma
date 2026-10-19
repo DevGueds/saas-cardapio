@@ -94,6 +94,11 @@ model Restaurant {
   products           Product[]
   orders             Order[]
   commerce           StoreCommerce?
+  payments           Payment[]
+  channel            StoreChannel?
+  notifications      NotificationEvent[]
+  pushSubscriptions  PushSubscription[]
+  inboxReads         InboxRead[]
 
   @@unique([tenantId, id])
   @@index([tenantId, createdAt])
@@ -157,7 +162,13 @@ model Order {
   payloadHash      String      @db.Char(64)
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
+  payments         Payment[]
+  whatsappConsentAt DateTime?
+  whatsappRevokedAt DateTime?
+  notificationEvents NotificationEvent[]
+  pushSubscriptions PushSubscription[]
 
+  @@unique([tenantId, restaurantId, id])
   @@unique([tenantId, restaurantId, idempotencyHash])
   @@index([tenantId, restaurantId, createdAt, id])
   @@index([tenantId, restaurantId, courierId, createdAt])
@@ -171,6 +182,30 @@ model RateLimit {
   @@index([expiresAt])
 }
 
+model Payment {
+  id String @id @db.Char(36)
+  tenantId String @db.Char(36)
+  restaurantId String @db.Char(36)
+  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict, map: "Payment_restaurant_fkey")
+  orderId String? @db.Char(36)
+  order Order? @relation(fields: [tenantId, restaurantId, orderId], references: [tenantId, restaurantId, id], onDelete: Restrict, map: "Payment_order_fkey")
+  amount Int
+  method String @db.VarChar(10)
+  description String @db.VarChar(160)
+  source String @default("MANUAL") @db.VarChar(20)
+  requestHash String @db.Char(64)
+  payloadHash String @db.Char(64)
+  recordedBy String @db.Char(36)
+  createdAt DateTime @default(now())
+  reversedAt DateTime?
+  reversedBy String? @db.Char(36)
+  reversalReason String? @db.VarChar(300)
+  @@unique([tenantId, restaurantId, requestHash])
+  @@index([tenantId, restaurantId, createdAt, id])
+  @@index([tenantId, restaurantId, reversedAt])
+  @@index([tenantId, restaurantId, orderId])
+}
+
 model StoreCommerce {
   restaurantId String @id @db.Char(36)
   tenantId String @db.Char(36)
@@ -178,5 +213,75 @@ model StoreCommerce {
   combos Json
   promotions Json
   delivery Json
+  addonGroups Json?
+  appearance Json?
   @@unique([tenantId, restaurantId])
+}
+
+model StoreChannel {
+  restaurantId String @id @db.Char(36)
+  tenantId String @db.Char(36)
+  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
+  revision Int @default(0)
+  boardEnabled Boolean @default(false)
+  boardVersion String @db.Char(36)
+  whatsappEnabled Boolean @default(false)
+  @@unique([tenantId, restaurantId])
+}
+
+model NotificationEvent {
+  id String @id @db.Char(36)
+  tenantId String @db.Char(36)
+  restaurantId String @db.Char(36)
+  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
+  orderId String @db.Char(36)
+  order Order @relation(fields: [tenantId, restaurantId, orderId], references: [tenantId, restaurantId, id], onDelete: Cascade)
+  kind String @db.VarChar(10)
+  status String @db.VarChar(20)
+  createdAt DateTime @default(now())
+  expandedAt DateTime?
+  deliveries NotificationDelivery[]
+  @@index([expandedAt, createdAt])
+  @@index([tenantId, restaurantId, createdAt])
+}
+
+model PushSubscription {
+  id String @id @db.Char(36)
+  tenantId String @db.Char(36)
+  restaurantId String @db.Char(36)
+  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
+  orderId String? @db.Char(36)
+  order Order? @relation(fields: [tenantId, restaurantId, orderId], references: [tenantId, restaurantId, id], onDelete: Cascade)
+  userId String? @db.Char(36)
+  sessionId String? @db.Char(36)
+  endpointHash String @db.Char(64)
+  encrypted String @db.Text
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@unique([tenantId, restaurantId, endpointHash])
+  @@index([tenantId, restaurantId, orderId, userId])
+}
+
+model NotificationDelivery {
+  id String @id @db.Char(36)
+  eventId String @db.Char(36)
+  event NotificationEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  channel String @db.VarChar(10)
+  recipient String @db.VarChar(100)
+  state String @default("PENDING") @db.VarChar(12)
+  attempts Int @default(0)
+  availableAt DateTime @default(now())
+  claimedAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([eventId, channel, recipient])
+  @@index([state, availableAt])
+}
+
+model InboxRead {
+  tenantId String @db.Char(36)
+  restaurantId String @db.Char(36)
+  userId String @db.Char(36)
+  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
+  readAt DateTime
+  @@id([tenantId, restaurantId, userId])
 }

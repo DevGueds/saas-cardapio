@@ -1,4 +1,8 @@
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
+import { useServices } from "../../../app/presentation/ServicesProvider"
+import { useMutation } from "../../../shared/presentation/use-mutation"
+import ErrorNotice from "../../../shared/presentation/ErrorNotice"
+import { notifySuccess } from "../../../shared/presentation/notify"
 import { useEffect, useRef, useState } from "react"
 import {
   Banknote,
@@ -45,6 +49,8 @@ const columns: {
 ]
 
 export default function DemoOrdersPage() {
+  const { documents } = useServices(),
+    printing = useMutation()
   const [orders, setOrders] = useState(demoOrders)
   const movedOrder = useRef<{ id: string; previousStatus: DemoOrderStatus } | null>(null)
   const [filter, setFilter] = useState<DemoOrderStatus | "all">("all")
@@ -77,6 +83,7 @@ export default function DemoOrdersPage() {
     setNotice(
       `Pedido #${id} movido para ${current.status === "new" ? "Em preparo" : "Saiu para entrega"}.`,
     )
+    notifySuccess(`Pedido #${id} atualizado na demonstração.`)
   }
 
   return (
@@ -86,11 +93,44 @@ export default function DemoOrdersPage() {
         title="Gestor de Pedidos"
         description="Da cozinha até a entrega, tudo no seu lugar."
       >
-        <button className="secondary-button" type="button" onClick={() => window.print()}>
+        <button
+          className="secondary-button"
+          type="button"
+          disabled={printing.pending || !documents}
+          onClick={() => {
+            if (!documents) return
+            void printing.run(
+              () =>
+                documents.pdf({
+                  title: "Pedidos demonstrativos",
+                  subtitle:
+                    "SIMULAÇÃO - dados fictícios visíveis no quadro. Os relatórios por período de pedidos reais ficam em Caixa e relatórios na loja conectada.",
+                  filename: "pedidos-demonstrativos.pdf",
+                  sections: [
+                    {
+                      title: "Quadro de exemplo",
+                      columns: ["Pedido", "Horário", "Etapa", "Itens", "Total"],
+                      rows: visibleOrders
+                        .filter((o) => filter === "all" || o.status === filter)
+                        .map((o) => [
+                          o.id,
+                          o.time,
+                          columns.find((c) => c.id === o.status)!.title,
+                          o.items.join("; "),
+                          formatMoney(o.total),
+                        ]),
+                    },
+                  ],
+                }),
+              "PDF demonstrativo gerado.",
+            )
+          }}
+        >
           <Printer size={18} aria-hidden="true" />
-          Imprimir quadro
+          {printing.pending ? "Gerando PDF…" : "Baixar quadro em PDF"}
         </button>
       </PageHeading>
+      {printing.error && <ErrorNotice error={printing.error} />}
       <div className="orders-metrics" aria-label="Resumo demonstrativo">
         <div>
           <span className="stat-icon">

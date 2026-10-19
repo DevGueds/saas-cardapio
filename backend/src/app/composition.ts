@@ -1,4 +1,13 @@
 import { PostalAddresses } from "../modules/delivery/application/postal-address.js"
+import { Engagement } from "../modules/engagement/application/engagement.js"
+import { PrismaEngagement } from "../modules/engagement/infrastructure/prisma-engagement.js"
+import { SubscriptionCipher } from "../modules/engagement/infrastructure/subscription-cipher.js"
+import { EvolutionWhatsapp } from "../modules/engagement/infrastructure/evolution-whatsapp.js"
+import { WebPushSender } from "../modules/engagement/infrastructure/web-push.js"
+import { NotificationWorker } from "../modules/engagement/infrastructure/notification-worker.js"
+import { Payments } from "../modules/payments/application/payments.js"
+import { createDiagnostics } from "../shared/infrastructure/logging.js"
+import { PrismaPayments } from "../modules/payments/infrastructure/prisma-payments.js"
 import { BrasilApiAddress } from "../modules/delivery/infrastructure/brasil-api-address.js"
 import { ResilientHttp } from "../shared/infrastructure/resilient-http.js"
 import { CommerceManagement } from "../modules/commerce/application/commerce.js"
@@ -9,7 +18,6 @@ import {
   ArgonPasswords,
   NodeSecrets,
   clock,
-  diagnostics,
   ids,
 } from "../shared/infrastructure/runtime.js"
 import { RedisStore, RedisLimiter } from "../shared/infrastructure/redis.js"
@@ -32,6 +40,11 @@ export async function compose(config: ApiConfig) {
     config.redisUrl,
     config.environment + ":" + config.database.pathname.slice(1),
   )
+  const diagnostics = createDiagnostics({
+    level: config.logLevel,
+    directory: config.logDirectory,
+    instance: config.logInstance,
+  })
   const operation = new Operation(diagnostics, ids, clock)
   try {
     await db.connect()
@@ -42,8 +55,44 @@ export async function compose(config: ApiConfig) {
       memberships = new PrismaAccess(db)
     const access = new Authorization(identity, memberships, clock)
     const menus = new CachedMenu(new PrismaMenu(db), redis)
+    const cipher = new SubscriptionCipher(config.secret),
+      whatsapp = new EvolutionWhatsapp(config.evolutionUrl, config.evolutionKey),
+      push = new WebPushSender(
+        config.vapidSubject,
+        config.vapidPublicKey,
+        config.vapidPrivateKey,
+      )
+    const notificationWorker = new NotificationWorker(
+      db,
+      cipher,
+      whatsapp,
+      push,
+      operation,
+    )
     return {
+      notificationWorker,
+      engagement: new Engagement(
+        new PrismaEngagement(db, cipher),
+        menus,
+        access,
+        operation,
+        secrets,
+        clock,
+        ids,
+        limiter,
+        whatsapp,
+        config.vapidPublicKey,
+      ),
       config,
+      diagnostics,
+      payments: new Payments(
+        new PrismaPayments(db),
+        access,
+        operation,
+        ids,
+        clock,
+        secrets,
+      ),
       db,
       redis,
       operation,
@@ -90,6 +139,7 @@ export async function compose(config: ApiConfig) {
   } catch (error) {
     redis.close()
     await db.close()
+    await diagnostics.close()
     throw error
   }
 }

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { notifySuccess } from "../../../shared/presentation/notify"
 import { useSearchParams } from "react-router"
 import { PackagePlus, Plus, TicketPercent } from "lucide-react"
 import { comboAvailable, promotionActive } from "@cardapio/domain/quote"
@@ -18,8 +18,7 @@ export default function PublicOffers({
   search?: string
 }) {
   const { menu } = useMenu(),
-    [params, setParams] = useSearchParams(),
-    [notice, setNotice] = useState("")
+    [params, setParams] = useSearchParams()
   const selected =
     menu.commerce?.combos.find(
       (combo) => combo.active && combo.id === params.get("combo"),
@@ -116,11 +115,6 @@ export default function PublicOffers({
           </div>
         </>
       )}
-      {notice && (
-        <p className="success-notice" role="status">
-          {notice}
-        </p>
-      )}
       {selected && (
         <ComboChoice
           key={selected.id}
@@ -129,7 +123,7 @@ export default function PublicOffers({
           onClose={() => setSelected(null)}
           onAdd={(selections) => {
             controller.addCombo(selected, selections)
-            setNotice(`${selected.name} adicionado ao carrinho.`)
+            notifySuccess(`${selected.name} adicionado ao carrinho.`)
             setSelected(null)
           }}
         />

@@ -18,7 +18,7 @@ export class ApiClient {
       this.expired.delete(listener)
     }
   }
-  private endpoint(path: string) {
+  endpoint(path: string) {
     try {
       if (typeof this.base !== "string") throw new Error()
       const base = new URL(
@@ -26,7 +26,12 @@ export class ApiClient {
       )
       const local = ["localhost", "127.0.0.1", "[::1]"].includes(base.hostname)
       if (
-        (base.protocol !== "https:" && !(local && base.protocol === "http:")) ||
+        (base.protocol !== "https:" &&
+          !(
+            (local ||
+              (this.base === "/api/v1" && base.origin === window.location.origin)) &&
+            base.protocol === "http:"
+          )) ||
         base.username ||
         base.password ||
         base.search ||

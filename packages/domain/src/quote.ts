@@ -3,11 +3,13 @@ import { assertCents } from "./money.js"
 import type { MenuDocument } from "./menu-document.js"
 import type { Cart, CartLine } from "./cart.js"
 import { emptyCommerce, type Combo, type Promotion } from "./commerce.js"
+import { priceAddons } from "./menu-options.js"
 export interface Fulfillment {
   mode: "DELIVERY" | "PICKUP"
   zoneId?: string
 }
 export interface CheckoutOptions {
+  whatsappConsent?: boolean
   fulfillment?: Fulfillment
   couponCode?: string
   expectedTotal?: number
@@ -33,13 +35,20 @@ export interface Quote {
   fulfillment: Fulfillment
   items: PricedLine[]
 }
-export function lineKey(line: Pick<CartLine, "productId" | "kind" | "selections">) {
+export function lineKey(
+  line: Pick<CartLine, "productId" | "kind" | "selections" | "addons">,
+) {
   return line.kind === "COMBO"
     ? `${line.productId}:${Object.entries(line.selections ?? {})
         .sort()
         .map(([g, p]) => `${g}=${p}`)
         .join(",")}`
-    : line.productId
+    : Object.keys(line.addons ?? {}).length
+      ? `${line.productId}:addons:${Object.entries(line.addons!)
+          .sort()
+          .map(([id, qty]) => `${id}=${qty}`)
+          .join(",")}`
+      : line.productId
 }
 export function comboAvailable(combo: Combo, menu: Pick<MenuDocument, "products">) {
   const available = (id: string) => menu.products.some((p) => p.id === id && p.available)
@@ -67,14 +76,25 @@ export function priceLine(menu: MenuDocument, line: CartLine): PricedLine {
     if (!product)
       throw new Failure("CONFLICT", "Um produto foi removido. Atualize seu carrinho.")
     requireValid(product.available, `O produto ${product.name} está indisponível.`)
+    const { extra, components } = priceAddons(
+      menu.commerce?.addonGroups ?? [],
+      product.id,
+      line.addons,
+    )
+    assertCents(product.price + extra, "price", true)
     return {
       productId: product.id,
       name: product.name,
       quantity: line.quantity,
-      unitPrice: product.price,
+      unitPrice: product.price + extra,
       note: line.note,
+      ...(components.length ? { components } : {}),
     }
   }
+  requireValid(
+    !Object.keys(line.addons ?? {}).length,
+    "Adicionais avulsos não são aceitos em combos.",
+  )
   const combo = menu.commerce?.combos.find((c) => c.id === line.productId)
   if (!combo)
     throw new Failure("CONFLICT", "Um combo foi removido. Atualize seu carrinho.")

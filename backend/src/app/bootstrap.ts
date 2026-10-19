@@ -1,4 +1,6 @@
 import { DeliveryController } from "../modules/delivery/presentation/delivery.controller.js"
+import { EngagementController } from "../modules/engagement/presentation/engagement.controller.js"
+import { PaymentsController } from "../modules/payments/presentation/payments.controller.js"
 import { Bulkhead } from "../shared/application/bulkhead.js"
 import { CommerceController } from "../modules/commerce/presentation/commerce.controller.js"
 import { SessionGuard } from "../modules/identity/presentation/session-guard.js"
@@ -30,6 +32,8 @@ export async function createApplication(config: ApiConfig) {
       OrdersController,
       CommerceController,
       DeliveryController,
+      EngagementController,
+      PaymentsController,
       SystemController,
     ],
     providers: [
@@ -37,9 +41,11 @@ export async function createApplication(config: ApiConfig) {
       {
         provide: "database-lifecycle",
         useValue: {
-          onApplicationShutdown: () => {
+          onApplicationShutdown: async () => {
+            await runtime.notificationWorker.close()
             runtime.redis.close()
-            return runtime.db.close()
+            await runtime.db.close()
+            await runtime.diagnostics.close()
           },
         },
       },
@@ -73,6 +79,8 @@ export async function createApplication(config: ApiConfig) {
         "X-CSRF-Token",
         "Idempotency-Key",
         "X-Order-Token",
+        "X-Board-Key",
+        "Last-Event-ID",
       ],
       maxAge: 600,
     })
@@ -89,9 +97,17 @@ export async function createApplication(config: ApiConfig) {
     })
     const capacity = new Bulkhead(config.maxInFlight)
     const releases = new WeakMap<object, () => void>()
-    adapter.getInstance().addHook("onResponse", async (request) => {
+    adapter.getInstance().addHook("onResponse", async (request, reply) => {
       releases.get(request)?.()
       releases.delete(request)
+      if (!request.url.startsWith("/api/v1/health/"))
+        runtime.diagnostics.http({
+          requestId: request.id,
+          method: request.method,
+          route: request.routeOptions.url ?? "unmatched",
+          status: reply.statusCode,
+          durationMs: Math.round(reply.elapsedTime),
+        })
     })
     adapter.getInstance().addHook("onRequestAbort", async (request) => {
       releases.get(request)?.()
@@ -100,7 +116,10 @@ export async function createApplication(config: ApiConfig) {
     adapter.getInstance().addHook("onRequest", async (request, reply) => {
       reply.header("Cache-Control", "no-store")
       try {
-        if (!request.url.startsWith("/api/v1/health/"))
+        if (
+          !request.url.startsWith("/api/v1/health/") &&
+          !request.routeOptions.url?.endsWith("/board/stream")
+        )
           releases.set(request, capacity.enter())
         const origin = request.headers.origin
         const unsafe = !["GET", "HEAD", "OPTIONS"].includes(request.method)
@@ -136,6 +155,7 @@ export async function createApplication(config: ApiConfig) {
     app.enableShutdownHooks()
     await app.init()
     await adapter.getInstance().ready()
+    if (config.environment !== "test") runtime.notificationWorker.start()
     return {
       app,
       runtime,

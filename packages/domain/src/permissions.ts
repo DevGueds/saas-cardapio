@@ -15,6 +15,10 @@ export type Permission =
   | "orders:write"
   | "orders:dispatch"
   | "members:write"
+  | "payments:read"
+  | "payments:write"
+  | "payments:reverse"
+  | "reports:read"
 export const roleLabels: Record<Role, string> = {
   OWNER: "Proprietário",
   MANAGER: "Gerente",
@@ -32,8 +36,16 @@ const permissions: Record<Role, readonly Permission[]> = {
     "orders:write",
     "orders:dispatch",
     "members:write",
+    "payments:read",
+    "payments:write",
+    "payments:reverse",
+    "reports:read",
   ],
   MANAGER: [
+    "payments:read",
+    "payments:write",
+    "payments:reverse",
+    "reports:read",
     "catalog:read",
     "catalog:write",
     "orders:read",
@@ -41,7 +53,14 @@ const permissions: Record<Role, readonly Permission[]> = {
     "orders:dispatch",
   ],
   STAFF: ["catalog:read", "orders:read", "orders:write", "orders:dispatch"],
-  CASHIER: ["catalog:read", "orders:read", "orders:write", "orders:dispatch"],
+  CASHIER: [
+    "catalog:read",
+    "orders:read",
+    "orders:write",
+    "orders:dispatch",
+    "payments:read",
+    "payments:write",
+  ],
   KITCHEN: ["catalog:read", "orders:read", "orders:write"],
   COURIER: ["catalog:read", "orders:read", "orders:write"],
   VIEWER: ["catalog:read", "orders:read"],

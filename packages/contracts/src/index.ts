@@ -6,6 +6,10 @@ export const API_VERSION = "v1"
 import { uuid, revision, cents } from "./common.js"
 export { uuid, revision, cents } from "./common.js"
 export * from "./commerce.js"
+export * from "./payments.js"
+export * from "./menu-options.js"
+export * from "./engagement.js"
+import { addonSelectionsSchema } from "./menu-options.js"
 import { checkoutOptionsSchema, pricedLineSchema, fulfillmentSchema } from "./commerce.js"
 import {
   labelField as name,
@@ -108,6 +112,7 @@ export const cartSchema = z.strictObject({
       z.strictObject({
         productId: uuid,
         quantity: z.number().int().min(1).max(999),
+        addons: addonSelectionsSchema.optional(),
         unitPrice: cents.positive(),
         note: textField(500),
         kind: z.enum(["PRODUCT", "COMBO"]).optional(),

@@ -122,6 +122,7 @@ export const fulfillmentSchema = z.strictObject({
   zoneId: uuid.optional(),
 })
 export const checkoutOptionsSchema = z.strictObject({
+  whatsappConsent: z.boolean().optional(),
   fulfillment: fulfillmentSchema.optional(),
   couponCode: couponField.optional(),
   expectedTotal: cents.optional(),
@@ -133,7 +134,7 @@ export const pricedLineSchema = z.strictObject({
   unitPrice: cents.positive(),
   note: z.string().max(500),
   kind: z.enum(["PRODUCT", "COMBO"]).optional(),
-  components: z.array(z.string().max(250)).max(28).optional(),
+  components: z.array(z.string().max(250)).max(60).optional(),
 })
 export const quoteSchema = z.strictObject({
   subtotal: cents,

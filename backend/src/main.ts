@@ -8,7 +8,7 @@ try {
   const config = loadConfig(process.env)
   server = await createApplication(config)
   await server.app.listen({ host: config.host, port: config.port })
-  process.stdout.write(`API pronta na porta ${config.port}.\n`)
+  server.runtime.diagnostics.ready(config.port)
 } catch (cause) {
   await server?.close()
   new Operation(diagnostics, ids, clock).error("startup", cause)

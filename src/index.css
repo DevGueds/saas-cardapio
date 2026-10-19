@@ -16,3 +16,6 @@
 @import "./modules/orders/presentation/orders.css";
 
 @import "./modules/commerce/presentation/commerce.css";
+@import "./modules/commerce/presentation/menu-options.css";
+@import "./modules/payments/presentation/payments.css";
+@import "./modules/engagement/presentation/engagement.css";

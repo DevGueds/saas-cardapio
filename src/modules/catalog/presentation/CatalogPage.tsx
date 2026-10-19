@@ -1,3 +1,4 @@
+import { notifySuccess } from "../../../shared/presentation/notify"
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
 import ValidatedSelect from "../../../shared/presentation/form-validation/ValidatedSelect"
 import { useSearchParams } from "react-router"
@@ -69,8 +70,6 @@ export default function CatalogPage() {
     revision: number
   } | null>(null)
 
-  const [notice, setNotice] = useState("")
-
   const blocked =
     loading ||
     !!loadError ||
@@ -88,8 +87,6 @@ export default function CatalogPage() {
   async function changeAvailability(product: Product) {
     if (blocked) return
 
-    setNotice("")
-
     const result = await mutation.run(() =>
       services.catalog.setAvailability(
         menu.restaurant.id,
@@ -99,13 +96,11 @@ export default function CatalogPage() {
       ),
     )
 
-    if (result?.ok) setNotice("Disponibilidade salva.")
+    if (result?.ok) notifySuccess("Disponibilidade salva.")
   }
 
   async function remove() {
     if (!deleting || blocked) return
-
-    setNotice("")
 
     const result = await mutation.run(() =>
       services.catalog.delete(menu.restaurant.id, deleting.revision, deleting.product.id),
@@ -113,7 +108,7 @@ export default function CatalogPage() {
 
     if (result?.ok) {
       setDeleting(null)
-      setNotice("Produto excluído.")
+      notifySuccess("Produto excluído.")
     }
   }
 
@@ -137,7 +132,6 @@ export default function CatalogPage() {
           className="primary-button"
           disabled={blocked}
           onClick={() => {
-            setNotice("")
             setEditor({})
           }}
         >
@@ -221,11 +215,6 @@ export default function CatalogPage() {
           </div>
         </div>
       </section>
-      {notice && (
-        <p className="success-notice" role="status">
-          {notice}
-        </p>
-      )}
       {mutation.error && !deleting && (
         <ErrorNotice error={mutation.error} onRetry={() => void reload()} />
       )}
@@ -236,7 +225,6 @@ export default function CatalogPage() {
           view={view}
           disabled={blocked}
           onEdit={(product) => {
-            setNotice("")
             setEditor({ product })
           }}
           onDelete={(product) => {
@@ -283,7 +271,7 @@ export default function CatalogPage() {
           onClose={() => setEditor(null)}
           onSaved={() => {
             setEditor(null)
-            setNotice("Produto salvo com sucesso.")
+            notifySuccess("Produto salvo com sucesso.")
           }}
         />
       )}

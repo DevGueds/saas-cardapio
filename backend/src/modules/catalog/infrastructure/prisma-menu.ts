@@ -122,6 +122,8 @@ export class PrismaMenu implements MenuRepository {
           next.products,
         )
         const data = {
+          addonGroups: (commerce.addonGroups ?? []) as unknown as Prisma.InputJsonValue,
+          appearance: commerce.appearance as unknown as Prisma.InputJsonValue,
           combos: commerce.combos as unknown as Prisma.InputJsonValue,
           promotions: commerce.promotions as unknown as Prisma.InputJsonValue,
           delivery: commerce.delivery as unknown as Prisma.InputJsonValue,

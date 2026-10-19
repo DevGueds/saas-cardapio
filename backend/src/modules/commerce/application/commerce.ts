@@ -4,12 +4,17 @@ import {
   saveDeliverySchema,
   deleteSchema,
   uuid,
+  saveAddonSchema,
+  saveAppearanceSchema,
 } from "@cardapio/contracts"
 import {
   saveCombo,
   savePromotion,
   saveDelivery,
   removeOffer,
+  saveAddon,
+  saveAppearance,
+  removeAddon,
 } from "@cardapio/domain/commerce-changes"
 import type { MenuDocument } from "@cardapio/domain/menu-document"
 import type { Actor } from "../../identity/domain/identity.js"
@@ -38,6 +43,29 @@ export class CommerceManagement {
       return this.commit(actor, id, data.expectedRevision, (m) =>
         saveCombo(m, data.combo),
       )
+    })
+  }
+  addon(actor: Actor, id: string, input: unknown) {
+    return this.operation.run("commerce.addon", async () => {
+      const data = validate(saveAddonSchema, input)
+      return this.commit(actor, id, data.expectedRevision, (m) =>
+        saveAddon(m, data.group),
+      )
+    })
+  }
+  appearance(actor: Actor, id: string, input: unknown) {
+    return this.operation.run("commerce.appearance", async () => {
+      const data = validate(saveAppearanceSchema, input)
+      return this.commit(actor, id, data.expectedRevision, (m) =>
+        saveAppearance(m, data.appearance),
+      )
+    })
+  }
+  removeAddon(actor: Actor, id: string, groupId: string, input: unknown) {
+    return this.operation.run("commerce.remove-addon", async () => {
+      const data = validate(deleteSchema, input),
+        group = validate(uuid, groupId)
+      return this.commit(actor, id, data.expectedRevision, (m) => removeAddon(m, group))
     })
   }
   promotion(actor: Actor, id: string, input: unknown) {

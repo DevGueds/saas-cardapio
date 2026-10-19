@@ -24,6 +24,17 @@ export class Operation {
         operation,
         code: failure.code,
         timestamp: this.clock.now().toISOString(),
+        errorType: cause instanceof Error ? cause.name : undefined,
+        frames:
+          cause instanceof Error
+            ? cause.stack
+                ?.split("\n")
+                .slice(1, 9)
+                .flatMap((line) => {
+                  const match = line.match(/([\w.-]+\.(?:js|ts|tsx):\d+:\d+)\)?$/)
+                  return match ? [match[1]!] : []
+                })
+            : undefined,
         cause:
           failure.technicalCause ??
           (cause instanceof Failure ? "controlled_failure" : "unhandled_failure"),

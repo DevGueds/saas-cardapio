@@ -1,3 +1,4 @@
+import { notifySuccess } from "../../../shared/presentation/notify"
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
 import { Link } from "react-router"
 import { useCallback, useEffect, useState, type FormEvent } from "react"
@@ -14,9 +15,10 @@ import { InputField, SelectField } from "../../../shared/presentation/Fields"
 import { useMutation } from "../../../shared/presentation/use-mutation"
 const descriptions: Record<Role, string> = {
   OWNER: "Configura a loja e controla os acessos da equipe.",
-  MANAGER: "Gerencia catálogo, ofertas, entregas e todos os pedidos.",
-  CASHIER: "Atende pedidos, cancela e organiza a saída das entregas.",
-  STAFF: "Atendimento: mesmas permissões de Caixa / atendimento.",
+  MANAGER: "Gerencia a operação, consulta relatórios financeiros e reverte recebimentos.",
+  CASHIER:
+    "Atende pedidos, organiza entregas e registra recebimentos. Não reverte pagamentos nem acessa relatórios.",
+  STAFF: "Atendimento legado: opera pedidos e entregas, sem acesso financeiro.",
   KITCHEN:
     "Consulta itens e observações; inicia preparo e marca como pronto. Contatos e endereços ficam ocultos.",
   COURIER: "Vê somente pedidos atribuídos a ele; informa saída e conclusão.",
@@ -32,7 +34,6 @@ export default function TeamPage() {
     [loading, setLoading] = useState(false),
     [email, setEmail] = useState(""),
     [role, setRole] = useState<Exclude<Role, "OWNER">>("CASHIER"),
-    [notice, setNotice] = useState(""),
     [removing, setRemoving] = useState<TeamMember | null>(null)
   const tenantId = account?.restaurant.tenantId,
     allowed = can(account?.restaurant.role, "members:write")
@@ -55,7 +56,7 @@ export default function TeamPage() {
     const result = await mutation.run(() => team.save(tenantId, email, role))
     if (result?.ok) {
       setEmail("")
-      setNotice("Acesso salvo. As permissões já estão em vigor.")
+      notifySuccess("Acesso salvo. As permissões já estão em vigor.")
       await reload()
     }
   }
@@ -64,7 +65,7 @@ export default function TeamPage() {
     const result = await mutation.run(() => team.remove(tenantId, removing.userId))
     if (result?.ok) {
       setRemoving(null)
-      setNotice("Acesso removido da equipe.")
+      notifySuccess("Acesso removido da equipe.")
       await reload()
     }
   }
@@ -81,11 +82,6 @@ export default function TeamPage() {
         </p>
       ) : (
         <>
-          {notice && (
-            <p className="success-notice" role="status">
-              {notice}
-            </p>
-          )}
           {error && <ErrorNotice error={error} onRetry={() => void reload()} />}
           {mutation.error && <ErrorNotice error={mutation.error} />}
           <div className="team-layout">

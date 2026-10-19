@@ -1,4 +1,5 @@
 import { LocalCommerce } from "../modules/commerce/application/local-commerce"
+import { PdfDocuments } from "../shared/infrastructure/pdf-documents"
 import type { ApplicationServices } from "./presentation/ServicesProvider"
 import { apiServices } from "./api-services"
 import { Executor } from "../shared/application/execute"
@@ -41,6 +42,7 @@ const repository = new LocalMenuRepository(
 
 const demoServices: ApplicationServices = {
   mode: "demo",
+  documents: new PdfDocuments(executor),
   commerce: new LocalCommerce(repository, access, executor),
   menu: new LoadMenu(repository, demoDirectory, access, executor),
 

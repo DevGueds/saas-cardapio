@@ -33,6 +33,6 @@ jobs:
       - run: pnpm audit --prod
       - name: Diagnose container failures
         if: failure() && hashFiles('backend/.env') != ''
-        run: docker compose --env-file backend/.env --profile app logs --tail 80
+        run: docker compose --env-file backend/.env --profile app logs --tail 80 api api-replica web
       - if: always() && hashFiles('backend/.env') != ''
         run: pnpm docker:down

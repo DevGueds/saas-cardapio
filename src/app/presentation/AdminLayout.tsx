@@ -1,8 +1,10 @@
 import { can } from "@cardapio/domain/permissions"
+import FeatureBoundary from "../../shared/presentation/FeatureBoundary"
 import { useAccount } from "../../modules/identity/presentation/AccountContext"
 import { useEffect, useRef, useState } from "react"
 import { Outlet, useLocation } from "react-router"
-import { Bell, Menu, VolumeX } from "lucide-react"
+import { Menu } from "lucide-react"
+import NotificationBell from "../../modules/engagement/presentation/NotificationBell"
 import { useMutation } from "../../shared/presentation/use-mutation"
 import ErrorNotice from "../../shared/presentation/ErrorNotice"
 import Dialog from "../../shared/presentation/Dialog"
@@ -17,22 +19,31 @@ export default function AdminLayout() {
   const canManage = !account || can(account.restaurant.role, "catalog:write")
   const mutation = useMutation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [confirmClosing, setConfirmClosing] = useState(false)
   const main = useRef<HTMLElement>(null)
   const location = useLocation()
   const { restaurant } = menu
-  const section = location.pathname.endsWith("offers")
-    ? "Combos e promoções"
-    : location.pathname.endsWith("delivery")
-      ? "Entregas e retirada"
-      : location.pathname.endsWith("team")
-        ? "Equipe e permissões"
-        : location.pathname.endsWith("settings")
-          ? "Configurações"
-          : location.pathname.endsWith("orders")
-            ? services.mode === "api"
-              ? "Pedidos"
-              : "Pedidos demonstrativos"
-            : "Cardápio"
+  const section = location.pathname.endsWith("addons")
+    ? "Adicionais"
+    : location.pathname.endsWith("appearance")
+      ? "Aparência e QR Code"
+      : location.pathname.endsWith("channels")
+        ? "Painel e notificações"
+        : location.pathname.endsWith("finance")
+          ? "Caixa e relatórios"
+          : location.pathname.endsWith("offers")
+            ? "Combos e promoções"
+            : location.pathname.endsWith("delivery")
+              ? "Entregas e retirada"
+              : location.pathname.endsWith("team")
+                ? "Equipe e permissões"
+                : location.pathname.endsWith("settings")
+                  ? "Configurações"
+                  : location.pathname.endsWith("orders")
+                    ? services.mode === "api"
+                      ? "Pedidos"
+                      : "Pedidos demonstrativos"
+                    : "Cardápio"
 
   useEffect(() => {
     document.title = `${section} · ${restaurant.name}`
@@ -40,9 +51,13 @@ export default function AdminLayout() {
 
   async function toggleStore() {
     if (mutation.pending || loading || loadError) return
-    await mutation.run(() =>
-      services.restaurant.setOpen(restaurant.id, menu.revision, !restaurant.isOpen),
+    const result = await mutation.run(
+      () => services.restaurant.setOpen(restaurant.id, menu.revision, !restaurant.isOpen),
+      restaurant.isOpen
+        ? "Loja fechada para novos pedidos."
+        : "Loja aberta para pedidos.",
     )
+    if (result?.ok) setConfirmClosing(false)
   }
 
   return (
@@ -51,7 +66,9 @@ export default function AdminLayout() {
         Pular para o conteúdo
       </a>
       <aside className="admin-sidebar" aria-label="Painel administrativo">
-        <AdminNavigation />
+        <FeatureBoundary label="Navegação">
+          <AdminNavigation />
+        </FeatureBoundary>
       </aside>
       {sidebarOpen && (
         <Dialog
@@ -81,15 +98,9 @@ export default function AdminLayout() {
             <strong>{section}</strong>
           </div>
           <div className="admin-topbar__status">
-            <div className="future-controls">
-              <button type="button" disabled aria-label="Som indisponível">
-                <VolumeX size={18} aria-hidden="true" />
-              </button>
-              <button type="button" disabled aria-label="Notificações indisponíveis">
-                <Bell size={18} aria-hidden="true" />
-              </button>
-              <span>Em breve</span>
-            </div>
+            <FeatureBoundary label="Notificações">
+              <NotificationBell />
+            </FeatureBoundary>
             <div className="store-control">
               <div>
                 <strong>{restaurant.isOpen ? "Loja aberta" : "Loja fechada"}</strong>
@@ -108,7 +119,10 @@ export default function AdminLayout() {
                 aria-label="Loja aberta"
                 aria-checked={restaurant.isOpen}
                 disabled={loading || !!loadError || mutation.pending || !canManage}
-                onClick={() => void toggleStore()}
+                onClick={() => {
+                  if (restaurant.isOpen) setConfirmClosing(true)
+                  else void toggleStore()
+                }}
               >
                 <span />
               </button>
@@ -119,7 +133,9 @@ export default function AdminLayout() {
           {mutation.error && (
             <ErrorNotice error={mutation.error} onRetry={() => void reload()} />
           )}
-          <Outlet />
+          <FeatureBoundary label={section} resetKeys={[location.pathname, restaurant.id]}>
+            <Outlet />
+          </FeatureBoundary>
         </main>
         <footer className="admin-footer">
           <span>Feito para simplificar o dia a dia da sua loja.</span>
@@ -128,6 +144,37 @@ export default function AdminLayout() {
           </span>
         </footer>
       </div>
+      {confirmClosing && (
+        <Dialog
+          title="Fechar a loja para novos pedidos?"
+          busy={mutation.pending}
+          onClose={() => setConfirmClosing(false)}
+        >
+          <p>
+            Novos pedidos ficarão pausados. Continue atendendo os pedidos já recebidos e
+            reabra quando estiver pronto.
+          </p>
+          {mutation.error && <ErrorNotice error={mutation.error} />}
+          <div className="form-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={mutation.pending}
+              onClick={() => setConfirmClosing(false)}
+            >
+              Manter loja aberta
+            </button>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={mutation.pending || loading || !!loadError}
+              onClick={() => void toggleStore()}
+            >
+              Confirmar fechamento
+            </button>
+          </div>
+        </Dialog>
+      )}
     </div>
   )
 }

@@ -13,6 +13,7 @@ export interface OrderDraft {
   whatsappUrl: string
   trackingHash: string
   trackingExpiresAt: Date
+  whatsappConsentAt?: Date | null
 }
 export interface OrderOperator {
   userId: string

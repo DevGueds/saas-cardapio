@@ -1,3 +1,4 @@
+import { notifySuccess } from "../../../shared/presentation/notify"
 import { useState } from "react"
 import { useSearchParams } from "react-router"
 import { Plus, PackagePlus, TicketPercent, Pencil, Trash2 } from "lucide-react"
@@ -21,7 +22,6 @@ export default function OffersPage() {
     account = useAccount(),
     mutation = useMutation()
   const [params, setParams] = useSearchParams(),
-    [notice, setNotice] = useState(""),
     [deleting, setDeleting] = useState<{
       id: string
       name: string
@@ -42,7 +42,7 @@ export default function OffersPage() {
     })
   const saved = () => {
     navigate("edit", null)
-    setNotice("Oferta salva no cardápio.")
+    notifySuccess("Oferta salva no cardápio.")
   }
   async function remove() {
     if (!deleting || !commerce) return
@@ -51,7 +51,7 @@ export default function OffersPage() {
     )
     if (result?.ok) {
       setDeleting(null)
-      setNotice("Oferta excluída. Pedidos anteriores foram preservados.")
+      notifySuccess("Oferta excluída. Pedidos anteriores foram preservados.")
     }
   }
   return (
@@ -84,11 +84,6 @@ export default function OffersPage() {
           </button>
         ))}
       </div>
-      {notice && (
-        <p className="success-notice" role="status">
-          {notice}
-        </p>
-      )}
       {mutation.error && (
         <ErrorNotice error={mutation.error} onRetry={() => void reload()} />
       )}

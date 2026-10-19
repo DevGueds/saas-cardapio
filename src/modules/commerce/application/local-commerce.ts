@@ -3,6 +3,9 @@ import {
   savePromotion,
   saveDelivery,
   removeOffer,
+  saveAddon,
+  saveAppearance,
+  removeAddon,
 } from "@cardapio/domain/commerce-changes"
 import type { MenuDocument } from "@cardapio/domain/menu-document"
 import type { CommerceService } from "./ports"
@@ -27,6 +30,15 @@ export class LocalCommerce implements CommerceService {
   }
   combo(...[id, revision, combo]: Parameters<CommerceService["combo"]>) {
     return this.change(id, revision, (m) => saveCombo(m, combo))
+  }
+  addon(...[id, revision, group]: Parameters<CommerceService["addon"]>) {
+    return this.change(id, revision, (m) => saveAddon(m, group))
+  }
+  appearance(...[id, revision, appearance]: Parameters<CommerceService["appearance"]>) {
+    return this.change(id, revision, (m) => saveAppearance(m, appearance))
+  }
+  removeAddon(...[id, revision, groupId]: Parameters<CommerceService["removeAddon"]>) {
+    return this.change(id, revision, (m) => removeAddon(m, groupId))
   }
   promotion(...[id, revision, promotion]: Parameters<CommerceService["promotion"]>) {
     return this.change(id, revision, (m) => savePromotion(m, promotion))

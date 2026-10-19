@@ -1,4 +1,5 @@
 import { RouterProvider } from "react-router"
+import Notifications from "../shared/presentation/Notifications"
 
 import AppErrorBoundary from "../shared/presentation/AppErrorBoundary"
 
@@ -13,6 +14,7 @@ export default function App() {
     <ServicesProvider services={services}>
       <AppErrorBoundary report={services.reportUnexpected}>
         <RouterProvider router={router} />
+        <Notifications />
       </AppErrorBoundary>
     </ServicesProvider>
   )

@@ -7,6 +7,28 @@ import {
 @Controller("restaurants/:restaurantId")
 export class CommerceController {
   constructor(@Inject(RUNTIME) private readonly app: Runtime) {}
+  @Put("addons") addon(
+    @Req() req: SessionRequest,
+    @Param("restaurantId") id: string,
+    @Body() data: unknown,
+  ) {
+    return this.app.commerce.addon(authenticated(req).actor, id, data)
+  }
+  @Put("appearance") appearance(
+    @Req() req: SessionRequest,
+    @Param("restaurantId") id: string,
+    @Body() data: unknown,
+  ) {
+    return this.app.commerce.appearance(authenticated(req).actor, id, data)
+  }
+  @Delete("addons/:groupId") removeAddon(
+    @Req() req: SessionRequest,
+    @Param("restaurantId") id: string,
+    @Param("groupId") group: string,
+    @Body() data: unknown,
+  ) {
+    return this.app.commerce.removeAddon(authenticated(req).actor, id, group, data)
+  }
   @Put("combos") combo(
     @Req() req: SessionRequest,
     @Param("restaurantId") id: string,
