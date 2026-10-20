@@ -84,7 +84,12 @@ export class HttpEngagement implements EngagementService {
     while (!signal.aborted && !fatal) {
       const attempt = new AbortController(),
         abort = () => attempt.abort()
+      const offline = () => {
+        callbacks.status(false, "Sem conexão. Reconectando quando a rede voltar…")
+        attempt.abort()
+      }
       signal.addEventListener("abort", abort, { once: true })
+      window.addEventListener("offline", offline)
       let lastMessage = Date.now()
       const watchdog = setInterval(() => {
         if (Date.now() - lastMessage > 20000) {
@@ -93,6 +98,7 @@ export class HttpEngagement implements EngagementService {
         }
       }, 5000)
       try {
+        if (!navigator.onLine) throw new Error("network_offline")
         await fetchEventSource(
           this.client.endpoint(
             `/public/restaurants/${encodeURIComponent(slug)}/board/stream`,
@@ -121,6 +127,7 @@ export class HttpEngagement implements EngagementService {
               lastMessage = Date.now()
             },
             onmessage: (event) => {
+              if (attempt.signal.aborted) return
               lastMessage = Date.now()
               if (event.event === "snapshot") {
                 callbacks.snapshot(boardSnapshotSchema.parse(JSON.parse(event.data)))
@@ -149,6 +156,7 @@ export class HttpEngagement implements EngagementService {
       } finally {
         clearInterval(watchdog)
         signal.removeEventListener("abort", abort)
+        window.removeEventListener("offline", offline)
         attempt.abort()
       }
       if (!signal.aborted && !fatal)

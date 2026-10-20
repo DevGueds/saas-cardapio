@@ -40,20 +40,30 @@ function Balance({ order }: { order: OrderView }) {
         <>
           <dl className="order-details-totals">
             <div>
-              <dt>Recebido</dt>
+              <dt>
+                {balance.cancelled
+                  ? "Recebimentos a conferir"
+                  : "Recebido válido até agora"}
+              </dt>
               <dd>{formatMoney(balance.paid)}</dd>
             </div>
             <div>
               <dt>
-                {balance.outstanding === 0 ? "Pago integralmente" : "Saldo em aberto"}
+                {balance.cancelled
+                  ? "Cancelado · sem cobrança"
+                  : balance.total === 0
+                    ? "Sem valor a cobrar"
+                    : balance.outstanding === 0
+                      ? "Pago integralmente"
+                      : "Saldo em aberto"}
               </dt>
               <dd>{formatMoney(balance.outstanding)}</dd>
             </div>
           </dl>
           {balance.cancelled && balance.paid > 0 && (
             <p className="info-notice">
-              Este pedido foi cancelado e ainda possui recebimentos. O gerente deve
-              conferir a devolução e a reversão.
+              O cancelamento encerra a cobrança, mas não reverte recebimentos. O gerente
+              deve conferir se houve devolução e registrar a reversão correspondente.
             </p>
           )}
           {editing ? (
@@ -66,7 +76,7 @@ function Balance({ order }: { order: OrderView }) {
                   ? "CASH"
                   : order.customer.payment === "Pix"
                     ? "PIX"
-                    : "CREDIT"
+                    : ""
               }
               onCancel={() => setEditing(false)}
               onSaved={() => {

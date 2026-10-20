@@ -176,6 +176,37 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
     page.getByRole("row").filter({ hasText: "Venda avulsa de teste" }),
   ).toHaveCount(1)
   await page.getByRole("button", { name: "Relatórios", exact: true }).click()
+  await expect(
+    page
+      .locator(".finance-metrics article")
+      .filter({ hasText: "Total dos pedidos válidos" }),
+  ).toContainText("34,50")
+  await expect(
+    page
+      .locator(".finance-metrics article")
+      .filter({ hasText: "Recebimentos menos reversões" }),
+  ).toContainText("12,34")
+  await expect(
+    page
+      .locator(".finance-metrics article")
+      .filter({ hasText: "Falta receber desses pedidos" }),
+  ).toContainText("34,50")
+  await expect(
+    page.getByRole("region", { name: "Composição dos valores" }),
+  ).toContainText("29,50")
+  await expect(
+    page.getByRole("region", { name: "Composição dos valores" }),
+  ).toContainText("5,00")
+  await expect(
+    page.getByRole("row").filter({
+      has: page.getByRole("rowheader", { name: "Total do período", exact: true }),
+    }),
+  ).toContainText("46,84")
+  await expect(
+    page.getByRole("row").filter({
+      has: page.getByRole("rowheader", { name: "Total do período", exact: true }),
+    }),
+  ).toContainText("34,50")
   const download = page.waitForEvent("download")
   await page.getByRole("button", { name: "Baixar relatório PDF", exact: true }).click()
   const pdf = await download
@@ -329,6 +360,12 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
       decoded = jsQR(new Uint8ClampedArray(png.data), png.width, png.height)
     expect(decoded?.data).toBe(`${origin}/menu/${slug}`)
   }
+  await expect(
+    page.getByRole("button", { name: "Publicar aparência", exact: true }),
+  ).toBeEnabled()
+  await expect(page.getByText("O cardápio mudou.", { exact: false })).toHaveCount(0)
+  await page.getByRole("button", { name: "Baixar PNG", exact: true }).blur()
+  await page.evaluate(() => window.scrollTo(0, 0))
   await page.screenshot({ path: ".cache/appearance-desktop.png", fullPage: true })
   await page.setViewportSize({ width: 320, height: 740 })
   expect(
@@ -339,7 +376,7 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
   await page
     .getByRole("link", { name: "Painel ao vivo e mensagens", exact: true })
     .click()
-  await page.getByLabel("Disponibilizar painel público", { exact: true }).check()
+  await page.getByLabel("Disponibilizar painel público", { exact: true }).click()
   await page.getByRole("button", { name: "Confirmar alteração", exact: true }).click()
   const link = page.getByRole("link", { name: "Abrir painel para TV", exact: true })
   await expect(link).toBeVisible()

@@ -67,10 +67,12 @@ export function ToggleField({
 }
 export function FormActions({
   busy,
+  disabled = false,
   onCancel,
   label = "Salvar alterações",
 }: {
   busy: boolean
+  disabled?: boolean
   onCancel?: () => void
   label?: string
 }) {
@@ -86,7 +88,7 @@ export function FormActions({
           Fechar
         </button>
       )}
-      <button className="primary-button" disabled={busy}>
+      <button className="primary-button" disabled={busy || disabled}>
         {busy ? "Salvando…" : label}
       </button>
     </div>

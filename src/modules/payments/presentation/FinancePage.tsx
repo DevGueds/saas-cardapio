@@ -115,7 +115,7 @@ function FinanceWorkspace() {
           Aplicar período
         </button>
         <p className="field-help">
-          Datas inclusivas · Brasília (UTC−03) · até 31 dias por consulta
+          Datas inclusivas · fuso fixo UTC−03 · até 31 dias por consulta
         </p>
       </ValidatedForm>
       {rangeError && (
@@ -125,7 +125,7 @@ function FinanceWorkspace() {
       )}
       <p className="field-help">
         Período aplicado: {financeTime(range.from)} até{" "}
-        {financeTime(new Date(Date.parse(range.to) - 1).toISOString())} (Brasília).
+        {financeTime(new Date(Date.parse(range.to) - 1).toISOString())} (UTC−03).
       </p>
       <FeatureBoundary
         label={tab === "reports" ? "Relatório gerencial" : "Histórico de recebimentos"}
@@ -168,7 +168,7 @@ function Receipts({ restaurantId, range }: { restaurantId: string; range: Report
             <Wallet size={21} aria-hidden="true" />
             Recebimentos
           </h2>
-          <p>Confirmações manuais e reversões com histórico preservado.</p>
+          <p>Registros manuais, sem movimentação bancária automática.</p>
         </div>
         {can(account?.restaurant.role, "payments:write") && (
           <button
@@ -184,7 +184,9 @@ function Receipts({ restaurantId, range }: { restaurantId: string; range: Report
       </div>
       <p className="field-help">
         Para dar baixa em um pedido, abra seus detalhes no quadro de pedidos. Esta lista
-        inclui recebimentos ou reversões ocorridos no período.
+        inclui recebimentos ou reversões ocorridos no período, inclusive avulsos e pedidos
+        de outras datas. Situação é a atual; as colunas de entrada/reversão mostram apenas
+        o efeito no período aplicado.
       </p>
       {resource.loading && <p role="status">Buscando recebimentos…</p>}
       {resource.error && (
@@ -194,6 +196,7 @@ function Receipts({ restaurantId, range }: { restaurantId: string; range: Report
         <PaymentHistory
           payments={resource.data.items}
           restaurantId={restaurantId}
+          range={range}
           onChanged={() => void resource.reload()}
           disabled={resource.loading || !!resource.error}
         />

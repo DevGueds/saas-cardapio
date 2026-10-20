@@ -115,6 +115,42 @@ describe("combos, promoções e entrega", () => {
     expect(quote.promotionId).toBe("fixed")
     expect(quote.total).toBe(4190 + menu.restaurant.deliveryFee - 500)
   })
+  it("percentage discounts truncate fractional cents once on the eligible total and never discount freight", () => {
+    const m = savePromotion(
+      {
+        ...configured,
+        products: configured.products.map((p) =>
+          p.id === product.id ? { ...p, price: 101 } : p,
+        ),
+        restaurant: { ...configured.restaurant, deliveryFee: 299 },
+      },
+      { ...promotion, value: 33 },
+    )
+    const ordinary = {
+      restaurantId: m.restaurant.id,
+      lines: [{ productId: product.id, quantity: 3, unitPrice: 101, note: "" }],
+    }
+    const quote = quoteOrder(m, ordinary, {}, now)
+    expect(quote.subtotal).toBe(303)
+    expect(quote.discount).toBe(99)
+    expect(quote.total).toBe(503)
+    expect(quote.total).toBe(quote.subtotal + quote.deliveryFee - quote.discount)
+    const hundred = quoteOrder(
+      savePromotion(m, { ...promotion, value: 100 }),
+      ordinary,
+      {},
+      now,
+    )
+    expect(hundred.total).toBe(299)
+    const fixed = quoteOrder(
+      savePromotion(m, { ...promotion, kind: "FIXED", value: 10000 }),
+      ordinary,
+      {},
+      now,
+    )
+    expect(fixed.discount).toBe(303)
+    expect(fixed.total).toBe(299)
+  })
   it("expired, exhausted, inapplicable or unknown coupons fail closed", () => {
     const m = savePromotion(configured, { ...promotion, code: "CLIENTE", maxUses: 1 })
     expect(() =>

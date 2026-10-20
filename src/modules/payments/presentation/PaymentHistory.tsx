@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { reversalSchema, type PaymentView } from "@cardapio/contracts"
+import { reversalSchema, type PaymentView, type ReportRange } from "@cardapio/contracts"
+import { paymentActivity } from "@cardapio/domain/payments"
 import { can } from "@cardapio/domain/permissions"
 import { formatMoney } from "@cardapio/domain/money"
 import { useServices } from "../../../app/presentation/ServicesProvider"
@@ -16,11 +17,13 @@ export default function PaymentHistory({
   restaurantId,
   onChanged,
   disabled = false,
+  range,
 }: {
   payments: PaymentView[]
   restaurantId: string
   onChanged(): void
   disabled?: boolean
+  range?: ReportRange
 }) {
   const account = useAccount(),
     services = useServices(),
@@ -44,8 +47,14 @@ export default function PaymentHistory({
               <th>Recebido em</th>
               <th>Origem</th>
               <th>Forma</th>
-              <th>Valor</th>
-              <th>Situação</th>
+              <th>Valor original</th>
+              {range && (
+                <>
+                  <th>Entrada no período (+)</th>
+                  <th>Reversão no período (−)</th>
+                </>
+              )}
+              <th>Situação atual</th>
               {reverse && <th>Ações</th>}
             </tr>
           </thead>
@@ -61,11 +70,17 @@ export default function PaymentHistory({
                 </td>
                 <td>{paymentLabels[payment.method]}</td>
                 <td>{formatMoney(payment.amount)}</td>
+                {range && (
+                  <>
+                    <td>{formatMoney(paymentActivity(payment, range).received)}</td>
+                    <td>{formatMoney(paymentActivity(payment, range).reversed)}</td>
+                  </>
+                )}
                 <td>
                   <span
                     className={`finance-badge ${payment.reversedAt ? "is-reversed" : ""}`}
                   >
-                    {payment.reversedAt ? "Revertido" : "Confirmado"}
+                    {payment.reversedAt ? "Revertido" : "Registro válido"}
                   </span>
                   {payment.reversedAt && (
                     <small>
@@ -123,8 +138,8 @@ export default function PaymentHistory({
             <p>
               Reverter <strong>{formatMoney(selected.amount)}</strong>
               {selected.orderId
-                ? " reabre esse valor no saldo do pedido."
-                : " retira esse valor do saldo de recebimentos."}{" "}
+                ? " retira esse valor dos recebimentos válidos do pedido. Se ele não estiver cancelado, o valor volta a ficar em aberto."
+                : " retira esse valor dos recebimentos válidos avulsos."}{" "}
               O histórico será mantido.
             </p>
             <p className="field-help">

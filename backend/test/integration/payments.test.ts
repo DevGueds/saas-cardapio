@@ -310,6 +310,7 @@ test("cancellation preserves money history and blocks new receipts", async () =>
   )
   assert.equal(balance.cancelled, true)
   assert.equal(balance.paid, 100)
+  assert.equal(balance.outstanding, 0)
 })
 test("role permissions are enforced server-side for finance and reports", async () => {
   const payment = value<PaymentView>(
@@ -388,4 +389,92 @@ test("reports include all period activity, reject oversized ranges and do not ex
     ).statusCode,
     422,
   )
+})
+
+test("real reports use movement dates independently from order dates and preserve later-paid current balances", async () => {
+  const db = server.runtime.db.client
+  const oldOrder = await order(),
+    newOrder = await order()
+  const oldPayment = value<PaymentView>(
+    (await request("POST", `${route()}/payments`, command(oldOrder, "1,00"), owner)).body,
+  )
+  const latePayment = value<PaymentView>(
+    (await request("POST", `${route()}/payments`, command(newOrder, "10,01"), owner))
+      .body,
+  )
+  const standalone = value<PaymentView>(
+    (await request("POST", `${route()}/payments`, command(null, "0,10"), owner)).body,
+  )
+  for (const payment of [oldPayment, standalone]) {
+    assert.equal(
+      (
+        await request(
+          "POST",
+          `${route()}/payments/${payment.id}/reverse`,
+          { reason: "Conferência de período" },
+          owner,
+        )
+      ).statusCode,
+      201,
+    )
+  }
+  // Backdate only this test's own records to exercise day boundaries without waiting days.
+  await db.order.update({
+    where: { id: oldOrder },
+    data: { createdAt: new Date("2026-09-30T12:00:00Z") },
+  })
+  await db.order.update({
+    where: { id: newOrder },
+    data: { createdAt: new Date("2026-10-01T12:00:00Z") },
+  })
+  await db.payment.update({
+    where: { id: oldPayment.id },
+    data: {
+      createdAt: new Date("2026-10-01T03:00:00Z"),
+      reversedAt: new Date("2026-10-02T03:00:00Z"),
+    },
+  })
+  await db.payment.update({
+    where: { id: latePayment.id },
+    data: { createdAt: new Date("2026-10-02T03:00:00Z") },
+  })
+  await db.payment.update({
+    where: { id: standalone.id },
+    data: {
+      createdAt: new Date("2026-10-01T12:00:00Z"),
+      reversedAt: new Date("2026-10-01T13:00:00Z"),
+    },
+  })
+  const first = value<FinancialReport>(
+    (
+      await request(
+        "GET",
+        `${route()}/reports/financial?from=2026-10-01T03:00:00Z&to=2026-10-02T03:00:00Z`,
+        undefined,
+        owner,
+      )
+    ).body,
+  )
+  assert.equal(first.orders.length, 1)
+  assert.equal(first.summary.sales, 1001)
+  assert.equal(first.orders[0]!.paid, 1001)
+  assert.equal(first.summary.outstanding, 0)
+  assert.equal(first.summary.received, 110)
+  assert.equal(first.summary.reversed, 10)
+  assert.equal(first.summary.netReceived, 100)
+  const second = value<FinancialReport>(
+    (
+      await request(
+        "GET",
+        `${route()}/reports/financial?from=2026-10-02T03:00:00Z&to=2026-10-03T03:00:00Z`,
+        undefined,
+        owner,
+      )
+    ).body,
+  )
+  assert.equal(second.orders.length, 0)
+  assert.equal(second.summary.sales, 0)
+  assert.equal(second.summary.received, 1001)
+  assert.equal(second.summary.reversed, 100)
+  assert.equal(second.summary.netReceived, 901)
 })

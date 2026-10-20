@@ -40,7 +40,7 @@ export default function QrDesigner({
           height: 800,
           type: "svg",
           data: url,
-          margin: 48,
+          margin: 80,
           qrOptions: { errorCorrectionLevel: "H" },
           image: withLogo ? logo : undefined,
           imageOptions: {
@@ -51,6 +51,7 @@ export default function QrDesigner({
           },
           dotsOptions: { color: "#172f27", type: style },
           cornersSquareOptions: { type: "square" },
+          cornersDotOptions: { type: "square" },
           backgroundOptions: { color: "#ffffff" },
         })
         const blob = await Promise.race([
