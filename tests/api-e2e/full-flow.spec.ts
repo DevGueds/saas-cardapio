@@ -85,6 +85,7 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
   await menu.getByLabel("Seu nome completo *").fill("Cliente Açaí")
   await menu.getByLabel("Seu WhatsApp com DDD *").fill("11999999999")
   await menu.getByLabel("Endereço de entrega completo *").fill("Rua São João, 10")
+  await menu.getByLabel("Pagamento", { exact: true }).selectOption("Cartão na Entrega")
   await menu
     .getByRole("button", { name: "Enviar pedido para a loja", exact: true })
     .click()
@@ -120,8 +121,14 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
     "Marcar como pronto",
     "Saiu para entrega",
     "Concluir pedido",
-  ])
+  ]) {
+    const updated = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/status") && response.request().method() === "PUT",
+    )
     await page.getByRole("button", { name, exact: true }).click()
+    expect((await updated).status()).toBe(200)
+  }
   await page.getByRole("button", { name: "Concluídos", exact: true }).click()
   await expect(page.getByRole("heading", { name: "Cliente Açaí" })).toBeVisible()
   await page.getByRole("button", { name: "Ver detalhes", exact: true }).click()
@@ -129,6 +136,13 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
   await expect(page.getByLabel("Valor recebido (R$)", { exact: true })).toHaveValue(
     "34,50",
   )
+  await expect(page.getByLabel("Forma de recebimento", { exact: true })).toHaveValue("")
+  await page.getByRole("button", { name: "Confirmar recebimento", exact: true }).click()
+  await expect(page.getByLabel("Forma de recebimento", { exact: true })).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  )
+  await page.getByLabel("Forma de recebimento", { exact: true }).selectOption("DEBIT")
   await page.getByRole("button", { name: "Confirmar recebimento", exact: true }).click()
   await expect(page.getByText("Pago integralmente", { exact: true })).toBeVisible()
   await page.getByRole("button", { name: "Reverter", exact: true }).click()

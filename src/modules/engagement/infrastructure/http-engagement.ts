@@ -169,7 +169,6 @@ export class HttpEngagement implements EngagementService {
         clearInterval(watchdog)
         window.removeEventListener("offline", offline)
         signal.removeEventListener("abort", abort)
-        window.removeEventListener("offline", offline)
         attempt.abort()
       }
       if (!signal.aborted && !fatal) await waitForNetworkRetry(signal, 3000)
