@@ -8,6 +8,8 @@ Em **Caixa e relatórios → Recebimentos**, registre valores avulsos com uma de
 
 Gerente/proprietário pode **Reverter**, informar o motivo e confirmar. O registro original, valor, data e operador permanecem; a reversão adiciona data, responsável e motivo. Repetir a mesma reversão não desconta novamente. A operação não devolve dinheiro automaticamente: a equipe deve realizar a devolução pelo meio combinado, quando necessária.
 
+Em dinheiro, registre apenas o valor que fica com a loja, descontando o troco. Um pagamento parcial reduz somente sua parcela do saldo. Pedido com total zero aparece como **Sem valor a cobrar**, sem inventar um recebimento. Cancelamento encerra a cobrança e mantém os recebimentos não revertidos em **Recebimentos a conferir**; não aparece como quitado nem como dívida a cobrar.
+
 ## Permissões
 
 | Perfil                                          | Ver recebimentos/saldo | Registrar | Reverter | Relatórios/PDF reais |
@@ -20,14 +22,20 @@ Validação também ocorre nos casos de uso do backend, independentemente de bot
 
 ## Semântica dos relatórios
 
-- Período com início inclusivo e fim exclusivo na API; a interface converte dias inclusivos para Brasília (UTC−03).
+- Período com início inclusivo e fim exclusivo na API; a interface converte dias inclusivos para o fuso fixo UTC−03. Filtros, horários, agrupamento diário e PDF usam o mesmo fuso, independentemente do dispositivo. Não há ajuste histórico de horário de verão.
 - Até 31 dias e 5.000 pedidos / 5.000 registros de pagamento por relatório. Acima do limite, a consulta falha com orientação para dividir o período; não produz um total incompleto. A prévia em tela mostra até 100 pedidos; o PDF contém todos os registros retornados, com paginação.
-- **Vendas**: totais de pedidos criados no período, excluindo cancelados e incluindo frete; não significa recebimento.
+- **Total dos pedidos válidos**: produtos/adicionais + frete − descontos, apenas de pedidos criados no período e não cancelados na consulta. Inclui os em andamento; não é receita recebida nem apenas pedidos concluídos. Avulsos não criam vendas.
 - **Recebimentos**: pagamentos registrados no período, inclusive avulsos e pedidos anteriores.
 - **Reversões**: pagamentos revertidos no período, ainda que recebidos em outra data. Um pagamento pode aparecer em períodos distintos por seus dois eventos, mas cada soma considera apenas o evento dentro do intervalo.
-- **Líquido recebido**: recebimentos menos reversões; pode ser negativo.
-- **Saldo em aberto**: saldo atual dos pedidos não cancelados criados no período, calculado com todos os pagamentos desses pedidos. É uma posição na data da consulta, não uma reconstrução histórica no fim do dia selecionado.
+- **Recebimentos menos reversões**: resultado dos registros no período; pode ser negativo, sem significar saldo bancário negativo. Recebimentos em cartão são registros do operador, sem conciliação, taxas ou previsão de liquidação bancária.
+- **Falta receber desses pedidos**: total dos pedidos válidos criados no período menos todos os recebimentos não revertidos desses pedidos, inclusive posteriores ao período. É a posição na consulta, sem reconstruir um saldo histórico de fechamento.
+- **Recebimentos a conferir em cancelados**: valor não revertido de pedidos cancelados criados no período. Excluído do total válido e da dívida a cobrar, mas continua nos movimentos das respectivas datas até registrar uma reversão. Cancelamento não confirma nem executa devolução.
+- Etapas, cancelamentos e recebimentos válidos refletem a consulta; repetir um relatório antigo pode mudar esses saldos quando houver alterações posteriores. O PDF registra o instante da consulta. As colunas do histórico distinguem valor original, situação atual e entradas/reversões do período; o PDF discrimina os movimentos com sinal e mantém o histórico completo.
 - Relatório gerencial não é documento fiscal. Ainda não há fechamento de turno, sangrias/despesas, DRE, ranking de produtos ou conciliação bancária. Essas extensões não devem ser inferidas do saldo de recebimentos.
+
+Exemplo: pedido de R$ 30,03 em produtos, R$ 5,00 de frete e R$ 3,00 de desconto totaliza R$ 32,03. Receber R$ 1,03 deixa R$ 31,00 em aberto. Um avulso de R$ 10,00 aumenta os recebimentos, mas não reduz os R$ 31,00. Se a entrada ocorreu ontem e é revertida hoje, ontem mantém a entrada e hoje registra a reversão; o saldo atual do pedido é reaberto. Se o pedido for cancelado, não há cobrança, e valores não revertidos precisam ser conferidos.
+
+Percentuais são aplicados uma vez ao subtotal elegível de produtos/adicionais (e combos, quando habilitados), sem frete. Frações de centavo do desconto são descartadas: 33% de R$ 3,03 gera R$ 0,99, não três descontos arredondados por unidade. Há apenas uma promoção por pedido; descontos fixos/percentuais respeitam subtotal elegível e teto, e entrega grátis desconta somente o frete. A fórmula é sempre subtotal + frete − desconto. O formulário da promoção explica esse critério.
 
 ## Integridade e integração futura
 

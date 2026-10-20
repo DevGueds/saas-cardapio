@@ -49,14 +49,19 @@ export const paymentPageSchema = z.strictObject({
   nextCursor: uuid.nullable(),
 })
 export type PaymentPage = z.infer<typeof paymentPageSchema>
-export const orderBalanceSchema = z.strictObject({
-  orderId: uuid,
-  total: cents,
-  paid: cents,
-  outstanding: cents,
-  cancelled: z.boolean(),
-  payments: z.array(paymentSchema),
-})
+export const orderBalanceSchema = z
+  .strictObject({
+    orderId: uuid,
+    total: cents,
+    paid: cents,
+    outstanding: cents,
+    cancelled: z.boolean(),
+    payments: z.array(paymentSchema),
+  })
+  .refine(
+    (v) => v.paid <= v.total && v.outstanding === (v.cancelled ? 0 : v.total - v.paid),
+    { message: "Saldo do pedido inconsistente." },
+  )
 export type OrderBalance = z.infer<typeof orderBalanceSchema>
 export const reportRangeSchema = z
   .strictObject({ from: z.iso.datetime(), to: z.iso.datetime() })
@@ -95,6 +100,8 @@ export const financialReportSchema = z.strictObject({
   summary: z.strictObject({
     orders: total,
     cancelled: total,
+    subtotal: total,
+    cancelledPaid: total,
     sales: total,
     discounts: total,
     deliveryFees: total,

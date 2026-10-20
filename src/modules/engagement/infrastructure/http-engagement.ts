@@ -110,6 +110,7 @@ export class HttpEngagement implements EngagementService {
         }
       }, 5000)
       try {
+        if (!navigator.onLine) throw new Error("network_offline")
         await fetchEventSource(
           this.client.endpoint(
             `/public/restaurants/${encodeURIComponent(slug)}/board/stream`,
@@ -168,6 +169,7 @@ export class HttpEngagement implements EngagementService {
         clearInterval(watchdog)
         window.removeEventListener("offline", offline)
         signal.removeEventListener("abort", abort)
+        window.removeEventListener("offline", offline)
         attempt.abort()
       }
       if (!signal.aborted && !fatal) await waitForNetworkRetry(signal, 3000)

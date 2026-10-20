@@ -32,3 +32,22 @@ export function sumCents(values: readonly number[]): number {
   }
   return total
 }
+
+/** Receipt and reversal are separate movements; the end of the range is exclusive. */
+export function paymentActivity(
+  payment: { amount: number; createdAt: string; reversedAt: string | null },
+  range: { from: string; to: string },
+) {
+  assertCents(payment.amount, "amount", true)
+  const from = Date.parse(range.from),
+    to = Date.parse(range.to)
+  requireValid(
+    Number.isFinite(from) && Number.isFinite(to) && from < to,
+    "Período financeiro inválido.",
+  )
+  const inside = (at: string | null) =>
+    at !== null && Date.parse(at) >= from && Date.parse(at) < to
+  const received = inside(payment.createdAt) ? payment.amount : 0
+  const reversed = inside(payment.reversedAt) ? payment.amount : 0
+  return { received, reversed, net: received - reversed }
+}

@@ -90,7 +90,7 @@ export default function AppearancePage() {
         {mutation.error && (
           <ErrorNotice error={mutation.error} onRetry={() => void refresh()} />
         )}
-        {draft.value.revision !== menu.revision && (
+        {!loading && !mutation.pending && draft.value.revision !== menu.revision && (
           <p className="info-notice">
             O cardápio mudou.{" "}
             <button type="button" onClick={() => void refresh()}>
@@ -137,7 +137,8 @@ export default function AppearancePage() {
           />
         </fieldset>
         <FormActions
-          busy={loading || !!error || mutation.pending || !commerce}
+          busy={mutation.pending}
+          disabled={loading || !!error || !commerce}
           label="Publicar aparência"
         />
       </ValidatedForm>

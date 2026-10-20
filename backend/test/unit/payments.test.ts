@@ -2,7 +2,11 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import { randomUUID } from "node:crypto"
 import { can } from "@cardapio/domain/permissions"
-import { assertPaymentBalance, sumCents } from "@cardapio/domain/payments"
+import {
+  assertPaymentBalance,
+  paymentActivity,
+  sumCents,
+} from "@cardapio/domain/payments"
 import { parseMoney } from "@cardapio/domain/money"
 import {
   paymentInputSchema,
@@ -118,6 +122,8 @@ test("reports separate sales from cash and count old reversals in the correct pe
   assert.deepEqual(report.summary, {
     orders: 2,
     cancelled: 1,
+    subtotal: 1001,
+    cancelledPaid: 100,
     sales: 1001,
     discounts: 100,
     deliveryFees: 100,
@@ -128,6 +134,99 @@ test("reports separate sales from cash and count old reversals in the correct pe
   })
   assert.deepEqual(report.daily, [{ day: "2026-10-18", orders: 1, sales: 1001 }])
 })
+test("period arithmetic separates later reversals, earlier receipts, standalone entries and exact boundaries", () => {
+  const range = { from: "2026-10-19T03:00:00.000Z", to: "2026-10-20T03:00:00.000Z" }
+  const cases = [
+    { createdAt: range.from, reversedAt: null, received: 101, reversed: 0 },
+    { createdAt: range.to, reversedAt: null, received: 0, reversed: 0 },
+    {
+      createdAt: "2026-10-19T02:59:59.999Z",
+      reversedAt: range.from,
+      received: 0,
+      reversed: 101,
+    },
+    { createdAt: range.from, reversedAt: range.to, received: 101, reversed: 0 },
+    {
+      createdAt: range.from,
+      reversedAt: "2026-10-20T02:59:59.999Z",
+      received: 101,
+      reversed: 101,
+    },
+  ]
+  for (const c of cases)
+    assert.deepEqual(paymentActivity({ ...c, amount: 101 }, range), {
+      received: c.received,
+      reversed: c.reversed,
+      net: c.received - c.reversed,
+    })
+  const base: PaymentView = {
+    id: randomUUID(),
+    orderId: null,
+    amount: 2147483647,
+    method: "PIX",
+    description: "Avulso",
+    createdAt: range.from,
+    recordedBy: randomUUID(),
+    reversedAt: null,
+    reversedBy: null,
+    reversalReason: null,
+  }
+  const report = buildReport(range, [], [base, { ...base, id: randomUUID() }], range.to)
+  assert.equal(report.summary.received, 4294967294)
+  assert.equal(report.summary.sales, 0)
+  assert.equal(report.summary.netReceived, 4294967294)
+  assert.equal(sumCents(report.methods.map((m) => m.received)), report.summary.received)
+  assert.equal(sumCents(report.methods.map((m) => m.reversed)), report.summary.reversed)
+})
+
+test("order totals reconcile independently of cash dates and cancelled receipts never become debt", () => {
+  const range = { from: "2026-10-19T03:00:00.000Z", to: "2026-10-20T03:00:00.000Z" }
+  const valid: ReportOrder = {
+    id: randomUUID(),
+    createdAt: range.from,
+    status: "NEW",
+    subtotal: 3003,
+    discount: 300,
+    deliveryFee: 500,
+    total: 3203,
+    paid: 103,
+    fulfillment: "DELIVERY",
+  }
+  const cancelled: ReportOrder = {
+    ...valid,
+    id: randomUUID(),
+    status: "CANCELLED",
+    paid: 3000,
+  }
+  const free: ReportOrder = {
+    ...valid,
+    id: randomUUID(),
+    subtotal: 100,
+    discount: 100,
+    deliveryFee: 0,
+    total: 0,
+    paid: 0,
+    fulfillment: "PICKUP",
+    status: "COMPLETED",
+  }
+  const report = buildReport(range, [valid, cancelled, free], [], range.to),
+    s = report.summary
+  assert.equal(s.subtotal, 3103)
+  assert.equal(s.discounts, 400)
+  assert.equal(s.deliveryFees, 500)
+  assert.equal(s.sales, 3203)
+  assert.equal(s.sales, s.subtotal + s.deliveryFees - s.discounts)
+  assert.equal(s.outstanding, 3100)
+  assert.equal(s.cancelledPaid, 3000)
+  assert.equal(s.received, 0)
+  assert.equal(s.netReceived, 0)
+  assert.equal(sumCents(report.daily.map((d) => d.sales)), s.sales)
+  assert.equal(
+    report.daily.reduce((n, d) => n + d.orders, 0),
+    s.orders - s.cancelled,
+  )
+})
+
 test("developer diagnostics discard arbitrary exception text and unapproved fields", async () => {
   const lines: string[] = []
   const logger = createDiagnostics(

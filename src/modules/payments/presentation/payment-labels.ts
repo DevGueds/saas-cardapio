@@ -8,7 +8,7 @@ export const paymentLabels: Record<PaymentMethod, string> = {
 }
 export function financeTime(value: string) {
   return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
+    timeZone: "Etc/GMT+3",
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(value))
