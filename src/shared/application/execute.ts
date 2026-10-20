@@ -26,7 +26,12 @@ export class Executor {
               "Não foi possível concluir a operação. Tente novamente.",
             )
 
-      const diagnosticId = this.ids.next()
+      let diagnosticId = "diagnostic-unavailable"
+      try {
+        diagnosticId = this.ids.next()
+      } catch {
+        // A missing entropy source must not break the error boundary itself.
+      }
 
       // No payload, arbitrary exception messages, customer information or stack frames are logged.
 

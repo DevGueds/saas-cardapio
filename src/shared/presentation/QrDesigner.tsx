@@ -40,7 +40,8 @@ export default function QrDesigner({
           height: 800,
           type: "svg",
           data: url,
-          margin: 80,
+          // At least four modules of quiet zone, even for the smallest (21x21) code.
+          margin: 112,
           qrOptions: { errorCorrectionLevel: "H" },
           image: withLogo ? logo : undefined,
           imageOptions: {
@@ -51,6 +52,7 @@ export default function QrDesigner({
           },
           dotsOptions: { color: "#172f27", type: style },
           cornersSquareOptions: { type: "square" },
+          // Keep finder centers solid: dotted centers can be mistaken for data modules.
           cornersDotOptions: { type: "square" },
           backgroundOptions: { color: "#ffffff" },
         })

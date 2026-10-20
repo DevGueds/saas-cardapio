@@ -14,9 +14,12 @@ test.afterAll(async () => {
 test("cadastro, catálogo, configurações, pedido real e troca de loja funcionam com MySQL", async ({
   page,
   browser,
+  baseURL,
 }) => {
   const slug = `loja-${randomUUID().slice(0, 8)}`
   await page.goto("/admin")
+  expect(await page.evaluate(() => isSecureContext)).toBe(false)
+  expect(await page.evaluate(() => typeof crypto.randomUUID)).toBe("undefined")
   await expect(page.getByRole("heading", { name: "Bom ter você por aqui" })).toBeVisible()
   await page.getByRole("button", { name: "Primeiro acesso? Criar minha conta" }).click()
   await page.getByLabel("Seu nome *", { exact: true }).fill("José da Conceição")
@@ -69,7 +72,7 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
   await page.getByRole("link", { name: "Pedidos", exact: true }).click()
   await expect(page.getByRole("heading", { name: "Pedidos", exact: true })).toBeVisible()
   await page.screenshot({ path: ".cache/api-orders-empty.png", fullPage: true })
-  const customer = await browser.newContext({ baseURL: "http://127.0.0.1:4176" })
+  const customer = await browser.newContext({ baseURL })
   await customer.route(/https:\/\//, (route) => route.abort())
   const menu = await customer.newPage()
   await menu.setViewportSize({ width: 390, height: 844 })
@@ -245,11 +248,12 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
 test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de ponta a ponta", async ({
   page,
   browser,
+  baseURL,
 }) => {
   test.setTimeout(180000)
   const slug = `extras-${randomUUID().slice(0, 8)}`,
-    api = "http://127.0.0.1:3002/api/v1",
-    origin = "http://127.0.0.1:4176"
+    api = `${baseURL}/api/v1`,
+    origin = baseURL!
   const registered = await page.request.post(`${api}/auth/register`, {
     headers: { origin },
     data: {
@@ -376,8 +380,12 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
   await page
     .getByRole("link", { name: "Painel ao vivo e mensagens", exact: true })
     .click()
-  await page.getByLabel("Disponibilizar painel público", { exact: true }).click()
+  const boardToggle = page.getByLabel("Disponibilizar painel público", { exact: true })
+  await boardToggle.click()
+  await expect(boardToggle).not.toBeChecked()
+  await expect(page.getByRole("dialog")).toBeVisible()
   await page.getByRole("button", { name: "Confirmar alteração", exact: true }).click()
+  await expect(boardToggle).toBeChecked()
   const link = page.getByRole("link", { name: "Abrir painel para TV", exact: true })
   await expect(link).toBeVisible()
   const boardContext = await browser.newContext(),
@@ -465,7 +473,7 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
 test("API indisponível não cria demonstração nem libera administração", async ({
   page,
 }) => {
-  await page.route("http://127.0.0.1:3002/**", (route) => route.abort())
+  await page.route("**/api/v1/**", (route) => route.abort())
   await page.goto("/menu/loja-inexistente")
   await expect(page.getByRole("alert")).toContainText("Não foi possível conectar")
   expect(await page.evaluate(() => localStorage.length)).toBe(0)
@@ -479,6 +487,7 @@ test("API indisponível não cria demonstração nem libera administração", as
 test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular", async ({
   page,
   browser,
+  baseURL,
 }) => {
   const slug = `combo-${randomUUID().slice(0, 8)}`
   await page.goto("/login?equipe=1")
@@ -567,7 +576,7 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   await expect(page.getByText("Entregas e retirada salvas.")).toBeVisible()
   await page.screenshot({ path: ".cache/delivery-admin.png", fullPage: true })
   const context = await browser.newContext({
-    baseURL: "http://127.0.0.1:4176",
+    baseURL,
     viewport: { width: 390, height: 844 },
   })
   await context.route(/https:\/\//, (route) => route.abort())
@@ -660,7 +669,7 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   await expect(
     customer.getByRole("button", { name: "Abrir carrinho com 0 itens" }),
   ).toBeVisible()
-  const staffContext = await browser.newContext({ baseURL: "http://127.0.0.1:4176" })
+  const staffContext = await browser.newContext({ baseURL })
   await staffContext.route(/https:\/\//, (route) => route.abort())
   const staff = await staffContext.newPage(),
     email = `equipe-${slug}@browser.example.test`

@@ -40,10 +40,10 @@ export default function PaymentForm({
   onCancel(): void
   onRefresh?(): void
 }) {
-  const { payments } = useServices()
+  const { payments, ids } = useServices()
   const mutation = useMutation()
   const [initial] = useState(() => ({
-    requestId: crypto.randomUUID(),
+    requestId: ids.next(),
     amount: balance ? moneyInput(balance.outstanding) : "",
     method: initialMethod,
     description: "",
@@ -71,12 +71,7 @@ export default function PaymentForm({
       }),
     )
     if (result?.ok) {
-      if (result.value.reversedAt)
-        notifyInfo(
-          "A tentativa já estava registrada e foi revertida. Confira o histórico; nenhum novo recebimento foi criado.",
-        )
-      else notifySuccess("Recebimento registrado. Saldo atualizado.")
-      draft.reset({ ...initial, requestId: crypto.randomUUID() })
+      draft.reset({ ...initial, requestId: ids.next() })
       onSaved()
     } else if (
       result &&
@@ -124,7 +119,7 @@ export default function PaymentForm({
                 ...value,
                 expectedPaid: balance.paid,
                 amount: moneyInput(balance.outstanding),
-                requestId: crypto.randomUUID(),
+                requestId: ids.next(),
               })
             }
           >

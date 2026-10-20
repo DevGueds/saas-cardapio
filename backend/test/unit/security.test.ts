@@ -50,6 +50,25 @@ test("configuration has no implicit environment or insecure production defaults"
     true,
   )
 })
+test("HTTP LAN is allowed only in development/test; production still requires HTTPS and secure cookies", () => {
+  const lan = "http://192.168.1.50:8080"
+  assert.deepEqual(
+    loadConfig({ ...env, NODE_ENV: "development", CORS_ORIGINS: lan }).origins,
+    [lan],
+  )
+  assert.throws(
+    () =>
+      loadConfig({
+        ...env,
+        NODE_ENV: "production",
+        DATABASE_TLS: "true",
+        REDIS_URL: "rediss://:test@localhost:6380/0",
+        CORS_ORIGINS: lan,
+      }),
+    Failure,
+  )
+})
+
 test("schemas reject mass assignment and bad prices", () => {
   assert.equal(
     registrationSchema.safeParse({

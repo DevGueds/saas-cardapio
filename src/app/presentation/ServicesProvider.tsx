@@ -1,3 +1,4 @@
+import type { IdGenerator } from "../../shared/application/ports"
 import type { TeamService } from "../../modules/identity/application/team"
 import type { EngagementService } from "../../modules/engagement/application/ports"
 import type { DevicePush } from "../../shared/application/push"
@@ -31,6 +32,7 @@ import type { Result } from "../../shared/application/result"
 import type { ImageReader } from "../../shared/application/image-reader"
 
 export interface ApplicationServices {
+  ids: IdGenerator
   engagement?: EngagementService
   devicePush?: DevicePush
   drafts?: DraftManager

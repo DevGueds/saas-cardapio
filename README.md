@@ -16,11 +16,24 @@ Abra **http://localhost:8080**. Crie sua conta com senha de **no mínimo 8 carac
 
 `setup:local` gera `backend/.env` com segredos aleatórios, sem sobrescrever arquivos existentes. Esse arquivo não vai para o Git. MySQL e Redis escutam apenas em `127.0.0.1:3307` e `127.0.0.1:6380`; os dados ficam em volume Docker. Frontend e API ficam na mesma origem: Caddy balanceia `/api/` entre duas instâncias internas da API, sem publicar a porta da API. `pnpm docker:down` para os serviços e preserva o volume. Não há senha padrão compartilhada entre instalações.
 
-O comando `docker:up` aplica migrations explicitamente e aguarda os healthchecks de MySQL, Redis, duas APIs, frontend, Evolution API e PostgreSQL do provedor de WhatsApp. As imagens são fixadas por digest. API e frontend executam sem root, sem capabilities e com filesystem somente leitura. O Compose usa configuração **local de desenvolvimento**. O setup permite acesso ao frontend pela rede local em `http://IP-DO-COMPUTADOR:8080`; banco, Redis e administração do provedor continuam restritos ao computador. Configure `WEB_BIND_ADDRESS=127.0.0.1` para restringir também o frontend.
+O comando `docker:up` aplica migrations explicitamente e aguarda os healthchecks de MySQL, Redis, duas APIs, frontend, Evolution API e PostgreSQL do provedor de WhatsApp. As imagens são fixadas por digest. API e frontend executam sem root, sem capabilities e com filesystem somente leitura. O Compose usa configuração **local de desenvolvimento**. O setup mantém o acesso restrito ao computador. Para testar no celular, configure explicitamente a rede local conforme abaixo; banco, Redis e administração do provedor continuam restritos ao computador.
+
+### Testar no celular pela rede local
+
+No computador, execute (substitua o IP pelo IPv4 da sua rede):
+
+```sh
+pnpm setup:lan --host 192.168.1.50
+pnpm docker:up
+```
+
+No celular conectado à mesma rede, abra `http://192.168.1.50:8080/menu/<slug-da-loja>`. O comando `setup:lan` valida que o IP pertence ao computador, adiciona as origens exatas de Docker (8080) e Vite (8443), e publica apenas o frontend em todas as interfaces. Preserva segredos e dados existentes. Sem `--host`, lista os IPs disponíveis. Se o IP mudar, execute novamente com o endereço atual e recrie os containers. Firewall e isolamento da rede Wi-Fi podem impedir acesso entre aparelhos.
+
+Pedidos, combos, adicionais, pagamentos e rascunhos funcionam em HTTP local. Web Push exige HTTPS em aparelhos externos e permanece opcional. Produção continua exigindo HTTPS, cookies seguros e origens explícitas. Para restringir novamente o Docker ao computador, defina `WEB_BIND_ADDRESS=127.0.0.1` em `backend/.env`, remova as origens de rede que não utiliza e execute `pnpm docker:up`. Veja [diagnóstico de acesso pelo IP](docs/diagnostics.md#acesso-pelo-ip-no-celular).
 
 ### Desenvolvimento com recarga automática
 
-Com o Docker instalado, use `pnpm db:up`, `pnpm db:migrate` e `pnpm dev:full`. Abra **http://localhost:8443**; a API escuta em `localhost:3001`. Para executar os processos em terminais separados: `pnpm api:dev` e `pnpm dev:api`. Use o mesmo hostname no frontend e na API para que o cookie de sessão funcione; a configuração local usa `localhost`.
+Com o Docker instalado, use `pnpm db:up`, `pnpm db:migrate` e `pnpm dev:full`. Abra **http://localhost:8443**; a API escuta em `localhost:3001`. Para executar os processos em terminais separados: `pnpm api:dev` e `pnpm dev:api`. O navegador usa `/api/v1` na mesma origem; Vite encaminha para `127.0.0.1:3001`, mantendo cookies e validação de origem. Para testar pelo IP na porta 8443, execute `setup:lan` e reinicie `dev:full`. `API_PROXY_TARGET` permite alterar o destino interno do proxy de desenvolvimento; nunca é enviado ao bundle.
 
 ## O que funciona
 
@@ -57,6 +70,7 @@ O modo API usa `.env.api` e nunca importa automaticamente os dados de demonstra�
 | `pnpm docker:up` / `pnpm docker:down` | Iniciar/parar frontend, duas APIs, Redis e MySQL em containers, preservando dados |
 | `pnpm docker:migrate`                 | Aplicar migrations pelo container de ferramentas                                  |
 | `pnpm dev:full`                       | Frontend em modo API + backend com recarga                                        |
+| `pnpm setup:lan --host <IP>`          | Configurar explicitamente acesso pela rede local, sem alterar segredos            |
 | `pnpm setup:local`                    | Gerar segredos locais, preservando configuração existente                         |
 | `pnpm db:up` / `pnpm db:down`         | Iniciar/parar MySQL e Redis locais, preservando dados                             |
 | `pnpm db:migrate`                     | Aplicar migrations explicitamente                                                 |
@@ -67,13 +81,13 @@ O modo API usa `.env.api` e nunca importa automaticamente os dados de demonstra�
 | `pnpm check:all`                      | Tipagem, lint, fronteiras arquiteturais, UTF-8, testes unitários e builds         |
 | `pnpm api:test:db`                    | Migrations e testes de integração exclusivamente no banco `_test`                 |
 | `pnpm test:e2e`                       | Regressões da demonstração no Chromium                                            |
-| `pnpm test:e2e:api`                   | Fluxo completo React → API → MySQL no Chromium                                    |
+| `pnpm test:e2e:api`                   | Fluxo completo React → API → MySQL em HTTP por IP, incluindo celular              |
 | `pnpm test:e2e:docker`                | Validar bundle, proxy, headers e bloqueios de acesso com os containers iniciados  |
 | `pnpm test:e2e:api:cleanup`           | Limpar somente as contas criadas na última execução de testes do navegador        |
 | `pnpm format:check`                   | Conferir formatação                                                               |
 | `pnpm audit --prod`                   | Auditar dependências de produção                                                  |
 
-Instale o navegador antes dos testes: `pnpm exec playwright install chromium`. Os testes da API usam portas 3002/4176 e o banco `cardapio_test`. Os testes da demonstração usam 4173/4174. Screenshots e traces ficam em diretórios ignorados pelo Git.
+Instale o navegador antes dos testes: `pnpm exec playwright install chromium`. Os testes da API usam portas 3002/4176 e o banco `cardapio_test`. Selecionam um IPv4 local para exercitar uma origem HTTP sem contexto seguro; `E2E_LAN_HOST` permite escolher a interface. Os testes da demonstração usam 4173/4174. Para verificar o bundle Docker pelo IP configurado, defina `DOCKER_E2E_ORIGIN=http://<IP>:8080` ao executar `pnpm test:e2e:docker`; o padrão é localhost. Screenshots e traces ficam em diretórios ignorados pelo Git.
 
 ## Mapa do projeto
 

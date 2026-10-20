@@ -1,4 +1,5 @@
 import type { DraftManager } from "../../../shared/application/drafts"
+import type { ContentFingerprint, IdGenerator } from "../../../shared/application/ports"
 import { z } from "zod"
 import { preparedOrderSchema } from "@cardapio/contracts"
 import type { ApiClient } from "../../../shared/infrastructure/api-client"
@@ -15,6 +16,8 @@ export class HttpCheckout {
     private readonly slug: (id: string) => string | undefined,
     private readonly executor: Executor,
     private readonly drafts: DraftManager,
+    private readonly ids: IdGenerator,
+    private readonly fingerprint: ContentFingerprint,
   ) {}
   reset(id: string) {
     this.drafts.clear(`api:customer:${id}:attempt`)
@@ -57,11 +60,7 @@ export class HttpCheckout {
           "Atualize os dados da loja antes de enviar o pedido.",
         )
       const body = { expectedRevision, cart, details, ...(options ? { options } : {}) }
-      const encoded = new TextEncoder().encode(JSON.stringify(body))
-      const signature = Array.from(
-        new Uint8Array(await crypto.subtle.digest("SHA-256", encoded)),
-        (b) => b.toString(16).padStart(2, "0"),
-      ).join("")
+      const signature = await this.fingerprint.digest(JSON.stringify(body))
       const draftKey = `api:customer:${id}:attempt`,
         saved = this.drafts.snapshot(draftKey)
       const parsed = attemptSchema.safeParse(saved?.value)
@@ -88,9 +87,7 @@ export class HttpCheckout {
             "O resultado do envio anterior ainda é incerto. Preserve os dados originais e tente novamente ou confirme com a loja antes de iniciar outro pedido.",
           )
       }
-      const attempt = parsed.success
-        ? parsed.data
-        : { signature, key: crypto.randomUUID() }
+      const attempt = parsed.success ? parsed.data : { signature, key: this.ids.next() }
       if (!this.drafts.set(draftKey, attempt))
         throw new Failure(
           "STORAGE_UNAVAILABLE",

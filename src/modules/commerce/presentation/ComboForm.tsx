@@ -36,7 +36,7 @@ export default function ComboForm({
     `combo:${combo?.id ?? "new"}`,
     {
       revision: menu.revision,
-      id: combo?.id ?? crypto.randomUUID(),
+      id: combo?.id ?? services.ids.next(),
       name: combo?.name ?? "",
       description: combo?.description ?? "",
       price: combo ? moneyInput(combo.price) : "",
@@ -351,7 +351,7 @@ export default function ComboForm({
                 field("groups", [
                   ...value.groups,
                   {
-                    id: crypto.randomUUID(),
+                    id: services.ids.next(),
                     name: "",
                     options: [{ productId: "", extraPrice: "0,00" }],
                   },
