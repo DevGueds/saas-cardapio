@@ -1,9 +1,10 @@
 import { AlertCircle, Flame, Minus, Plus } from "lucide-react"
+import { memo } from "react"
 import { formatMoney } from "../../../shared/domain/money"
 import ImageWithFallback from "../../../shared/presentation/ImageWithFallback"
 import type { Product } from "../domain/catalog"
 
-export default function PublicProductCard({
+function PublicProductCard({
   product,
   quantity,
   disabled,
@@ -13,8 +14,8 @@ export default function PublicProductCard({
   product: Product
   quantity: number
   disabled: boolean
-  onQuantityChange(delta: number): void
-  onCustomize?: () => void
+  onQuantityChange(productId: string, delta: number): void
+  onCustomize?: (productId: string) => void
 }) {
   return (
     <article
@@ -45,7 +46,7 @@ export default function PublicProductCard({
               type="button"
               className="add-button"
               disabled={disabled}
-              onClick={onCustomize}
+              onClick={() => onCustomize(product.id)}
               aria-label={`Personalizar ${product.name}`}
             >
               <Plus size={17} />
@@ -57,7 +58,7 @@ export default function PublicProductCard({
               type="button"
               disabled={disabled}
               aria-label={`Adicionar ${product.name}`}
-              onClick={() => onQuantityChange(1)}
+              onClick={() => onQuantityChange(product.id, 1)}
             >
               <Plus size={17} aria-hidden="true" />
               <span>Adicionar</span>
@@ -72,7 +73,7 @@ export default function PublicProductCard({
                 type="button"
                 aria-label={`Remover uma unidade de ${product.name}`}
                 disabled={disabled}
-                onClick={() => onQuantityChange(-1)}
+                onClick={() => onQuantityChange(product.id, -1)}
               >
                 <Minus size={17} />
               </button>
@@ -81,7 +82,7 @@ export default function PublicProductCard({
                 type="button"
                 aria-label={`Adicionar uma unidade de ${product.name}`}
                 disabled={disabled || quantity >= 999}
-                onClick={() => onQuantityChange(1)}
+                onClick={() => onQuantityChange(product.id, 1)}
               >
                 <Plus size={17} />
               </button>
@@ -92,3 +93,4 @@ export default function PublicProductCard({
     </article>
   )
 }
+export default memo(PublicProductCard)

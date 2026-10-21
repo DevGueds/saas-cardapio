@@ -43,7 +43,7 @@ Cada contexto cria somente as camadas que utiliza: `domain`, `application`, `inf
 
 ## Dependências permitidas
 
-- Domínio depende de domínio e tipos de contrato; o pacote `domain` não tem dependências externas.
+- Domínio depende de domínio e bibliotecas puras, sem React, navegador, banco ou servidor. O pacote `domain` usa geolib para o cálculo compartilhado de distância em linha reta.
 - Aplicação depende de domínio, portas e schemas; não conhece NestJS, Prisma, React ou navegador.
 - Apresentação traduz HTTP/interação e chama serviços injetados.
 - Infraestrutura implementa as portas e valida dados externos. A API Prisma pode compartilhar leitura transacional do agregado entre catálogo e pedidos.

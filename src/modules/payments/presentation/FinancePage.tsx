@@ -48,6 +48,20 @@ function FinanceWorkspace() {
   const [range, setRange] = useState(() => dateRange(from, to))
   const [rangeError, setRangeError] = useState("")
   const [refresh, setRefresh] = useState(0)
+  function preset(days: number | "month") {
+    const end = today(),
+      start =
+        days === "month"
+          ? `${end.slice(0, 7)}-01`
+          : new Date(Date.parse(`${end}T12:00:00Z`) - (days - 1) * 86400000)
+              .toISOString()
+              .slice(0, 10)
+    setFrom(start)
+    setTo(end)
+    setRange(dateRange(start, end))
+    setRangeError("")
+    setRefresh((v) => v + 1)
+  }
   return (
     <section className="finance-page">
       <PageHeading
@@ -75,6 +89,22 @@ function FinanceWorkspace() {
             {label}
           </button>
         ))}
+      </div>
+      <div className="finance-period-presets" role="group" aria-label="Períodos rápidos">
+        <span>Consultar</span>
+        <button type="button" className="secondary-button" onClick={() => preset(1)}>
+          Hoje
+        </button>
+        <button type="button" className="secondary-button" onClick={() => preset(7)}>
+          Últimos 7 dias
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => preset("month")}
+        >
+          Este mês
+        </button>
       </div>
       <ValidatedForm
         className="finance-filters"
@@ -115,7 +145,7 @@ function FinanceWorkspace() {
           Aplicar período
         </button>
         <p className="field-help">
-          Datas inclusivas · Brasília (UTC−03) · até 31 dias por consulta
+          Datas inclusivas · fuso fixo UTC−03 · até 31 dias por consulta
         </p>
       </ValidatedForm>
       {rangeError && (
@@ -125,7 +155,7 @@ function FinanceWorkspace() {
       )}
       <p className="field-help">
         Período aplicado: {financeTime(range.from)} até{" "}
-        {financeTime(new Date(Date.parse(range.to) - 1).toISOString())} (Brasília).
+        {financeTime(new Date(Date.parse(range.to) - 1).toISOString())} (UTC−03).
       </p>
       <FeatureBoundary
         label={tab === "reports" ? "Relatório gerencial" : "Histórico de recebimentos"}
@@ -168,7 +198,7 @@ function Receipts({ restaurantId, range }: { restaurantId: string; range: Report
             <Wallet size={21} aria-hidden="true" />
             Recebimentos
           </h2>
-          <p>Confirmações manuais e reversões com histórico preservado.</p>
+          <p>Registros manuais, sem movimentação bancária automática.</p>
         </div>
         {can(account?.restaurant.role, "payments:write") && (
           <button
@@ -184,7 +214,9 @@ function Receipts({ restaurantId, range }: { restaurantId: string; range: Report
       </div>
       <p className="field-help">
         Para dar baixa em um pedido, abra seus detalhes no quadro de pedidos. Esta lista
-        inclui recebimentos ou reversões ocorridos no período.
+        inclui recebimentos ou reversões ocorridos no período, inclusive avulsos e pedidos
+        de outras datas. Situação é a atual; as colunas de entrada/reversão mostram apenas
+        o efeito no período aplicado.
       </p>
       {resource.loading && <p role="status">Buscando recebimentos…</p>}
       {resource.error && (
@@ -194,7 +226,8 @@ function Receipts({ restaurantId, range }: { restaurantId: string; range: Report
         <PaymentHistory
           payments={resource.data.items}
           restaurantId={restaurantId}
-          onChanged={() => void resource.reload()}
+          range={range}
+          onChanged={resource.reload}
           disabled={resource.loading || !!resource.error}
         />
       )}

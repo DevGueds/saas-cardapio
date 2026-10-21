@@ -10,7 +10,11 @@ export * from "./payments.js"
 export * from "./menu-options.js"
 export * from "./engagement.js"
 import { addonSelectionsSchema } from "./menu-options.js"
-import { checkoutOptionsSchema, pricedLineSchema, fulfillmentSchema } from "./commerce.js"
+import {
+  checkoutOptionsSchema,
+  pricedLineSchema,
+  fulfillmentViewSchema,
+} from "./commerce.js"
 import {
   labelField as name,
   personNameField,
@@ -195,7 +199,7 @@ export const orderSchema = z.strictObject({
   discount: cents.optional(),
   promotionName: z.string().max(120).nullable().optional(),
   promotionId: uuid.nullable().optional(),
-  fulfillment: fulfillmentSchema.optional(),
+  fulfillment: fulfillmentViewSchema.optional(),
   region: z.string().max(300).optional(),
   eta: z.string().max(80).optional(),
   courierId: uuid.nullable().optional(),

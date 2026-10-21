@@ -145,6 +145,11 @@ export default function PromotionForm({
                   value.kind === "PERCENT" ? integerTextField(1, 100) : moneyField(true)
                 }
                 value={value.value}
+                help={
+                  value.kind === "PERCENT"
+                    ? "Aplicado uma vez ao total elegível dos produtos e adicionais, sem frete. Frações de centavo são descartadas no desconto."
+                    : "Limitado ao valor dos produtos elegíveis, sem frete."
+                }
                 onChange={(e) => field("value", e.target.value)}
               />
             )}

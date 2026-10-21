@@ -110,6 +110,7 @@ export class HttpEngagement implements EngagementService {
         }
       }, 5000)
       try {
+        if (!navigator.onLine) throw new Error("network_offline")
         await fetchEventSource(
           this.client.endpoint(
             `/public/restaurants/${encodeURIComponent(slug)}/board/stream`,

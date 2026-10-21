@@ -789,6 +789,147 @@ test("combos, regional fees, promotion caps and snapshots are transactional", as
   assert.deepEqual(JSON.parse(receipt1.body), JSON.parse(receipt2.body))
 })
 
+test("radius quotes are authoritative, reject stale fees and preserve the recorded delivery snapshot", async () => {
+  await current()
+  const origin = { latitude: 0, longitude: 0 },
+    destination = { latitude: 0, longitude: 0.01 },
+    path = `/restaurants/${alice.store.id}`,
+    publicPath = `/public/restaurants/${alice.store.slug}`,
+    delivery = {
+      ...menu.commerce!.delivery,
+      mode: "RADIUS",
+      radius: {
+        origin,
+        bands: [
+          { id: randomUUID(), maxMeters: 1113, fee: 101 },
+          { id: randomUUID(), maxMeters: 2226, fee: 202 },
+        ],
+      },
+    }
+  menu = value<MenuDocument>(
+    (
+      await request(
+        "PUT",
+        `${path}/delivery`,
+        { expectedRevision: menu.revision, delivery },
+        alice,
+      )
+    ).body,
+  )
+  const input = {
+    ...checkout(),
+    options: { fulfillment: { mode: "DELIVERY", destination } },
+  }
+  const quote = value<import("@cardapio/domain/quote").Quote>(
+    (
+      await request("POST", `${publicPath}/checkout/quote`, {
+        expectedRevision: menu.revision,
+        cart: input.cart,
+        options: input.options,
+      })
+    ).body,
+  )
+  assert.equal(quote.deliveryFee, 101)
+  assert.equal(quote.total, input.cart.lines[0]!.unitPrice + 101)
+  assert.deepEqual(quote.fulfillment.radius, {
+    origin,
+    distanceMeters: 1113,
+    maxMeters: 1113,
+    fee: 101,
+  })
+  const receipt = value<import("@cardapio/contracts").PreparedOrderView>(
+    (
+      await request(
+        "POST",
+        `${publicPath}/orders`,
+        { ...input, options: { ...input.options, expectedTotal: quote.total } },
+        undefined,
+        { "idempotency-key": randomUUID() },
+      )
+    ).body,
+  )
+  for (const fulfillment of [
+    { mode: "DELIVERY", destination: { latitude: 0, longitude: 0.1 } },
+    { mode: "DELIVERY", destination, radius: { ...quote.fulfillment.radius, fee: 0 } },
+    { mode: "DELIVERY", destination: { latitude: 91, longitude: 0 } },
+  ]) {
+    assert.equal(
+      (
+        await request("POST", `${publicPath}/checkout/quote`, {
+          expectedRevision: menu.revision,
+          cart: input.cart,
+          options: { fulfillment },
+        })
+      ).statusCode,
+      422,
+    )
+    assert.equal(
+      (
+        await request(
+          "POST",
+          `${publicPath}/orders`,
+          { ...input, options: { fulfillment } },
+          undefined,
+          { "idempotency-key": randomUUID() },
+        )
+      ).statusCode,
+      422,
+    )
+  }
+  menu = value<MenuDocument>(
+    (
+      await request(
+        "PUT",
+        `${path}/delivery`,
+        {
+          expectedRevision: menu.revision,
+          delivery: {
+            ...delivery,
+            radius: {
+              ...delivery.radius,
+              bands: delivery.radius.bands.map((b) => ({ ...b, fee: b.fee + 100 })),
+            },
+          },
+        },
+        alice,
+      )
+    ).body,
+  )
+  assert.equal(
+    (
+      await request(
+        "POST",
+        `${publicPath}/orders`,
+        { ...input, options: { ...input.options, expectedTotal: quote.total } },
+        undefined,
+        { "idempotency-key": randomUUID() },
+      )
+    ).statusCode,
+    409,
+  )
+  assert.equal(
+    (
+      await request(
+        "POST",
+        `${publicPath}/orders`,
+        {
+          ...input,
+          expectedRevision: menu.revision,
+          options: { ...input.options, expectedTotal: quote.total },
+        },
+        undefined,
+        { "idempotency-key": randomUUID() },
+      )
+    ).statusCode,
+    409,
+  )
+  const persisted = value<{ items: import("@cardapio/contracts").OrderView[] }>(
+    (await request("GET", `${path}/orders`, undefined, alice)).body,
+  ).items.find((o) => o.id === receipt.orderId)!
+  assert.equal(persisted.deliveryFee, 101)
+  assert.deepEqual(persisted.fulfillment, quote.fulfillment)
+})
+
 test("kitchen, courier and viewer permissions restrict data and order transitions", async () => {
   const makeMember = async (role: string) => {
     const response = await request(
@@ -805,6 +946,9 @@ test("kitchen, courier and viewer permissions restrict data and order transition
     (await request("GET", `${path}/orders`, undefined, bob)).body,
   )
   assert.ok(kitchen.items.length > 0)
+  assert.ok(
+    kitchen.items.every((o) => !o.fulfillment?.destination && !o.fulfillment?.radius),
+  )
   assert.ok(
     kitchen.items.every(
       (o) => o.customer.phone === "" && o.customer.address === "Dados restritos",

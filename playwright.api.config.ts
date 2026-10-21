@@ -15,6 +15,7 @@ const origin = `http://${host}:4176`
 
 export default defineConfig({
   testDir: "./tests/api-e2e",
+  outputDir: "./test-results/api",
   fullyParallel: false,
   workers: 1,
   retries: 0,

@@ -95,15 +95,15 @@ Instale o navegador antes dos testes: `pnpm exec playwright install chromium`. O
 - `backend/src/`: API modular, casos de uso, autorização e adaptadores Prisma/HTTP.
 - `backend/prisma/`: esquema e migrations versionadas.
 - `docker/` e `compose.yaml`: builds separados, proxy e ambiente local completo.
-- `packages/domain/`: dinheiro, catálogo, restaurante, carrinho e checkout, sem dependências externas.
+- `packages/domain/`: dinheiro, catálogo, restaurante, carrinho e checkout; geolib calcula distâncias sem depender de navegador ou servidor.
 - `packages/contracts/`: schemas e tipos de entrada/saída compartilhados.
 - `.agents/skills/ux-ui-design-principles/`: skill de revisão de interface, referenciada no `AGENTS.md`.
 
-Leia [Arquitetura](docs/architecture.md), [Backend, segurança e desenvolvimento](docs/backend.md), [Diagnóstico](docs/diagnostics.md), [UI/UX](docs/ui-ux.md), [Combos, entrega, equipe e rascunhos](docs/mvp-expansion.md) e [Resiliência e benchmark](docs/resilience.md).
+Leia [Arquitetura](docs/architecture.md), [Backend, segurança e desenvolvimento](docs/backend.md), [Diagnóstico](docs/diagnostics.md), [UI/UX](docs/ui-ux.md), [Combos, entrega, equipe e rascunhos](docs/mvp-expansion.md), [Entrega por bairro e raio](docs/delivery-radius.md), [Desempenho e organização financeira](docs/frontend-performance.md) e [Resiliência e benchmark](docs/resilience.md).
 
 ## Limites desta etapa
 
-É uma base de desenvolvimento com persistência e autorização no servidor. Ainda não inclui verificação de e-mail, recuperação de senha por e-mail, MFA, cobrança de assinaturas, gateway de pagamento, upload em object storage ou publicação em produção. Pagamentos são registros manuais; não movimentam dinheiro em bancos. WhatsApp exige pareamento do telefone e Web Push em celulares externos exige HTTPS. O cadastro público pode ser desabilitado por configuração. A gestão de equipe já tem tela; convites por e-mail continuam fora do escopo. Não há rastreio de entregador nem cálculo de rota/distância.
+É uma base de desenvolvimento com persistência e autorização no servidor. Ainda não inclui verificação de e-mail, recuperação de senha por e-mail, MFA, cobrança de assinaturas, gateway de pagamento, upload em object storage ou publicação em produção. Pagamentos são registros manuais; não movimentam dinheiro em bancos. WhatsApp exige pareamento do telefone e Web Push em celulares externos exige HTTPS. O cadastro público pode ser desabilitado por configuração. A gestão de equipe já tem tela; convites por e-mail continuam fora do escopo. A entrega por raio usa distância em linha reta; não há rastreio de entregador nem cálculo de trajeto por ruas.
 
 Os arquivos usam UTF-8. No PowerShell, configure `$OutputEncoding = [System.Text.UTF8Encoding]::new($false)` antes de enviar texto acentuado por pipe. `pnpm check:text` verifica os textos do frontend, backend e domínio. Não há Supabase nem conexão do navegador com banco de dados.
 

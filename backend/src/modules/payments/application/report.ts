@@ -4,7 +4,7 @@ import type {
   ReportOrder,
   ReportRange,
 } from "@cardapio/contracts"
-import { sumCents } from "@cardapio/domain/payments"
+import { paymentActivity, sumCents } from "@cardapio/domain/payments"
 
 export function buildReport(
   range: ReportRange,
@@ -12,13 +12,13 @@ export function buildReport(
   payments: PaymentView[],
   generatedAt: string,
 ): FinancialReport {
-  const inside = (at: string) =>
-    Date.parse(at) >= Date.parse(range.from) && Date.parse(at) < Date.parse(range.to)
   const sales = orders.filter((o) => o.status !== "CANCELLED")
-  const receipts = payments.filter((p) => inside(p.createdAt))
-  const reversals = payments.filter((p) => p.reversedAt && inside(p.reversedAt))
-  const received = sumCents(receipts.map((p) => p.amount))
-  const reversed = sumCents(reversals.map((p) => p.amount))
+  const movements = payments.map((p) => ({
+    method: p.method,
+    ...paymentActivity(p, range),
+  }))
+  const received = sumCents(movements.map((p) => p.received))
+  const reversed = sumCents(movements.map((p) => p.reversed))
   const days = new Map<string, { day: string; orders: number; sales: number }>()
   for (const order of sales) {
     const day = new Date(Date.parse(order.createdAt) - 3 * 3600000)
@@ -37,6 +37,10 @@ export function buildReport(
     summary: {
       orders: orders.length,
       cancelled: orders.length - sales.length,
+      subtotal: sumCents(sales.map((o) => o.subtotal)),
+      cancelledPaid: sumCents(
+        orders.filter((o) => o.status === "CANCELLED").map((o) => o.paid),
+      ),
       sales: sumCents(sales.map((o) => o.total)),
       discounts: sumCents(sales.map((o) => o.discount)),
       deliveryFees: sumCents(sales.map((o) => o.deliveryFee)),
@@ -48,10 +52,10 @@ export function buildReport(
     methods: (["PIX", "CASH", "DEBIT", "CREDIT", "OTHER"] as const).map((method) => ({
       method,
       received: sumCents(
-        receipts.filter((p) => p.method === method).map((p) => p.amount),
+        movements.filter((p) => p.method === method).map((p) => p.received),
       ),
       reversed: sumCents(
-        reversals.filter((p) => p.method === method).map((p) => p.amount),
+        movements.filter((p) => p.method === method).map((p) => p.reversed),
       ),
     })),
     daily: [...days.values()].sort((a, b) => a.day.localeCompare(b.day)),

@@ -14,12 +14,13 @@ import { InputField, SelectField } from "../../../shared/presentation/Fields"
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import { useMutation } from "../../../shared/presentation/use-mutation"
+import { notifyInfo, notifySuccess } from "../../../shared/presentation/notify"
 import { paymentLabels } from "./payment-labels"
 
 const draftSchema = z.strictObject({
   requestId: uuid,
   amount: z.string().max(30),
-  method: paymentMethodSchema,
+  method: paymentMethodSchema.or(z.literal("")),
   description: z.string().max(160),
   expectedPaid: z.number().int().min(0),
   submitted: z.boolean(),
@@ -34,7 +35,7 @@ export default function PaymentForm({
 }: {
   restaurantId: string
   balance?: OrderBalance
-  initialMethod?: PaymentMethod
+  initialMethod?: PaymentMethod | ""
   onSaved(): void
   onCancel(): void
   onRefresh?(): void
@@ -58,19 +59,28 @@ export default function PaymentForm({
   const locked = mutation.pending || value.submitted
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!payments || mutation.pending || draft.issue) return
+    if (!payments || mutation.pending || draft.issue || !value.method) return
     // Persist the request identity BEFORE the network call, including across reloads.
     if (!draft.set({ ...value, submitted: true })) return
     const { submitted: _submitted, ...data } = value
-    const result = await mutation.run(
-      () =>
-        payments.record(restaurantId, {
-          ...data,
-          orderId: balance?.orderId ?? null,
-        }),
-      "Recebimento registrado. Saldo atualizado.",
+    const result = await mutation.run(() =>
+      payments.record(restaurantId, {
+        ...data,
+        method: value.method as PaymentMethod,
+        orderId: balance?.orderId ?? null,
+      }),
     )
     if (result?.ok) {
+      if (result.value.reversedAt)
+        notifyInfo(
+          "A tentativa já estava registrada e foi revertida. Confira o histórico; nenhum novo recebimento foi criado.",
+        )
+      else
+        notifySuccess(
+          balance
+            ? "Recebimento registrado. Saldo do pedido atualizado."
+            : "Recebimento avulso registrado.",
+        )
       draft.reset({ ...initial, requestId: ids.next() })
       onSaved()
     } else if (
@@ -86,8 +96,13 @@ export default function PaymentForm({
         {balance ? "Registrar pagamento do pedido" : "Registrar recebimento avulso"}
       </h3>
       <p className="field-help">
-        Confirme apenas valores já recebidos. Este registro dá baixa no saldo; ele não
-        movimenta dinheiro em bancos ou cartões.
+        Confirme apenas valores já recebidos. Este registro manual não movimenta dinheiro
+        em bancos ou cartões.
+      </p>
+      <p className="field-help">
+        {balance
+          ? "Em dinheiro, registre o valor que fica com a loja, descontando o troco. Para pagamento parcial, informe só a parcela recebida."
+          : "Avulsos entram nos recebimentos, sem criar uma venda ou quitar um pedido. Para dar baixa em um pedido, use os detalhes dele."}
       </p>
       {draft.issue && (
         <p className="error-notice" role="alert">
@@ -136,11 +151,15 @@ export default function PaymentForm({
           />
           <SelectField
             label="Forma de recebimento"
+            required
             value={value.method}
             onChange={(e) =>
               draft.set({ ...value, method: e.target.value as PaymentMethod })
             }
           >
+            <option value="" disabled>
+              Selecione a forma recebida
+            </option>
             {Object.entries(paymentLabels).map(([method, label]) => (
               <option key={method} value={method}>
                 {label}

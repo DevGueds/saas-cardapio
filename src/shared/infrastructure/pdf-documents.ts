@@ -23,9 +23,10 @@ export class PdfDocuments implements DocumentExporter {
           nextY = 18
         }
         doc.setFontSize(12)
-        doc.text(section.title, 14, nextY)
+        const sectionTitle = doc.splitTextToSize(section.title, 265) as string[]
+        doc.text(sectionTitle, 14, nextY)
         autoTable(doc, {
-          startY: nextY + 4,
+          startY: nextY + sectionTitle.length * 5,
           head: [section.columns],
           body: section.rows,
           styles: {

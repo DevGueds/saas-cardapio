@@ -1,6 +1,6 @@
 import { browserExecutor } from "../browser-executor"
 import { toast } from "react-toastify"
-import { useRef, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import type { AppError, Result } from "../application/result"
 
@@ -11,7 +11,7 @@ export function useMutation() {
 
   const [error, setError] = useState<AppError | null>(null)
 
-  async function run<T>(
+  const run = useCallback(async function run<T>(
     action: () => Promise<Result<T>>,
     successMessage?: string,
   ): Promise<Result<T> | undefined> {
@@ -39,7 +39,8 @@ export function useMutation() {
       gate.current = false
       setPending(false)
     }
-  }
+  }, [])
 
-  return { pending, error, run, clearError: () => setError(null) }
+  const clearError = useCallback(() => setError(null), [])
+  return { pending, error, run, clearError }
 }

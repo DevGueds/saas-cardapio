@@ -232,6 +232,10 @@ importers:
         version: 5.9.3
 
   packages/domain:
+    dependencies:
+      geolib:
+        specifier: 4.0.0
+        version: 4.0.0
     devDependencies:
       typescript:
         specifier: ^5.7.0
@@ -1994,6 +1998,9 @@ packages:
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
     engines: {node: '>=6.9.0'}
+
+  geolib@4.0.0:
+    resolution: {integrity: sha512-q6xrjzO5epECM1FjYLPwAeK6FSgCrgcZeeAOMKJ5kjxyyqD+mhSXnQJGHkMb9ju9R2XFat8T0Iiuyje6VdQTow==}
 
   get-caller-file@2.0.5:
     resolution: {integrity: sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==}
@@ -4929,6 +4936,8 @@ snapshots:
       is-property: 1.0.2
 
   gensync@1.0.0-beta.2: {}
+
+  geolib@4.0.0: {}
 
   get-caller-file@2.0.5: {}
 

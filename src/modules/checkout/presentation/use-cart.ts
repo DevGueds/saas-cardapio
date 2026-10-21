@@ -1,4 +1,5 @@
 import { useDraft } from "../../../shared/presentation/DraftsProvider"
+import { useCallback, useMemo } from "react"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import { cartDraftSchema } from "../application/drafts"
 import type { MenuDocument } from "@cardapio/domain/menu-document"
@@ -9,53 +10,78 @@ import { lineKey, priceLine } from "@cardapio/domain/quote"
 export function useCart(menu: MenuDocument) {
   const { mode } = useServices(),
     restaurantId = menu.restaurant.id
-  const draft = useDraft<Cart>(
-    `${mode ?? "demo"}:customer:${restaurantId}:cart`,
-    { restaurantId, lines: [] },
-    (value) => {
+  const parseCart = useCallback(
+    (value: unknown) => {
       const parsed = cartDraftSchema.parse(value)
       if (parsed.restaurantId !== restaurantId) throw new Error("foreign_cart")
       return parsed
     },
+    [restaurantId],
+  )
+  const draft = useDraft<Cart>(
+    `${mode ?? "demo"}:customer:${restaurantId}:cart`,
+    { restaurantId, lines: [] },
+    parseCart,
   )
   const cart = draft.value
-  const describe = (line: CartLine) => {
-    try {
-      return { priced: priceLine(menu, line), available: true }
-    } catch {
-      return { priced: null, available: false }
-    }
-  }
-  const changed = cart.lines.some((line) => {
-    const result = describe(line)
-    if (result.priced) return result.priced.unitPrice !== line.unitPrice
-    return line.kind === "COMBO"
-      ? !menu.commerce?.combos.some((c) => c.id === line.productId)
-      : !menu.products.some((p) => p.id === line.productId)
-  })
-  const unavailable =
-    !!draft.issue || cart.lines.some((line) => !describe(line).available)
-  function updateQuantity(key: string, delta: number) {
-    draft.set((current) => {
-      const existing = current.lines.find((l) => lineKey(l) === key),
-        product = menu.products.find((p) => p.id === key)
-      if (delta > 0 && (existing ? !describe(existing).available : !product?.available))
-        return current
-      const quantity = Math.max(0, Math.min(999, (existing?.quantity ?? 0) + delta))
-      if (!quantity)
-        return { ...current, lines: current.lines.filter((l) => lineKey(l) !== key) }
-      if (!existing && (!product || current.lines.length >= 100)) return current
-      const next: CartLine = existing
-        ? { ...existing, quantity }
-        : { productId: key, quantity, unitPrice: product!.price, note: "" }
-      return {
-        ...current,
-        lines: existing
-          ? current.lines.map((l) => (lineKey(l) === key ? next : l))
-          : [...current.lines, next],
+  const describe = useCallback(
+    (line: CartLine) => {
+      try {
+        return { priced: priceLine(menu, line), available: true }
+      } catch {
+        return { priced: null, available: false }
       }
-    })
-  }
+    },
+    [menu],
+  )
+  const analysis = useMemo(() => {
+    let changed = false,
+      unavailable = false,
+      subtotal = 0,
+      itemCount = 0
+    const quantities = new Map<string, number>()
+    for (const line of cart.lines) {
+      const result = describe(line)
+      changed ||= result.priced
+        ? result.priced.unitPrice !== line.unitPrice
+        : line.kind === "COMBO"
+          ? !menu.commerce?.combos.some((c) => c.id === line.productId)
+          : !menu.products.some((p) => p.id === line.productId)
+      unavailable ||= !result.available
+      subtotal += line.unitPrice * line.quantity
+      itemCount += line.quantity
+      quantities.set(
+        line.productId,
+        (quantities.get(line.productId) ?? 0) + line.quantity,
+      )
+    }
+    return { changed, unavailable, subtotal, itemCount, quantities }
+  }, [cart.lines, describe, menu])
+  const setDraft = draft.set
+  const updateQuantity = useCallback(
+    (key: string, delta: number) => {
+      setDraft((current) => {
+        const existing = current.lines.find((l) => lineKey(l) === key),
+          product = menu.products.find((p) => p.id === key)
+        if (delta > 0 && (existing ? !describe(existing).available : !product?.available))
+          return current
+        const quantity = Math.max(0, Math.min(999, (existing?.quantity ?? 0) + delta))
+        if (!quantity)
+          return { ...current, lines: current.lines.filter((l) => lineKey(l) !== key) }
+        if (!existing && (!product || current.lines.length >= 100)) return current
+        const next: CartLine = existing
+          ? { ...existing, quantity }
+          : { productId: key, quantity, unitPrice: product!.price, note: "" }
+        return {
+          ...current,
+          lines: existing
+            ? current.lines.map((l) => (lineKey(l) === key ? next : l))
+            : [...current.lines, next],
+        }
+      })
+    },
+    [setDraft, menu.products, describe],
+  )
   function addCombo(combo: Combo, selections: Readonly<Record<string, string>>) {
     const line: CartLine = {
       productId: combo.id,
@@ -112,8 +138,8 @@ export function useCart(menu: MenuDocument) {
     addCombo,
     addProduct,
     clear: () => draft.set({ restaurantId, lines: [] }),
-    changed,
-    unavailable,
+    changed: analysis.changed,
+    unavailable: !!draft.issue || analysis.unavailable,
     updateQuantity,
     setNote: (key: string, note: string) =>
       draft.set((current) => ({
@@ -131,12 +157,9 @@ export function useCart(menu: MenuDocument) {
           }
         }),
       })),
-    subtotal: cart.lines.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0),
-    itemCount: cart.lines.reduce((sum, l) => sum + l.quantity, 0),
-    quantity: (id: string) =>
-      cart.lines
-        .filter((l) => l.productId === id)
-        .reduce((sum, l) => sum + l.quantity, 0),
+    subtotal: analysis.subtotal,
+    itemCount: analysis.itemCount,
+    quantity: (id: string) => analysis.quantities.get(id) ?? 0,
   }
 }
 export type CartController = ReturnType<typeof useCart>

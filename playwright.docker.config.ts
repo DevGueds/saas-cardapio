@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test"
 export default defineConfig({
   testDir: "./tests/docker-e2e",
+  outputDir: "./test-results/docker",
   workers: 1,
   retries: 0,
   timeout: 30000,

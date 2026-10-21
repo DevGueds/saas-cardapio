@@ -6,12 +6,13 @@ export const paymentLabels: Record<PaymentMethod, string> = {
   CREDIT: "Cartão de crédito",
   OTHER: "Outro",
 }
+const financeDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "Etc/GMT+3",
+  dateStyle: "short",
+  timeStyle: "short",
+})
 export function financeTime(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(value))
+  return financeDateFormatter.format(new Date(value))
 }
 export const today = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10)
 export function dateRange(from: string, to: string): ReportRange {

@@ -1,6 +1,6 @@
 import { postalCodeField } from "@cardapio/contracts"
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
-import { useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { CheckoutOptions } from "@cardapio/domain/quote"
 import { emptyCommerce } from "@cardapio/domain/commerce"
 import { normalizeName } from "@cardapio/domain/validation"
@@ -14,6 +14,7 @@ import ReferenceMap from "../../../app/presentation/ReferenceMap"
 export default function FulfillmentForm({
   value,
   cep,
+  address,
   onChange,
   onCep,
   onAddress,
@@ -21,6 +22,7 @@ export default function FulfillmentForm({
 }: {
   value: CheckoutOptions
   cep: string
+  address: string
   onChange(value: CheckoutOptions): void
   onCep(value: string): void
   onAddress(value: string): void
@@ -31,15 +33,28 @@ export default function FulfillmentForm({
     delivery = menu.commerce?.delivery ?? emptyCommerce().delivery,
     mutation = useMutation()
   const [notice, setNotice] = useState("")
+  const lookupGeneration = useRef({ value: 0 })
   const fulfillment = value.fulfillment ?? { mode: "DELIVERY" },
-    zones = delivery.zones.filter((z) => z.active),
+    zones = useMemo(() => delivery.zones.filter((z) => z.active), [delivery.zones]),
     selected = zones.find((z) => z.id === fulfillment.zoneId)
-  const cities = [...new Set(zones.map((z) => `${z.city} / ${z.state}`))].sort(),
+  const cities = useMemo(
+      () => [...new Set(zones.map((z) => `${z.city} / ${z.state}`))].sort(),
+      [zones],
+    ),
     [city, setCity] = useState(selected ? `${selected.city} / ${selected.state}` : "")
   const currentCity = selected ? `${selected.city} / ${selected.state}` : city
+  useEffect(() => {
+    const generation = lookupGeneration.current
+    generation.value++
+    return () => {
+      generation.value++
+    }
+  }, [cep, address, fulfillment.mode, fulfillment.zoneId, menu.revision, city])
   async function lookup() {
     if (!maps || !postalCodeField.safeParse(cep).success) return
+    const request = ++lookupGeneration.current.value
     const result = await mutation.run(() => maps.lookup(cep.replace(/\D/g, "")))
+    if (request !== lookupGeneration.current.value) return
     if (result?.ok) {
       const address = result.value,
         zone = zones.find(
@@ -54,11 +69,12 @@ export default function FulfillmentForm({
           .join(", "),
       )
       setCity(`${address.city} / ${address.state}`)
-      if (zone) onChange({ ...value, fulfillment: { mode: "DELIVERY", zoneId: zone.id } })
+      if (zone && delivery.mode === "ZONES")
+        onChange({ ...value, fulfillment: { mode: "DELIVERY", zoneId: zone.id } })
       else if (delivery.mode === "ZONES")
         onChange({ ...value, fulfillment: { mode: "DELIVERY" } })
       setNotice(
-        zone || delivery.mode === "FLAT"
+        zone || delivery.mode !== "ZONES"
           ? "Endereço encontrado. Acrescente o número e o complemento abaixo."
           : "Confira se seu bairro está entre as regiões atendidas. A busca por CEP não garante a entrega.",
       )
@@ -161,6 +177,13 @@ export default function FulfillmentForm({
                   ))}
               </SelectField>
             </div>
+          )}
+          {delivery.mode === "RADIUS" && (
+            <p className="field-help">
+              Preencha o endereço e confirme o ponto de entrega abaixo. O frete será
+              calculado automaticamente pela faixa de distância. O CEP ajuda a preencher o
+              endereço, mas não define o ponto exato.
+            </p>
           )}
           {selected && (
             <>

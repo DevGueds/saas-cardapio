@@ -116,7 +116,7 @@ export class PrismaPayments implements PaymentsRepository {
         orderId,
         total: order.total,
         paid,
-        outstanding: order.total - paid,
+        outstanding: order.status === "CANCELLED" ? 0 : order.total - paid,
         cancelled: order.status === "CANCELLED",
         payments,
       })

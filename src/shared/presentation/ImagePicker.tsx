@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { memo, useEffect, useRef, useState } from "react"
 
 import { Camera } from "lucide-react"
 
@@ -8,7 +8,7 @@ import type { AppError } from "../application/result"
 
 import ErrorNotice from "./ErrorNotice"
 
-export default function ImagePicker({
+function ImagePicker({
   label,
   value,
   onChange,
@@ -111,3 +111,4 @@ export default function ImagePicker({
     </div>
   )
 }
+export default memo(ImagePicker)
