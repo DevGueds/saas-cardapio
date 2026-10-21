@@ -1,5 +1,6 @@
 import { requireValid } from "./failure.js"
 import { assertCents } from "./money.js"
+import { parseRadiusDelivery, type RadiusDelivery } from "./delivery-radius.js"
 import {
   boolean,
   identifier,
@@ -70,9 +71,10 @@ export interface DeliveryZone {
 export interface DeliverySettings {
   enabled: boolean
   pickupEnabled: boolean
-  mode: "FLAT" | "ZONES"
+  mode: "FLAT" | "ZONES" | "RADIUS"
   pickupEta: string
   zones: DeliveryZone[]
+  radius?: RadiusDelivery
 }
 export interface Commerce {
   addonGroups?: AddonGroup[]
@@ -230,7 +232,7 @@ export function parsePromotion(input: unknown): Promotion {
 export function parseDelivery(input: unknown): DeliverySettings {
   const row = record(input)
   requireValid(
-    row.mode === "FLAT" || row.mode === "ZONES",
+    row.mode === "FLAT" || row.mode === "ZONES" || row.mode === "RADIUS",
     "Modalidade de frete inválida.",
   )
   const zones = list(row.zones, 500).map((input) => {
@@ -306,12 +308,19 @@ export function parseDelivery(input: unknown): DeliverySettings {
     zones.map((z) => normalizeName(`${z.state}|${z.city}|${z.neighborhood}`)),
     "Este bairro já foi cadastrado nesta cidade.",
   )
+  const radius = row.radius === undefined ? undefined : parseRadiusDelivery(row.radius)
+  requireValid(
+    row.mode !== "RADIUS" || (!!radius?.origin && radius.bands.length > 0),
+    "Marque o local da loja e cadastre pelo menos uma faixa de entrega.",
+    "radius",
+  )
   return {
     enabled: boolean(row.enabled, "enabled"),
     pickupEnabled: boolean(row.pickupEnabled, "pickupEnabled"),
     mode: row.mode,
     pickupEta: text(row.pickupEta, "pickupEta", 80, true),
     zones,
+    ...(radius ? { radius } : {}),
   }
 }
 export function parseCommerce(input: unknown, products: readonly Product[]): Commerce {

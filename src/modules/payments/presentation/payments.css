@@ -7,6 +7,60 @@
 .finance-page > * {
   min-width: 0;
 }
+.finance-page {
+  font-variant-numeric: tabular-nums;
+}
+.finance-period-presets,
+.finance-report-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+.finance-period-presets > span {
+  color: #52615c;
+  font-size: 0.875rem;
+}
+.finance-report-links a {
+  padding: 0.75rem 1rem;
+  border: 1px solid #dce8e1;
+  border-radius: 12px;
+  color: #225b45;
+  background: #fff;
+  text-decoration: underline;
+}
+.finance-explanation {
+  margin: 0.75rem 0 1.25rem;
+  color: #52615c;
+  font-size: 0.875rem;
+}
+.finance-explanation summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  text-decoration: underline;
+}
+.finance-explanation p {
+  max-width: 85ch;
+  line-height: 1.65;
+}
+.finance-detail-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 1rem;
+}
+.financial-report > .finance-section-heading[id] {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dfe7e3;
+  scroll-margin-top: 5rem;
+}
+.finance-orders {
+  margin-top: 2rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #dfe7e3;
+}
 .finance-filters {
   display: flex;
   flex-wrap: wrap;

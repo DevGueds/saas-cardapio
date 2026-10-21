@@ -38,11 +38,12 @@ export function parseMoney(input: string, field = "price", positive = false): Ce
   return cents
 }
 
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+})
 export function formatMoney(cents: Cents): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(cents / 100)
+  return currencyFormatter.format(cents / 100)
 }
 
 export function moneyInput(cents: Cents): string {

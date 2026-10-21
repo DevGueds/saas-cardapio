@@ -2,6 +2,7 @@ import { can, canAdvance } from "@cardapio/domain/permissions"
 import OrderPayments from "../../payments/presentation/OrderPayments"
 import { useAccount } from "../../identity/presentation/AccountContext"
 import CourierAssignment from "./CourierAssignment"
+import ReferenceMap from "../../../app/presentation/ReferenceMap"
 import { useState } from "react"
 import type { OrderView } from "@cardapio/contracts"
 import type { AppError } from "../../../shared/application/result"
@@ -46,6 +47,20 @@ export default function OrderDetails({
           </p>
           <p>{order.customer.phone}</p>
           <p>{order.customer.address}</p>
+          {order.fulfillment?.radius && (
+            <p className="field-help">
+              {order.region}. Taxa registrada: {formatMoney(order.fulfillment.radius.fee)}{" "}
+              antes dos descontos.
+            </p>
+          )}
+          {order.fulfillment?.destination && (
+            <ReferenceMap
+              label="Ver ponto de entrega"
+              help="Ponto confirmado pelo cliente na criação do pedido. A taxa registrada usa a distância em linha reta até a loja; o mapa não mostra o entregador."
+              latitude={order.fulfillment.destination.latitude}
+              longitude={order.fulfillment.destination.longitude}
+            />
+          )}
           {order.customer.notes && <p className="info-notice">{order.customer.notes}</p>}
         </section>
         <section>

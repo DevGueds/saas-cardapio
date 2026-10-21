@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react"
+import { useLayoutEffect, useRef, type KeyboardEvent, type ReactNode } from "react"
 
 import { X } from "lucide-react"
 
@@ -17,7 +17,7 @@ export default function Dialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const previous = document.activeElement
 
     const dialog = ref.current

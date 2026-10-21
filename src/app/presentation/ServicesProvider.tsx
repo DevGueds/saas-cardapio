@@ -2,6 +2,7 @@ import type { IdGenerator } from "../../shared/application/ports"
 import type { TeamService } from "../../modules/identity/application/team"
 import type { EngagementService } from "../../modules/engagement/application/ports"
 import type { DevicePush } from "../../shared/application/push"
+import type { DeviceLocation } from "../../shared/application/location"
 import type { PaymentsService } from "../../modules/payments/application/ports"
 import type { DocumentExporter } from "../../shared/application/documents"
 import type {
@@ -35,6 +36,7 @@ export interface ApplicationServices {
   ids: IdGenerator
   engagement?: EngagementService
   devicePush?: DevicePush
+  deviceLocation?: DeviceLocation
   drafts?: DraftManager
   mode?: "demo" | "api"
   auth?: IdentityService

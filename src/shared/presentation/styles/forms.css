@@ -113,7 +113,37 @@
 }
 .app-dialog::backdrop {
   background: #10251e94;
-  backdrop-filter: blur(4px);
+}
+.location-picker {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: #fff;
+}
+.location-picker legend {
+  font-weight: 700;
+  padding: 0 0.35rem;
+}
+.location-picker .secondary-button {
+  justify-self: start;
+}
+.radius-settings > p {
+  margin: 0.5rem 0 1rem;
+}
+.radius-settings .region-card {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+@media (max-width: 540px) {
+  .radius-settings .region-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .radius-settings .region-actions {
+    grid-column: 1 / -1;
+    justify-content: end;
+  }
 }
 .dialog-heading {
   display: flex;

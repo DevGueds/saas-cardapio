@@ -18,5 +18,8 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "geolib": "4.0.0"
+  }
 }

@@ -36,7 +36,9 @@ for (const file of [...files("src"), ...files("../packages/domain/src")]) {
         failures.push(
           `${file}: shared não pode depender de módulos ou composição (${name})`,
         )
-      if (pure && !name.startsWith("."))
+      // geolib is a pure distance calculation dependency shared by browser and API.
+      // Keep the exception narrow: adapters and environment access remain forbidden.
+      if (pure && !name.startsWith(".") && name !== "geolib")
         failures.push(`${file}: domínio compartilhado não pode importar ${name}`)
       if (
         core &&

@@ -79,14 +79,27 @@ export default function PublicMenuPage() {
     ? selection
     : displayCategories[0]?.id
 
-  const visibleProducts = products.filter((product) =>
-    search.trim()
-      ? normalizeName(`${product.name} ${product.description}`).includes(
-          normalizeName(search),
-        )
-      : activeCategory === "$popular"
-        ? product.popular
-        : product.categoryId === activeCategory,
+  const visibleProducts = useMemo(
+    () =>
+      products.filter((product) =>
+        search.trim()
+          ? normalizeName(`${product.name} ${product.description}`).includes(
+              normalizeName(search),
+            )
+          : activeCategory === "$popular"
+            ? product.popular
+            : product.categoryId === activeCategory,
+      ),
+    [products, search, activeCategory],
+  )
+  const customizable = useMemo(
+    () =>
+      new Set(
+        menu.commerce?.addonGroups
+          ?.filter((g) => g.active)
+          .flatMap((g) => g.productIds) ?? [],
+      ),
+    [menu.commerce?.addonGroups],
   )
 
   function selectCategory(id: string) {
@@ -161,7 +174,9 @@ export default function PublicMenuPage() {
                   <strong>
                     {menu.commerce?.delivery.mode === "ZONES"
                       ? "Por bairro"
-                      : formatMoney(store.deliveryFee)}
+                      : menu.commerce?.delivery.mode === "RADIUS"
+                        ? "Por distância"
+                        : formatMoney(store.deliveryFee)}
                   </strong>
                 </span>
               </span>
@@ -267,15 +282,9 @@ export default function PublicMenuPage() {
                       quantity={controller.quantity(product.id)}
                       disabled={loading || !!loadError}
                       onCustomize={
-                        menu.commerce?.addonGroups?.some(
-                          (g) => g.active && g.productIds.includes(product.id),
-                        )
-                          ? () => setCustomizing(product.id)
-                          : undefined
+                        customizable.has(product.id) ? setCustomizing : undefined
                       }
-                      onQuantityChange={(delta) =>
-                        controller.updateQuantity(product.id, delta)
-                      }
+                      onQuantityChange={controller.updateQuantity}
                     />
                   </FeatureBoundary>
                 ))}

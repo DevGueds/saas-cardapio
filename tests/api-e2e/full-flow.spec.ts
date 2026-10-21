@@ -4,6 +4,148 @@ import { mkdir, readFile, writeFile } from "node:fs/promises"
 import jsQR from "jsqr"
 import { PNG } from "pngjs"
 const users: string[] = []
+test("frete por raio sincroniza ponto, endereço, faixas e total em HTTP local", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  test.setTimeout(180000)
+  const slug = `raio-${randomUUID().slice(0, 8)}`
+  const registration = await page.request.post("/api/v1/auth/register", {
+    headers: { origin: baseURL! },
+    data: {
+      name: "Gestor Raio",
+      email: `${slug}@browser.example.test`,
+      password: "12345678",
+      restaurantName: "Loja por Raio",
+      slug,
+    },
+  })
+  const account = await registration.json()
+  expect(account.ok).toBe(true)
+  users.push(account.value.user.id)
+  const stores = await (await page.request.get("/api/v1/me/restaurants")).json(),
+    store = stores.value[0],
+    headers = { origin: baseURL!, "x-csrf-token": account.value.csrfToken }
+  const product = await (
+    await page.request.post(`/api/v1/restaurants/${store.id}/products`, {
+      headers,
+      data: {
+        expectedRevision: 0,
+        name: "Lanche raio",
+        description: "",
+        price: "10,01",
+        categoryId: "",
+        newCategoryName: "Lanches",
+        imageUrl: "",
+        available: true,
+        popular: true,
+      },
+    })
+  ).json()
+  expect(product.ok).toBe(true)
+  const opened = await page.request.put(`/api/v1/restaurants/${store.id}/open`, {
+    headers,
+    data: { expectedRevision: product.value.revision, isOpen: true },
+  })
+  expect(opened.status()).toBe(200)
+  await page.goto(`/admin/delivery?restaurant=${store.id}`)
+  await page.getByLabel("Como calcular o frete").selectOption("RADIUS")
+  await page.getByLabel("Aceitar retirada").check()
+  await page.getByText("Informar coordenadas", { exact: true }).click()
+  await page.getByLabel("Latitude do ponto").fill("0")
+  await page.getByLabel("Longitude do ponto").fill("0")
+  await page.getByRole("button", { name: "Confirmar ponto do endereço" }).click()
+  for (const [distance, fee] of [
+    ["1,113", "1,01"],
+    ["2,226", "2,02"],
+  ]) {
+    await page.getByRole("button", { name: "Adicionar faixa", exact: true }).click()
+    const dialog = page.getByRole("dialog", { name: "Adicionar faixa de frete" })
+    await dialog.getByLabel("Raio máximo da faixa (km)").fill(distance!)
+    await dialog.getByLabel("Taxa da faixa (R$)").fill(fee!)
+    await dialog.getByRole("button", { name: "Adicionar à lista" }).click()
+    await expect(dialog).toHaveCount(0)
+  }
+  await page.getByRole("button", { name: "Salvar entregas" }).click()
+  await expect(page.getByText("Entregas e retirada salvas.")).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole("heading", { name: "Até 1,113 km" })).toBeVisible()
+  await page.screenshot({ path: ".cache/radius-admin.png", fullPage: true })
+  const context = await browser.newContext({
+    baseURL,
+    viewport: { width: 390, height: 844 },
+  })
+  await context.route(/https:\/\//, (route) => route.abort())
+  const customer = await context.newPage()
+  await customer.goto(`/menu/${slug}`)
+  await expect(customer.getByText("Por distância", { exact: true })).toBeVisible()
+  await customer
+    .getByRole("button", { name: "Adicionar Lanche raio", exact: true })
+    .click()
+  await customer.getByRole("button", { name: "Abrir carrinho com 1 item" }).click()
+  await customer.getByLabel("Seu nome completo *").fill("Cliente do Raio")
+  await customer.getByLabel("Seu WhatsApp com DDD *").fill("11999999999")
+  await customer.getByLabel("Endereço de entrega completo *").fill("Rua do Cliente, 10")
+  const send = customer.getByRole("button", {
+    name: "Enviar pedido para a loja",
+    exact: true,
+  })
+  await expect(send).toBeDisabled()
+  await expect(
+    customer.getByRole("button", { name: "Usar minha localização" }),
+  ).toBeDisabled()
+  await customer.getByText("Informar coordenadas", { exact: true }).click()
+  await customer.getByLabel("Latitude do ponto").fill("0")
+  await customer.getByLabel("Longitude do ponto").fill("0,01")
+  await customer.getByRole("button", { name: "Confirmar ponto do endereço" }).click()
+  await expect(customer.locator(".order-summary__total")).toContainText("11,02")
+  await customer.getByLabel("Longitude do ponto").fill("0.01001")
+  await expect(send).toBeDisabled()
+  await customer.getByRole("button", { name: "Confirmar ponto do endereço" }).click()
+  await expect(customer.locator(".order-summary__total")).toContainText("12,03")
+  await customer.getByLabel("Endereço de entrega completo *").fill("Rua Nova, 20")
+  await expect(send).toBeDisabled()
+  await customer.getByText("Informar coordenadas", { exact: true }).click()
+  await customer.getByLabel("Latitude do ponto").fill("0")
+  await customer.getByLabel("Longitude do ponto").fill("0.1")
+  await customer.getByRole("button", { name: "Confirmar ponto do endereço" }).click()
+  await expect(customer.getByRole("alert")).toContainText("fora do raio")
+  await expect(send).toBeDisabled()
+  await customer.getByLabel("Longitude do ponto").fill("0.02")
+  await customer.getByRole("button", { name: "Confirmar ponto do endereço" }).click()
+  await expect(customer.locator(".order-summary__total")).toContainText("12,03")
+  await customer.getByRole("radio", { name: /Retirada/ }).check()
+  await expect(customer.locator(".order-summary__total")).toContainText("10,01")
+  await customer.getByRole("radio", { name: /Entrega/ }).check()
+  await expect(customer.locator(".order-summary__total")).toContainText("12,03")
+  await customer.screenshot({ path: ".cache/radius-checkout-mobile.png", fullPage: true })
+  expect(
+    await customer.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true)
+  const ordered = customer.waitForResponse(
+    (r) =>
+      r.url().endsWith(`/public/restaurants/${slug}/orders`) &&
+      r.request().method() === "POST",
+  )
+  await send.click()
+  const receipt = await (await ordered).json()
+  expect(receipt.ok).toBe(true)
+  const persisted = await (
+    await page.request.get(`/api/v1/restaurants/${store.id}/orders`)
+  ).json()
+  const order = persisted.value.items.find(
+    (o: { id: string }) => o.id === receipt.value.orderId,
+  )
+  expect(order.total).toBe(1203)
+  expect(order.deliveryFee).toBe(202)
+  expect(order.fulfillment.radius).toMatchObject({
+    distanceMeters: 2226,
+    fee: 202,
+    maxMeters: 2226,
+  })
+  await context.close()
+})
 test.beforeEach(async ({ context }) => {
   await context.route(/https:\/\//, (route) => route.abort())
 })
@@ -228,6 +370,17 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
   await page.getByRole("button", { name: "Baixar relatório PDF", exact: true }).click()
   const pdf = await download
   await pdf.saveAs(".cache/financial-report.pdf")
+  await page.getByLabel("Saldo do pedido").selectOption("settled")
+  await expect(page.getByText("Nenhum pedido corresponde aos filtros.")).toBeVisible()
+  await expect(
+    page
+      .locator(".finance-metrics article")
+      .filter({ hasText: "Total dos pedidos válidos" }),
+  ).toContainText("34,50")
+  await page.getByLabel("Saldo do pedido").selectOption("pending")
+  await expect(
+    page.getByRole("region", { name: "Pedidos do relatório" }).getByRole("row"),
+  ).toHaveCount(2)
   expect((await readFile(".cache/financial-report.pdf")).subarray(0, 5).toString()).toBe(
     "%PDF-",
   )
@@ -584,6 +737,12 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   await page.getByLabel("Latitude", { exact: true }).fill("-23.55")
   await page.getByLabel("Longitude", { exact: true }).fill("-46.63")
   await page.getByRole("button", { name: "Adicionar à lista", exact: true }).click()
+  await page.getByRole("button", { name: "Adicionar bairro", exact: true }).click()
+  await page.getByLabel("Estado", { exact: true }).selectOption("SP")
+  await page.getByLabel("Cidade", { exact: true }).fill("São Paulo")
+  await page.getByLabel("Bairro", { exact: true }).fill("Vila Nova")
+  await page.getByLabel("Taxa de entrega (R$)").fill("9,00")
+  await page.getByRole("button", { name: "Adicionar à lista", exact: true }).click()
   await page.reload()
   await expect(page.getByRole("heading", { name: "Centro", exact: true })).toBeVisible()
   await page.getByRole("button", { name: "Salvar entregas", exact: true }).click()
@@ -620,6 +779,14 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
     "Praça da Sé, 10",
   )
   await expect(customer.getByLabel("Cupom de desconto")).toHaveValue("PRACA10")
+  await expect(customer.locator(".order-summary__total")).toContainText("40,30")
+  await customer
+    .getByLabel("Bairro de entrega")
+    .selectOption({ label: "Vila Nova · R$ 9,00" })
+  await expect(customer.locator(".order-summary__total")).toContainText("42,30")
+  await customer
+    .getByLabel("Bairro de entrega")
+    .selectOption({ label: "Centro · R$ 7,00" })
   await expect(customer.locator(".order-summary__total")).toContainText("40,30")
   await customer.getByRole("button", { name: "Ver mapa de referência" }).click()
   await expect(customer.getByText(/O mapa não pôde ser carregado/)).toBeVisible()
