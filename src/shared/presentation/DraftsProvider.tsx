@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -35,28 +36,32 @@ export function useDraft<T>(
   const fallback = useRef({ key, value: initial })
   if (fallback.current.key !== key) fallback.current = { key, value: initial }
   const entry = useSyncExternalStore(manager.subscribe, () => manager.snapshot(key))
+  const fallbackValue = fallback.current.value
   const decoded = useMemo(() => {
-    if (!entry) return { value: fallback.current.value, invalid: false }
+    if (!entry) return { value: fallbackValue, invalid: false }
     try {
       return { value: parse(entry.value), invalid: false }
     } catch {
-      return { value: fallback.current.value, invalid: true }
+      return { value: fallbackValue, invalid: true }
     }
-  }, [entry, parse])
-  const set = (value: SetStateAction<T>) => {
-    let current = decoded.value
-    try {
-      const entry = manager.snapshot(key)
-      if (entry) current = parse(entry.value)
-    } catch {
-      /* Preserve the rendered draft when invalid. */
-    }
-    return manager.set(
-      key,
-      typeof value === "function" ? (value as (previous: T) => T)(current) : value,
-      ttlMs,
-    )
-  }
+  }, [entry, parse, fallbackValue])
+  const set = useCallback(
+    (value: SetStateAction<T>) => {
+      let current = fallback.current.value
+      try {
+        const entry = manager.snapshot(key)
+        if (entry) current = parse(entry.value)
+      } catch {
+        /* Preserve the rendered draft when invalid. */
+      }
+      return manager.set(
+        key,
+        typeof value === "function" ? (value as (previous: T) => T)(current) : value,
+        ttlMs,
+      )
+    },
+    [manager, key, parse, ttlMs],
+  )
   return {
     value: decoded.value,
     set,

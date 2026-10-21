@@ -1,4 +1,5 @@
 import ImageWithFallback from "../../../shared/presentation/ImageWithFallback"
+import { memo, useMemo } from "react"
 import { Check, Pause, Pencil, Trash2 } from "lucide-react"
 
 import type { Category, Product } from "../domain/catalog"
@@ -64,13 +65,20 @@ function ProductActions({
   )
 }
 
-export default function ProductList(props: Props) {
+function ProductList(props: Props) {
+  const grouped = useMemo(() => {
+    const groups = new Map<string, Product[]>()
+    for (const product of props.products) {
+      const items = groups.get(product.categoryId) ?? []
+      items.push(product)
+      groups.set(product.categoryId, items)
+    }
+    return groups
+  }, [props.products])
   return (
     <div className="catalog-groups">
       {props.categories.map((category) => {
-        const items = props.products.filter(
-          (product) => product.categoryId === category.id,
-        )
+        const items = grouped.get(category.id) ?? []
 
         if (!items.length) return null
 
@@ -138,3 +146,4 @@ export default function ProductList(props: Props) {
     </div>
   )
 }
+export default memo(ProductList)

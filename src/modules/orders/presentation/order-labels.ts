@@ -18,13 +18,14 @@ export const nextStep: Partial<
 export function shortOrder(id: string) {
   return id.slice(0, 8).toUpperCase()
 }
+const orderDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+})
 export function orderTime(date: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date))
+  return orderDateFormatter.format(new Date(date))
 }
 
 export function orderAction(order: import("@cardapio/contracts").OrderView) {

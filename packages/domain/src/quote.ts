@@ -4,10 +4,18 @@ import type { MenuDocument } from "./menu-document.js"
 import type { Cart, CartLine } from "./cart.js"
 import { emptyCommerce, type Combo, type Promotion } from "./commerce.js"
 import { priceAddons } from "./menu-options.js"
+import {
+  parseGeoPoint,
+  radiusDeliveryQuote,
+  type GeoPoint,
+  type RadiusSnapshot,
+} from "./delivery-radius.js"
 export interface Fulfillment {
   mode: "DELIVERY" | "PICKUP"
   zoneId?: string
+  destination?: GeoPoint
 }
+export type FulfillmentView = Fulfillment & { radius?: RadiusSnapshot }
 export interface CheckoutOptions {
   whatsappConsent?: boolean
   fulfillment?: Fulfillment
@@ -32,7 +40,7 @@ export interface Quote {
   promotionName: string | null
   eta: string
   region: string
-  fulfillment: Fulfillment
+  fulfillment: FulfillmentView
   items: PricedLine[]
 }
 export function lineKey(
@@ -161,13 +169,20 @@ export function quoteOrder(
   const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
   assertCents(subtotal, "subtotal", true)
   const commerce = menu.commerce ?? emptyCommerce(),
-    fulfillment = options.fulfillment ?? { mode: "DELIVERY" }
+    requested = options.fulfillment ?? { mode: "DELIVERY" }
+  const fulfillment: FulfillmentView = {
+    mode: requested.mode,
+    ...(requested.zoneId ? { zoneId: requested.zoneId } : {}),
+    ...(requested.destination
+      ? { destination: parseGeoPoint(requested.destination) }
+      : {}),
+  }
   let deliveryFee = 0,
     eta = commerce.delivery.pickupEta,
     region = "Retirada na loja"
   if (fulfillment.mode === "PICKUP")
     requireValid(
-      commerce.delivery.pickupEnabled && !fulfillment.zoneId,
+      commerce.delivery.pickupEnabled && !fulfillment.zoneId && !fulfillment.destination,
       "A retirada não está disponível nesta loja.",
     )
   else {
@@ -176,6 +191,7 @@ export function quoteOrder(
       "A entrega não está disponível nesta loja.",
     )
     if (commerce.delivery.mode === "ZONES") {
+      requireValid(!fulfillment.destination, "Selecione o bairro para esta modalidade.")
       const zone = commerce.delivery.zones.find(
         (z) => z.id === fulfillment.zoneId && z.active,
       )
@@ -183,8 +199,27 @@ export function quoteOrder(
       deliveryFee = zone!.fee
       eta = `${zone!.etaMin}–${zone!.etaMax} min`
       region = `${zone!.neighborhood}, ${zone!.city} / ${zone!.state}`
+    } else if (commerce.delivery.mode === "RADIUS") {
+      requireValid(
+        !fulfillment.zoneId && !!fulfillment.destination,
+        "Confirme o ponto de entrega para calcular o frete.",
+        "destination",
+      )
+      requireValid(
+        !!commerce.delivery.radius,
+        "O frete por raio ainda não foi configurado.",
+      )
+      const radius = radiusDeliveryQuote(
+        commerce.delivery.radius!,
+        fulfillment.destination,
+      )
+      fulfillment.radius = radius
+      deliveryFee = radius.fee
+      eta = menu.restaurant.eta
+      region = `Raio: ${radius.distanceMeters} m em linha reta · faixa até ${radius.maxMeters} m`
     } else {
       requireValid(!fulfillment.zoneId, "Atualize a região de entrega.")
+      requireValid(!fulfillment.destination, "Atualize a modalidade de entrega.")
       deliveryFee = menu.restaurant.deliveryFee
       eta = menu.restaurant.eta
       region = "Entrega local"

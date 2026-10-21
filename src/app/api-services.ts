@@ -2,6 +2,7 @@ import { sha256Fingerprint } from "../shared/infrastructure/sha256-fingerprint"
 import { HttpTeam } from "../modules/identity/infrastructure/http-team"
 import { HttpEngagement } from "../modules/engagement/infrastructure/http-engagement"
 import { BrowserPush } from "../shared/infrastructure/device-push"
+import { BrowserLocation } from "../shared/infrastructure/device-location"
 import { HttpPayments } from "../modules/payments/infrastructure/http-payments"
 import { PdfDocuments } from "../shared/infrastructure/pdf-documents"
 import { quoteSchema, trackingSchema } from "@cardapio/contracts"
@@ -31,6 +32,7 @@ export function apiServices(): ApplicationServices {
     ids: browserIds,
     engagement: new HttpEngagement(client),
     devicePush: new BrowserPush(executor),
+    deviceLocation: new BrowserLocation(executor),
     payments: new HttpPayments(client),
     documents: new PdfDocuments(executor),
     drafts,

@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router"
 import { can } from "@cardapio/domain/permissions"
 import { useAccount } from "../../identity/presentation/AccountContext"
 import PageHeading from "../../../shared/presentation/PageHeading"
-import { useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import {
   CheckCircle2,
@@ -57,13 +57,16 @@ export default function CatalogPage() {
       : editorId && menu.products.some((p) => p.id === editorId)
         ? { product: menu.products.find((p) => p.id === editorId)! }
         : null
-  const setEditor = (value: { product?: Product } | null) =>
-    setParams((previous) => {
-      const next = new URLSearchParams(previous)
-      if (value) next.set("edit", value.product?.id ?? "new")
-      else next.delete("edit")
-      return next
-    })
+  const setEditor = useCallback(
+    (value: { product?: Product } | null) =>
+      setParams((previous) => {
+        const next = new URLSearchParams(previous)
+        if (value) next.set("edit", value.product?.id ?? "new")
+        else next.delete("edit")
+        return next
+      }),
+    [setParams],
+  )
 
   const [deleting, setDeleting] = useState<{
     product: Product
@@ -76,28 +79,47 @@ export default function CatalogPage() {
     mutation.pending ||
     (!!account && !can(account.restaurant.role, "catalog:write"))
 
-  const products = menu.products.filter(
-    (product) =>
-      (!categoryId || product.categoryId === categoryId) &&
-      normalizeName(`${product.name} ${product.description}`).includes(
-        normalizeName(search),
+  const products = useMemo(
+    () =>
+      menu.products.filter(
+        (product) =>
+          (!categoryId || product.categoryId === categoryId) &&
+          normalizeName(`${product.name} ${product.description}`).includes(
+            normalizeName(search),
+          ),
       ),
+    [menu.products, categoryId, search],
+  )
+  const { run, clearError } = mutation
+  const editProduct = useCallback(
+    (product: Product) => setEditor({ product }),
+    [setEditor],
+  )
+  const deleteProduct = useCallback(
+    (product: Product) => {
+      clearError()
+      setDeleting({ product, revision: menu.revision })
+    },
+    [clearError, menu.revision],
   )
 
-  async function changeAvailability(product: Product) {
-    if (blocked) return
+  const changeAvailability = useCallback(
+    async (product: Product) => {
+      if (blocked) return
 
-    const result = await mutation.run(() =>
-      services.catalog.setAvailability(
-        menu.restaurant.id,
-        menu.revision,
-        product.id,
-        !product.available,
-      ),
-    )
+      const result = await run(() =>
+        services.catalog.setAvailability(
+          menu.restaurant.id,
+          menu.revision,
+          product.id,
+          !product.available,
+        ),
+      )
 
-    if (result?.ok) notifySuccess("Disponibilidade salva.")
-  }
+      if (result?.ok) notifySuccess("Disponibilidade salva.")
+    },
+    [blocked, run, services.catalog, menu.restaurant.id, menu.revision],
+  )
 
   async function remove() {
     if (!deleting || blocked) return
@@ -224,14 +246,9 @@ export default function CatalogPage() {
           products={products}
           view={view}
           disabled={blocked}
-          onEdit={(product) => {
-            setEditor({ product })
-          }}
-          onDelete={(product) => {
-            mutation.clearError()
-            setDeleting({ product, revision: menu.revision })
-          }}
-          onAvailability={(product) => void changeAvailability(product)}
+          onEdit={editProduct}
+          onDelete={deleteProduct}
+          onAvailability={changeAvailability}
         />
       ) : (
         <div className="empty-search">

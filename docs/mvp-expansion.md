@@ -17,7 +17,7 @@ Leaflet usa tiles OpenStreetMap apenas após **Ver mapa de referência**, com at
 
 **Buscar CEP** chama o backend, que consulta BrasilAPI CEP v2 em host fixo, valida a resposta, limita consultas e guarda cache de 24 horas. Número e complemento continuam manuais. Coordenadas podem estar ausentes. O frete vem da região cadastrada, nunca da API de mapas nem de coordenadas enviadas pelo cliente. O restaurante deve conferir que o endereço informado pertence à região. Falha de mapa/CEP não bloqueia o preenchimento manual; nenhuma região é inventada para aceitar o pedido.
 
-Não há cálculo de distância, roteirização nem rastreamento ao vivo do entregador. O mapa mostra apenas uma referência da região; as etapas do pedido são informadas pela equipe.
+A entrega também pode usar [faixas de raio em linha reta](delivery-radius.md), com ponto de saída da loja e confirmação do destino no checkout. Na modalidade por bairro, o mapa continua sendo uma referência da região. Não há roteirização nem rastreamento ao vivo do entregador; as etapas do pedido são informadas pela equipe.
 
 ## Pedidos e acesso da equipe
 

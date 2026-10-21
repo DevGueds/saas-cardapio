@@ -48,6 +48,20 @@ function FinanceWorkspace() {
   const [range, setRange] = useState(() => dateRange(from, to))
   const [rangeError, setRangeError] = useState("")
   const [refresh, setRefresh] = useState(0)
+  function preset(days: number | "month") {
+    const end = today(),
+      start =
+        days === "month"
+          ? `${end.slice(0, 7)}-01`
+          : new Date(Date.parse(`${end}T12:00:00Z`) - (days - 1) * 86400000)
+              .toISOString()
+              .slice(0, 10)
+    setFrom(start)
+    setTo(end)
+    setRange(dateRange(start, end))
+    setRangeError("")
+    setRefresh((v) => v + 1)
+  }
   return (
     <section className="finance-page">
       <PageHeading
@@ -75,6 +89,22 @@ function FinanceWorkspace() {
             {label}
           </button>
         ))}
+      </div>
+      <div className="finance-period-presets" role="group" aria-label="Períodos rápidos">
+        <span>Consultar</span>
+        <button type="button" className="secondary-button" onClick={() => preset(1)}>
+          Hoje
+        </button>
+        <button type="button" className="secondary-button" onClick={() => preset(7)}>
+          Últimos 7 dias
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => preset("month")}
+        >
+          Este mês
+        </button>
       </div>
       <ValidatedForm
         className="finance-filters"
@@ -197,7 +227,7 @@ function Receipts({ restaurantId, range }: { restaurantId: string; range: Report
           payments={resource.data.items}
           restaurantId={restaurantId}
           range={range}
-          onChanged={() => void resource.reload()}
+          onChanged={resource.reload}
           disabled={resource.loading || !!resource.error}
         />
       )}

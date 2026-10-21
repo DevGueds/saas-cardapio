@@ -6,7 +6,7 @@ import ValidatedSelect from "../../../shared/presentation/form-validation/Valida
 import { useFormDraft } from "../../../app/presentation/use-form-draft"
 import DraftNotice from "../../../shared/presentation/DraftNotice"
 import { productDraftSchema } from "../application/product-draft"
-import { useState, type FormEvent } from "react"
+import { useCallback, useState, type FormEvent } from "react"
 
 import { useMenu } from "../../../app/presentation/MenuScope"
 
@@ -23,6 +23,7 @@ import ImagePicker from "../../../shared/presentation/ImagePicker"
 import { useMutation } from "../../../shared/presentation/use-mutation"
 
 import type { Product } from "../domain/catalog"
+const priceSchema = moneyField(true)
 
 export default function ProductForm({
   product,
@@ -82,10 +83,14 @@ export default function ProductForm({
   const [pickedImage, setPickedImage] = useState<string | null>(null)
   const imageUrl =
     pickedImage ?? (draft.value.imageRemoved ? "" : (product?.imageUrl ?? ""))
-  const setImageUrl = (value: string) => {
-    setPickedImage(value)
-    field("imageRemoved")(value === "")
-  }
+  const setDraft = draft.set
+  const setImageUrl = useCallback(
+    (value: string) => {
+      setPickedImage(value)
+      setDraft((current) => ({ ...current, imageRemoved: value === "" }))
+    },
+    [setDraft],
+  )
   const [imageBusy, setImageBusy] = useState(false)
 
   const blocked = mutation.pending || imageBusy || loading || !!loadError
@@ -189,7 +194,7 @@ export default function ProductForm({
                 inputMode="decimal"
                 placeholder="28,90"
                 validation="money"
-                schema={moneyField(true)}
+                schema={priceSchema}
                 maxLength={20}
                 value={price}
                 onChange={(event) => setPrice(event.target.value)}

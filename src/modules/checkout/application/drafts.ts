@@ -29,6 +29,14 @@ export const customerDraftSchema = z.strictObject({
   cashChange: z.string().max(30),
 })
 export const checkoutDraftSchema = z.strictObject({
+  destination: z
+    .strictObject({
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+    })
+    .nullable()
+    .default(null),
+  destinationAddress: z.string().max(1000).default(""),
   whatsappConsent: z.boolean().default(false),
   details: customerDraftSchema,
   mode: z.enum(["DELIVERY", "PICKUP"]),

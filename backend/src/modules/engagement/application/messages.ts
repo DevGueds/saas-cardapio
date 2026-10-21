@@ -17,7 +17,7 @@ export function notificationText(event: {
     title: `Pedido #${code}`,
     message:
       event.kind === "PAYMENT"
-        ? "Um pagamento foi registrado pela loja. Consulte o saldo do pedido para conferir."
+        ? "A loja registrou um recebimento para este pedido. Para conferir o valor ou saldo pendente, fale com a loja."
         : event.kind === "REVERSAL"
           ? "Um registro de pagamento foi revertido pelo gerente. Consulte a loja para conferir o saldo."
           : (states[event.status] ?? "Seu pedido foi atualizado."),

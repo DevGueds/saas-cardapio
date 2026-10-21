@@ -1,5 +1,6 @@
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
-import { useState, type FormEvent } from "react"
+import { useCallback, useState, type FormEvent } from "react"
+import type { GeoPoint } from "@cardapio/domain/delivery-radius"
 import { Link } from "react-router"
 import { CheckCircle2, MessageCircle, ShoppingBag } from "lucide-react"
 import { emptyCommerce } from "@cardapio/domain/commerce"
@@ -18,6 +19,7 @@ import type { CartController } from "./use-cart"
 import CartItems from "./CartItems"
 import DeliveryForm from "./DeliveryForm"
 import FulfillmentForm from "./FulfillmentForm"
+import LocationPicker from "../../../app/presentation/LocationPicker"
 import { useQuote } from "./use-quote"
 import { useReceipts, trackingPath } from "./RecentOrders"
 export default function CheckoutDrawer({
@@ -48,17 +50,37 @@ export default function CheckoutDrawer({
       couponCode: "",
       cep: "",
       whatsappConsent: false,
+      destination: null,
+      destinationAddress: "",
     },
     checkoutDraftSchema.parse,
   )
   const value = draft.value,
     details = value.details,
     receipts = useReceipts(menu.restaurant.id)
+  const setDraft = draft.set
+  const changeDestination = useCallback(
+    (destination: GeoPoint | null) =>
+      setDraft((v) => ({
+        ...v,
+        destination,
+        destinationAddress: destination ? v.details.address : "",
+      })),
+    [setDraft],
+  )
   const options = {
     whatsappConsent: api && value.whatsappConsent,
     fulfillment: {
       mode: value.mode,
-      ...(value.zoneId && value.mode === "DELIVERY" ? { zoneId: value.zoneId } : {}),
+      ...(value.zoneId && value.mode === "DELIVERY" && delivery.mode === "ZONES"
+        ? { zoneId: value.zoneId }
+        : {}),
+      ...(value.mode === "DELIVERY" &&
+      delivery.mode === "RADIUS" &&
+      value.destination &&
+      value.destinationAddress === details.address
+        ? { destination: value.destination }
+        : {}),
     },
     couponCode: value.couponCode,
   }
@@ -313,9 +335,15 @@ export default function CheckoutDrawer({
           <FulfillmentForm
             value={options}
             cep={value.cep}
+            address={details.address}
             onCep={(cep) => draft.set((v) => ({ ...v, cep }))}
             onAddress={(address) =>
-              draft.set((v) => ({ ...v, details: { ...v.details, address } }))
+              draft.set((v) => ({
+                ...v,
+                details: { ...v.details, address },
+                destination: null,
+                destinationAddress: "",
+              }))
             }
             onChange={(next) =>
               draft.set((v) => ({
@@ -328,11 +356,31 @@ export default function CheckoutDrawer({
           />
           <DeliveryForm
             value={details}
-            onChange={(details) => draft.set((v) => ({ ...v, details }))}
+            onChange={(details) =>
+              draft.set((v) => ({
+                ...v,
+                details,
+                ...(details.address !== v.details.address
+                  ? { destination: null, destinationAddress: "" }
+                  : {}),
+              }))
+            }
             disabled={blocked}
             pickup={value.mode === "PICKUP"}
             total={pricing.quote?.total}
           />
+          {delivery.mode === "RADIUS" && value.mode === "DELIVERY" && (
+            <LocationPicker
+              key={details.address}
+              title="Ponto de entrega"
+              center={delivery.radius?.origin}
+              value={
+                value.destinationAddress === details.address ? value.destination : null
+              }
+              disabled={blocked || !details.address.trim()}
+              onChange={changeDestination}
+            />
+          )}
           {api && (
             <div className="checkout-consent">
               <ToggleField
@@ -391,6 +439,11 @@ export default function CheckoutDrawer({
               </strong>
             </div>
             {pricing.quote && <small>Previsão: {pricing.quote.eta}</small>}
+            {pricing.quote?.fulfillment.radius && (
+              <small>
+                {pricing.quote.region}. Distância em linha reta, não o trajeto por ruas.
+              </small>
+            )}
           </div>
           {pricing.error && (
             <ErrorNotice error={pricing.error} onRetry={() => void reload()} />

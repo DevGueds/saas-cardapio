@@ -1,6 +1,5 @@
-import { useState } from "react"
+import { memo, useCallback, useState } from "react"
 import { reversalSchema, type PaymentView, type ReportRange } from "@cardapio/contracts"
-import { paymentActivity } from "@cardapio/domain/payments"
 import { can } from "@cardapio/domain/permissions"
 import { formatMoney } from "@cardapio/domain/money"
 import { useServices } from "../../../app/presentation/ServicesProvider"
@@ -10,9 +9,9 @@ import ValidatedForm from "../../../shared/presentation/form-validation/Validate
 import { InputField } from "../../../shared/presentation/Fields"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import { useMutation } from "../../../shared/presentation/use-mutation"
-import { financeTime, paymentLabels } from "./payment-labels"
+import PaymentTable from "./PaymentTable"
 
-export default function PaymentHistory({
+function PaymentHistory({
   payments,
   restaurantId,
   onChanged,
@@ -30,87 +29,27 @@ export default function PaymentHistory({
     mutation = useMutation()
   const [selected, setSelected] = useState<PaymentView | null>(null)
   const [reason, setReason] = useState("")
+  const clearError = mutation.clearError
+  const selectPayment = useCallback(
+    (payment: PaymentView) => {
+      clearError()
+      setReason("")
+      setSelected(payment)
+    },
+    [clearError],
+  )
   const reverse = can(account?.restaurant.role, "payments:reverse")
   if (!payments.length)
     return <p className="info-notice">Nenhum recebimento registrado neste período.</p>
   return (
     <>
-      <div
-        className="finance-table-scroll"
-        tabIndex={0}
-        role="region"
-        aria-label="Histórico de recebimentos"
-      >
-        <table className="finance-table">
-          <thead>
-            <tr>
-              <th>Recebido em</th>
-              <th>Origem</th>
-              <th>Forma</th>
-              <th>Valor original</th>
-              {range && (
-                <>
-                  <th>Entrada no período (+)</th>
-                  <th>Reversão no período (−)</th>
-                </>
-              )}
-              <th>Situação atual</th>
-              {reverse && <th>Ações</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {payments.map((payment) => (
-              <tr key={payment.id}>
-                <td>{financeTime(payment.createdAt)}</td>
-                <td>
-                  {payment.orderId
-                    ? `Pedido #${payment.orderId.slice(0, 8).toUpperCase()}`
-                    : "Avulso"}
-                  <small>{payment.description || "Registro manual"}</small>
-                </td>
-                <td>{paymentLabels[payment.method]}</td>
-                <td>{formatMoney(payment.amount)}</td>
-                {range && (
-                  <>
-                    <td>{formatMoney(paymentActivity(payment, range).received)}</td>
-                    <td>{formatMoney(paymentActivity(payment, range).reversed)}</td>
-                  </>
-                )}
-                <td>
-                  <span
-                    className={`finance-badge ${payment.reversedAt ? "is-reversed" : ""}`}
-                  >
-                    {payment.reversedAt ? "Revertido" : "Registro válido"}
-                  </span>
-                  {payment.reversedAt && (
-                    <small>
-                      {financeTime(payment.reversedAt)} · {payment.reversalReason}
-                    </small>
-                  )}
-                </td>
-                {reverse && (
-                  <td>
-                    {!payment.reversedAt && (
-                      <button
-                        type="button"
-                        className="text-button"
-                        disabled={disabled}
-                        onClick={() => {
-                          mutation.clearError()
-                          setReason("")
-                          setSelected(payment)
-                        }}
-                      >
-                        Reverter
-                      </button>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PaymentTable
+        payments={payments}
+        range={range}
+        reverse={reverse}
+        disabled={disabled}
+        onReverse={selectPayment}
+      />
       {selected && (
         <Dialog
           title="Reverter recebimento"
@@ -180,3 +119,4 @@ export default function PaymentHistory({
     </>
   )
 }
+export default memo(PaymentHistory)

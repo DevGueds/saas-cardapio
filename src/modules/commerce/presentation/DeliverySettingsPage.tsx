@@ -3,7 +3,11 @@ import ValidatedForm from "../../../shared/presentation/form-validation/Validate
 import { useState, type FormEvent } from "react"
 import { Bike, MapPin, Plus, Pencil, Trash2, Store } from "lucide-react"
 import { can } from "@cardapio/domain/permissions"
-import { emptyCommerce, type DeliveryZone } from "@cardapio/domain/commerce"
+import {
+  emptyCommerce,
+  type DeliveryZone,
+  type DeliverySettings,
+} from "@cardapio/domain/commerce"
 import { normalizeName } from "@cardapio/domain/validation"
 import { formatMoney } from "@cardapio/domain/money"
 import { useMenu } from "../../../app/presentation/MenuScope"
@@ -23,6 +27,7 @@ import {
 import { useMutation } from "../../../shared/presentation/use-mutation"
 import { deliveryDraftSchema } from "../application/delivery-drafts"
 import ZoneForm from "./ZoneForm"
+import RadiusSettings from "./RadiusSettings"
 export default function DeliverySettingsPage() {
   const { menu, reload, loading, error } = useMenu(),
     { commerce } = useServices(),
@@ -92,7 +97,7 @@ export default function DeliverySettingsPage() {
             <section className="settings-card">
               <Bike size={26} />
               <h2>Entrega ao cliente</h2>
-              <p>Receba pedidos para os bairros cadastrados ou com uma taxa única.</p>
+              <p>Defina uma taxa única, por bairro ou por raio de distância.</p>
               <ToggleField
                 label="Aceitar entregas"
                 checked={delivery.enabled}
@@ -102,11 +107,12 @@ export default function DeliverySettingsPage() {
                 label="Como calcular o frete"
                 value={delivery.mode}
                 onChange={(e) =>
-                  set({ ...delivery, mode: e.target.value as "FLAT" | "ZONES" })
+                  set({ ...delivery, mode: e.target.value as DeliverySettings["mode"] })
                 }
               >
                 <option value="FLAT">Taxa única da loja</option>
                 <option value="ZONES">Por cidade e bairro</option>
+                <option value="RADIUS">Por raio de distância</option>
               </SelectField>
               {delivery.mode === "FLAT" && (
                 <p className="field-help">
@@ -133,74 +139,84 @@ export default function DeliverySettingsPage() {
               />
             </section>
           </div>
-          <section className="delivery-regions">
-            <div className="section-heading">
-              <div>
-                <h2>Regiões atendidas</h2>
-                <p>Edite a lista e salve as entregas para publicar.</p>
-              </div>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setEditor({})}
-                disabled={delivery.zones.length >= 500}
-              >
-                <Plus size={18} /> Adicionar bairro
-              </button>
-            </div>
-            <InputField
-              label="Buscar cidade ou bairro"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+          {delivery.mode === "RADIUS" && (
+            <RadiusSettings
+              value={delivery.radius}
+              onChange={(radius) => set({ ...delivery, radius })}
+              disabled={blocked}
+              address={menu.restaurant.address}
             />
-            {zones.length ? (
-              <div className="region-list">
-                {zones.map((zone) => (
-                  <article className="region-card" key={zone.id}>
-                    <span className="region-icon">
-                      <MapPin size={22} />
-                    </span>
-                    <div>
-                      <h3>{zone.neighborhood}</h3>
-                      <p>
-                        {zone.city} / {zone.state}
-                      </p>
-                      <small>
-                        {zone.etaMin}–{zone.etaMax} min ·{" "}
-                        {zone.active ? "Atendido" : "Pausado"}
-                      </small>
-                    </div>
-                    <strong>{formatMoney(zone.fee)}</strong>
-                    <div className="region-actions">
-                      <button
-                        type="button"
-                        className="icon-button"
-                        aria-label={`Editar bairro ${zone.neighborhood}`}
-                        onClick={() => setEditor({ zone })}
-                      >
-                        <Pencil size={18} />
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-button"
-                        aria-label={`Remover bairro ${zone.neighborhood}`}
-                        onClick={() => setDeleting(zone)}
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
+          )}
+          {delivery.mode === "ZONES" && (
+            <section className="delivery-regions">
+              <div className="section-heading">
+                <div>
+                  <h2>Regiões atendidas</h2>
+                  <p>Edite a lista e salve as entregas para publicar.</p>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setEditor({})}
+                  disabled={delivery.zones.length >= 500}
+                >
+                  <Plus size={18} /> Adicionar bairro
+                </button>
               </div>
-            ) : (
-              <div className="empty-search">
-                <MapPin size={32} />
-                <h3>Nenhum bairro nesta lista</h3>
-                <p>Cadastre os bairros da sua cidade e das cidades próximas.</p>
-              </div>
-            )}
-          </section>
+              <InputField
+                label="Buscar cidade ou bairro"
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {zones.length ? (
+                <div className="region-list">
+                  {zones.map((zone) => (
+                    <article className="region-card" key={zone.id}>
+                      <span className="region-icon">
+                        <MapPin size={22} />
+                      </span>
+                      <div>
+                        <h3>{zone.neighborhood}</h3>
+                        <p>
+                          {zone.city} / {zone.state}
+                        </p>
+                        <small>
+                          {zone.etaMin}–{zone.etaMax} min ·{" "}
+                          {zone.active ? "Atendido" : "Pausado"}
+                        </small>
+                      </div>
+                      <strong>{formatMoney(zone.fee)}</strong>
+                      <div className="region-actions">
+                        <button
+                          type="button"
+                          className="icon-button"
+                          aria-label={`Editar bairro ${zone.neighborhood}`}
+                          onClick={() => setEditor({ zone })}
+                        >
+                          <Pencil size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-button"
+                          aria-label={`Remover bairro ${zone.neighborhood}`}
+                          onClick={() => setDeleting(zone)}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-search">
+                  <MapPin size={32} />
+                  <h3>Nenhum bairro nesta lista</h3>
+                  <p>Cadastre os bairros da sua cidade e das cidades próximas.</p>
+                </div>
+              )}
+            </section>
+          )}
         </fieldset>
         <FormActions busy={blocked} label="Salvar entregas" />
       </ValidatedForm>

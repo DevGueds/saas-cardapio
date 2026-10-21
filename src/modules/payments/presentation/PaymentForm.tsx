@@ -71,6 +71,16 @@ export default function PaymentForm({
       }),
     )
     if (result?.ok) {
+      if (result.value.reversedAt)
+        notifyInfo(
+          "A tentativa já estava registrada e foi revertida. Confira o histórico; nenhum novo recebimento foi criado.",
+        )
+      else
+        notifySuccess(
+          balance
+            ? "Recebimento registrado. Saldo do pedido atualizado."
+            : "Recebimento avulso registrado.",
+        )
       draft.reset({ ...initial, requestId: ids.next() })
       onSaved()
     } else if (
@@ -86,8 +96,8 @@ export default function PaymentForm({
         {balance ? "Registrar pagamento do pedido" : "Registrar recebimento avulso"}
       </h3>
       <p className="field-help">
-        Confirme apenas valores já recebidos. Este registro dá baixa no saldo; ele não
-        movimenta dinheiro em bancos ou cartões.
+        Confirme apenas valores já recebidos. Este registro manual não movimenta dinheiro
+        em bancos ou cartões.
       </p>
       <p className="field-help">
         {balance

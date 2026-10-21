@@ -1,5 +1,6 @@
 import {
   useContext,
+  useCallback,
   useId,
   useLayoutEffect,
   useRef,
@@ -31,12 +32,15 @@ export function useFieldValidation<T extends FieldElement>({
     registry = useContext(FormValidationContext)
   const [error, setError] = useState("")
   const touched = useRef(false)
-  function validate(target: T) {
-    touched.current = true
-    const next = fieldError(target, schema, validation)
-    setError(next)
-    return !next
-  }
+  const validate = useCallback(
+    (target: T) => {
+      touched.current = true
+      const next = fieldError(target, schema, validation)
+      setError(next)
+      return !next
+    },
+    [schema, validation],
+  )
   useLayoutEffect(() => {
     const target = element.current
     if (!target) return
@@ -53,7 +57,7 @@ export function useFieldValidation<T extends FieldElement>({
     return () => {
       registry.fields.delete(id)
     }
-  })
+  }, [id, registry, validate])
   return {
     error,
     errorId: `${id}-error`,

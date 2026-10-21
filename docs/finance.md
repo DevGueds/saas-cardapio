@@ -23,7 +23,7 @@ Validação também ocorre nos casos de uso do backend, independentemente de bot
 ## Semântica dos relatórios
 
 - Período com início inclusivo e fim exclusivo na API; a interface converte dias inclusivos para o fuso fixo UTC−03. Filtros, horários, agrupamento diário e PDF usam o mesmo fuso, independentemente do dispositivo. Não há ajuste histórico de horário de verão.
-- Até 31 dias e 5.000 pedidos / 5.000 registros de pagamento por relatório. Acima do limite, a consulta falha com orientação para dividir o período; não produz um total incompleto. A prévia em tela mostra até 100 pedidos; o PDF contém todos os registros retornados, com paginação.
+- Até 31 dias e 5.000 pedidos / 5.000 registros de pagamento por relatório. Acima do limite, a consulta falha com orientação para dividir o período; não produz um total incompleto. A lista em tela pesquisa todos os pedidos retornados e mostra páginas de 25 linhas. Seus filtros não alteram os indicadores nem o PDF, que contém todos os registros do período aplicado, com paginação.
 - **Total dos pedidos válidos**: produtos/adicionais + frete − descontos, apenas de pedidos criados no período e não cancelados na consulta. Inclui os em andamento; não é receita recebida nem apenas pedidos concluídos. Avulsos não criam vendas.
 - **Recebimentos**: pagamentos registrados no período, inclusive avulsos e pedidos anteriores.
 - **Reversões**: pagamentos revertidos no período, ainda que recebidos em outra data. Um pagamento pode aparecer em períodos distintos por seus dois eventos, mas cada soma considera apenas o evento dentro do intervalo.

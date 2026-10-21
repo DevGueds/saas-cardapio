@@ -1,6 +1,12 @@
 import { z } from "zod"
 import { uuid, revision, cents } from "./common.js"
 import {
+  geoPointSchema,
+  radiusDeliverySchema,
+  radiusSnapshotSchema,
+} from "./delivery-radius.js"
+export * from "./delivery-radius.js"
+import {
   labelField as name,
   textField,
   couponField,
@@ -101,9 +107,10 @@ export const zoneSchema = z
 export const deliverySettingsSchema = z.strictObject({
   enabled: z.boolean(),
   pickupEnabled: z.boolean(),
-  mode: z.enum(["FLAT", "ZONES"]),
+  mode: z.enum(["FLAT", "ZONES", "RADIUS"]),
   pickupEta: textField(80, true),
   zones: z.array(zoneSchema).max(500),
+  radius: radiusDeliverySchema.optional(),
 })
 export const saveComboSchema = z.strictObject({
   expectedRevision: revision,
@@ -120,6 +127,10 @@ export const saveDeliverySchema = z.strictObject({
 export const fulfillmentSchema = z.strictObject({
   mode: z.enum(["DELIVERY", "PICKUP"]),
   zoneId: uuid.optional(),
+  destination: geoPointSchema.optional(),
+})
+export const fulfillmentViewSchema = fulfillmentSchema.extend({
+  radius: radiusSnapshotSchema.optional(),
 })
 export const checkoutOptionsSchema = z.strictObject({
   whatsappConsent: z.boolean().optional(),
@@ -145,7 +156,7 @@ export const quoteSchema = z.strictObject({
   promotionName: name.nullable(),
   eta: z.string().max(80),
   region: z.string().max(300),
-  fulfillment: fulfillmentSchema,
+  fulfillment: fulfillmentViewSchema,
   items: z.array(pricedLineSchema).min(1).max(100),
 })
 export const postalAddressSchema = z.strictObject({
