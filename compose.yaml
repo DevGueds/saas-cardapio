@@ -173,6 +173,15 @@ services:
   evolution:
     profiles: ["app"]
     image: evoapicloud/evolution-api:v2.3.7@sha256:1bd8afc4a6cf48822e6cf02469aeae7bd35a12a6b616eacd1291926307f4d339
+    # Keep the upstream command, but gate all output (including native/child writes).
+    entrypoint:
+      [
+        "node",
+        "/opt/cardapio/provider-log-gate.cjs",
+        "/bin/bash",
+        "-c",
+        ". ./Docker/scripts/deploy_database.sh && npm run start:prod",
+      ]
     restart: unless-stopped
     init: true
     mem_limit: 768m
@@ -209,7 +218,9 @@ services:
       CORS_ORIGIN: http://cardapio-internal
       CORS_CREDENTIALS: "false"
     ports: ["127.0.0.1:8081:8080"]
-    volumes: ["cardapio_evolution_instances:/evolution/instances"]
+    volumes:
+      - cardapio_evolution_instances:/evolution/instances
+      - ./docker/provider-log-gate.cjs:/opt/cardapio/provider-log-gate.cjs:ro
     depends_on:
       evolution-db:
         condition: service_healthy

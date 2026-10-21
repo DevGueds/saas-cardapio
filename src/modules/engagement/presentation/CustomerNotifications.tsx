@@ -52,8 +52,8 @@ function Preferences({
           />
           <p className="field-help">
             {resource.data.available
-              ? "Mensagens sobre etapas e pagamentos, no número informado no pedido."
-              : "O envio por WhatsApp depende da ativação deste canal pela loja."}
+              ? "Após autorizar, você receberá as próximas atualizações de etapas e pagamentos no número informado no pedido."
+              : "A loja ainda não ativou o envio por WhatsApp. Sua preferência será salva, mas as mensagens só poderão ser enviadas após a ativação pela loja."}
           </p>
         </>
       )}

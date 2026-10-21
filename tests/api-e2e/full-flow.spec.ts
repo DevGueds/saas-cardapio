@@ -865,6 +865,23 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
     "Pedido recebido",
   )
   expect(customer.url()).toContain(orderId)
+  const whatsappPreference = customer.getByRole("checkbox", {
+    name: "Receber atualizações deste pedido pelo WhatsApp",
+  })
+  await expect(whatsappPreference).not.toBeChecked()
+  await expect(
+    customer.getByText(/A loja ainda não ativou o envio por WhatsApp/),
+  ).toBeVisible()
+  await whatsappPreference.check()
+  await expect(whatsappPreference).toBeChecked()
+  await expect(customer.locator(".customer-notifications [role=alert]")).toHaveCount(0)
+  await customer.reload()
+  await expect(whatsappPreference).toBeChecked()
+  await whatsappPreference.uncheck()
+  await expect(whatsappPreference).not.toBeChecked()
+  await expect(customer.locator(".customer-notifications [role=alert]")).toHaveCount(0)
+  await customer.reload()
+  await expect(whatsappPreference).not.toBeChecked()
   await page.getByRole("link", { name: "Pedidos", exact: true }).click()
   await expect(
     page.getByRole("heading", { name: "João Açúcar", exact: true }),
