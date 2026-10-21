@@ -1,3 +1,4 @@
+import { sampleAddress } from "./address-fixture"
 import { useState } from "react"
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { expect, it, vi } from "vitest"
@@ -36,7 +37,7 @@ vi.mock("../src/app/presentation/ServicesProvider", () => ({
 }))
 vi.mock("../src/app/presentation/MenuScope", () => ({ useMenu: () => ({ menu }) }))
 function Form() {
-  const [address, setAddress] = useState("Rua Original, 10"),
+  const [address, setAddress] = useState(sampleAddress()),
     [cep, setCep] = useState("01001000"),
     [value, setValue] = useState<CheckoutOptions>({ fulfillment: { mode: "DELIVERY" } })
   return (
@@ -45,15 +46,29 @@ function Form() {
         address={address}
         cep={cep}
         value={value}
-        onAddress={setAddress}
+        onAddress={(found) =>
+          setAddress((v) => ({
+            ...v,
+            street: found.street,
+            city: found.city,
+            state: found.state,
+            neighborhood: found.neighborhood,
+            postalCode: found.cep,
+          }))
+        }
         onCep={setCep}
         onChange={setValue}
         disabled={false}
       />
       <InputField
         label="Endereço"
-        value={address}
-        onChange={(event) => setAddress(event.target.value)}
+        value={address.street}
+        onChange={(event) => setAddress((v) => ({ ...v, street: event.target.value }))}
+      />
+      <InputField
+        label="Cidade manual"
+        value={address.city}
+        onChange={(event) => setAddress((v) => ({ ...v, city: event.target.value }))}
       />
     </>
   )
@@ -94,7 +109,22 @@ it("matches the neighbourhood returned by CEP and ignores a late result after th
     expect(screen.getByLabelText("Bairro de entrega")).toHaveValue("center"),
   )
   expect(screen.getByLabelText("Cidade de entrega")).toHaveValue("São Paulo / SP")
-  expect(screen.getByLabelText("Endereço")).toHaveValue(
-    "Praça da Sé, CENTRO, SAO PAULO / SP",
+  expect(screen.getByLabelText("Endereço")).toHaveValue("Praça da Sé")
+})
+
+it("does not overwrite a manually edited city with a pending lookup result", async () => {
+  let resolve!: (value: unknown) => void
+  maps.lookup.mockReturnValueOnce(
+    new Promise((r) => {
+      resolve = r
+    }),
   )
+  render(<Form />)
+  fireEvent.click(screen.getByRole("button", { name: "Buscar CEP" }))
+  fireEvent.change(screen.getByLabelText("Cidade manual"), {
+    target: { value: "Outra Cidade" },
+  })
+  await act(async () => resolve(result))
+  expect(screen.getByLabelText("Cidade manual")).toHaveValue("Outra Cidade")
+  expect(screen.getByLabelText("Bairro de entrega")).toHaveValue("")
 })

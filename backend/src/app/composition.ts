@@ -112,13 +112,19 @@ export async function compose(config: ApiConfig) {
       addresses: new PostalAddresses(
         new BrasilApiAddress(
           new ResilientHttp({
-            timeoutMs: 3000,
+            timeoutMs: 2000,
             concurrency: 4,
             failureThreshold: 3,
             cooldownMs: 30000,
           }),
           redis,
           limiter,
+          new ResilientHttp({
+            timeoutMs: 2000,
+            concurrency: 4,
+            failureThreshold: 3,
+            cooldownMs: 30000,
+          }),
         ),
         limiter,
         operation,

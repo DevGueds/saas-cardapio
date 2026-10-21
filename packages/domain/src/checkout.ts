@@ -1,7 +1,8 @@
 import { quoteOrder, type CheckoutOptions } from "./quote.js"
 import { Failure, requireValid } from "./failure.js"
 import { assertCents, parseMoney } from "./money.js"
-import { brazilianPhone, text } from "./validation.js"
+import { brazilianPhone, normalizeName, text } from "./validation.js"
+import { deliveryAddressLines, parseDeliveryAddress } from "./delivery-address.js"
 import { type Cart } from "./cart.js"
 import { orderMessage, type DeliveryDetails } from "./order-message.js"
 import type { MenuDocument } from "./menu-document.js"
@@ -43,16 +44,30 @@ export function validateCheckout(
     ? brazilianPhone(menu.restaurant.whatsapp, "whatsapp")
     : ""
 
+  const address =
+    quote.fulfillment.mode === "PICKUP"
+      ? undefined
+      : parseDeliveryAddress(input.deliveryAddress)
+  if (address && quote.fulfillment.zoneId) {
+    const zone = menu.commerce?.delivery.zones.find(
+      (zone) => zone.id === quote.fulfillment.zoneId,
+    )
+    requireValid(
+      !!zone &&
+        address.state === zone.state &&
+        normalizeName(address.city) === normalizeName(zone.city) &&
+        normalizeName(address.neighborhood) === normalizeName(zone.neighborhood),
+      "O bairro e a cidade do endereço precisam corresponder à região de entrega selecionada.",
+      "deliveryAddress",
+    )
+  }
   const customer: DeliveryDetails = {
-    ...input,
-
     name: text(input.name, "name", 120, true),
     phone: brazilianPhone(input.phone, "phone"),
 
-    address:
-      quote.fulfillment.mode === "PICKUP"
-        ? "Retirada na loja"
-        : text(input.address, "address", 500, true),
+    address: address ? deliveryAddressLines(address).join(" · ") : "Retirada na loja",
+    ...(address ? { deliveryAddress: address } : {}),
+    payment: input.payment,
     notes: text(input.notes, "notes", 500),
 
     cashChange: text(input.cashChange, "cashChange", 30),

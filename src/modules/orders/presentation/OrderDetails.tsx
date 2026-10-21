@@ -10,6 +10,7 @@ import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import Dialog from "../../../shared/presentation/Dialog"
 import { formatMoney } from "../../../shared/domain/money"
 import { orderLabels, orderTime, shortOrder } from "./order-labels"
+import { deliveryAddressLines } from "@cardapio/domain/delivery-address"
 export default function OrderDetails({
   order,
   disabled,
@@ -46,7 +47,15 @@ export default function OrderDetails({
             <strong>{order.customer.name}</strong>
           </p>
           <p>{order.customer.phone}</p>
-          <p>{order.customer.address}</p>
+          {order.customer.deliveryAddress ? (
+            <address className="order-delivery-address">
+              {deliveryAddressLines(order.customer.deliveryAddress).map((line, index) => (
+                <p key={index}>{index === 0 ? <strong>{line}</strong> : line}</p>
+              ))}
+            </address>
+          ) : (
+            <p>{order.customer.address}</p>
+          )}
           {order.fulfillment?.radius && (
             <p className="field-help">
               {order.region}. Taxa registrada: {formatMoney(order.fulfillment.radius.fee)}{" "}

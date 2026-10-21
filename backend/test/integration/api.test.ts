@@ -122,6 +122,18 @@ function checkout() {
       name: "Cliente de teste",
       phone: "11999999999",
       address: "Rua de teste, 10",
+      deliveryAddress: {
+        street: "Rua de teste",
+        number: "10",
+        noNumber: false,
+        complement: "",
+        neighborhood: "Centro",
+        city: "São Paulo",
+        state: "SP",
+        postalCode: "",
+        reference: "",
+        kind: "HOUSE",
+      },
       notes: "",
       payment: "Pix",
       cashChange: "",
@@ -374,6 +386,25 @@ test("settings are persisted; checkout rejects closed, empty, stale, foreign or 
       cart: { ...base.cart, lines: [{ ...base.cart.lines[0], quantity: 1.5 }] },
     },
     { ...base, details: { ...base.details, phone: "123" } },
+    { ...base, details: { ...base.details, deliveryAddress: undefined } },
+    {
+      ...base,
+      details: {
+        ...base.details,
+        deliveryAddress: { ...base.details.deliveryAddress, number: "" },
+      },
+    },
+    {
+      ...base,
+      details: {
+        ...base.details,
+        deliveryAddress: {
+          ...base.details.deliveryAddress,
+          kind: "APARTMENT",
+          complement: "",
+        },
+      },
+    },
     { ...base, details: { ...base.details, payment: "Dinheiro", cashChange: "1,00" } },
     { ...base, expectedRevision: 0 },
   ]
@@ -951,7 +982,10 @@ test("kitchen, courier and viewer permissions restrict data and order transition
   )
   assert.ok(
     kitchen.items.every(
-      (o) => o.customer.phone === "" && o.customer.address === "Dados restritos",
+      (o) =>
+        o.customer.phone === "" &&
+        o.customer.address === "Dados restritos" &&
+        o.customer.deliveryAddress === undefined,
     ),
   )
   const active = kitchen.items.find(

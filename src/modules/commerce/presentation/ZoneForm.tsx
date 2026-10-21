@@ -1,5 +1,5 @@
 import { coordinateField, integerTextField } from "@cardapio/contracts"
-import { postalCodeField } from "@cardapio/contracts"
+import PostalCodeLookup from "../../../app/presentation/PostalCodeLookup"
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
 import { type FormEvent } from "react"
 import type { DeliveryZone } from "@cardapio/domain/commerce"
@@ -28,7 +28,7 @@ export default function ZoneForm({
   onClose(): void
   onAdd(zone: DeliveryZone): void
 }) {
-  const { maps, ids } = useServices(),
+  const { ids } = useServices(),
     mutation = useMutation()
   const draft = useFormDraft(
     `zone:${zone?.id ?? "new"}`,
@@ -50,21 +50,6 @@ export default function ZoneForm({
   const value = draft.value,
     field = <K extends keyof typeof value>(key: K, next: (typeof value)[K]) =>
       draft.set((v) => ({ ...v, [key]: next }))
-  async function lookup() {
-    if (!maps || !postalCodeField.safeParse(value.cep).success) return
-    const result = await mutation.run(() => maps.lookup(value.cep.replace(/\D/g, "")))
-    if (result?.ok) {
-      const address = result.value
-      draft.set((v) => ({
-        ...v,
-        state: address.state,
-        city: address.city,
-        neighborhood: address.neighborhood,
-        latitude: address.latitude?.toString() ?? "",
-        longitude: address.longitude?.toString() ?? "",
-      }))
-    }
-  }
   async function submit(event: FormEvent) {
     event.preventDefault()
     const result = await mutation.run(async () => {
@@ -110,25 +95,25 @@ export default function ZoneForm({
         </p>
         {mutation.error && <ErrorNotice error={mutation.error} />}
         <fieldset disabled={mutation.pending}>
-          {maps && (
-            <div className="postal-search">
-              <InputField
-                label="Preencher pelo CEP (opcional)"
-                inputMode="numeric"
-                maxLength={9}
-                validation="cep"
-                value={value.cep}
-                onChange={(e) => field("cep", e.target.value)}
-              />
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => void lookup()}
-              >
-                Buscar CEP
-              </button>
-            </div>
-          )}
+          <PostalCodeLookup
+            label="Preencher pelo CEP (opcional)"
+            section="zone"
+            help="Ao sair do campo, buscamos cidade e bairro. Confira a região antes de salvar."
+            value={value.cep}
+            onChange={(cep) => field("cep", cep)}
+            disabled={mutation.pending}
+            contextKey={JSON.stringify({ ...value, cep: undefined })}
+            onFound={(address) =>
+              draft.set((v) => ({
+                ...v,
+                state: address.state,
+                city: address.city,
+                neighborhood: address.neighborhood,
+                latitude: address.latitude?.toString() ?? "",
+                longitude: address.longitude?.toString() ?? "",
+              }))
+            }
+          />
           <div className="form-row">
             <SelectField
               label="Estado"

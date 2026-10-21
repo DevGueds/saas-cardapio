@@ -1,3 +1,4 @@
+import { sampleAddress } from "./address-fixture"
 import { describe, it, expect } from "vitest"
 import {
   emailField,
@@ -175,6 +176,7 @@ describe("shared Zod input contracts", () => {
         details: {
           ...input.details,
           address: "Rua São João, 10",
+          deliveryAddress: sampleAddress(),
           cashChange: "inválido",
           payment: "Pix",
         },
@@ -186,6 +188,7 @@ describe("shared Zod input contracts", () => {
         details: {
           ...input.details,
           address: "Rua São João, 10",
+          deliveryAddress: sampleAddress(),
           cashChange: "inválido",
           payment: "Dinheiro",
         },
