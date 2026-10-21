@@ -1,3 +1,4 @@
+import { fillDeliveryAddress } from "../browser-address"
 import { expect, test, type Page } from "@playwright/test"
 
 const storageKey = "saas-cardapio:v1:restaurant:demo-store"
@@ -29,8 +30,45 @@ async function addAndFillCheckout(page: Page) {
 
   await page.getByLabel("Seu WhatsApp com DDD *").fill("55999998888")
 
-  await page.getByLabel("Endereço de entrega completo *").fill("Rua São João, 10")
+  await fillDeliveryAddress(page)
 }
+
+test("endereço em 320px exige número ou referência e preserva o rascunho estruturado", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 740 })
+  await configureWhatsApp(page)
+  await addAndFillCheckout(page)
+  await page.getByLabel("Número do imóvel").fill("")
+  await page
+    .getByRole("button", { name: "Preparar pedido para WhatsApp", exact: true })
+    .click()
+  await expect(page.getByLabel("Número do imóvel")).toBeFocused()
+  await page.getByLabel("Sem número").check()
+  await page
+    .getByRole("button", { name: "Preparar pedido para WhatsApp", exact: true })
+    .click()
+  await expect(page.getByLabel("Ponto de referência")).toBeFocused()
+  await page.getByLabel("Ponto de referência").fill("Portão azul ao lado da escola")
+  await page.reload()
+  await expect(page.getByLabel("Sem número")).toBeChecked()
+  await expect(page.getByLabel("Ponto de referência")).toHaveValue(
+    "Portão azul ao lado da escola",
+  )
+  await page.getByLabel("Rua, avenida ou estrada").scrollIntoViewIfNeeded()
+  await page.screenshot({ path: ".cache/structured-address-320.png", fullPage: true })
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true)
+  await page
+    .getByRole("button", { name: "Preparar pedido para WhatsApp", exact: true })
+    .click()
+  const link = page.getByRole("link", { name: "Abrir WhatsApp e enviar pedido" })
+  await expect(link).toBeVisible()
+  const text = new URL((await link.getAttribute("href"))!).searchParams.get("text")!
+  expect(text).toContain("Rua São João, sem número")
+  expect(text).toContain("Portão azul ao lado da escola")
+})
 
 test("cardápio preserva português, carrinho vazio e foco do diálogo em telas pequenas", async ({
   page,

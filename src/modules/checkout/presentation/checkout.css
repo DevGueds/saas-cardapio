@@ -209,3 +209,19 @@
     padding: 0.9rem;
   }
 }
+.delivery-address-fields {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.delivery-address-fields h4 {
+  margin: 0;
+}
+.address-number-option {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+.order-delivery-address {
+  font-style: normal;
+}

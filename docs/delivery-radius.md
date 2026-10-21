@@ -8,6 +8,8 @@ O cliente escolhe cidade e bairro dentre as regiões ativas. A taxa e o total s�
 
 Respostas de CEP são descartadas se o cliente mudar o CEP, endereço, cidade, bairro, modalidade ou revisão do cardápio enquanto aguarda. O servidor rejeita bairros removidos, inativos ou de outra loja.
 
+O endereço usa campos separados e validados; bairro, cidade e UF seguem a região selecionada e o servidor exige correspondência com o frete. Consulte [endereço e preenchimento assistido](delivery-address.md) para regras de número, complemento e referência, fallback de CEP e compatibilidade com pedidos antigos.
+
 ## Por raio
 
 1. O gerente confirma o ponto de saída da loja no mapa, por GPS ou por coordenadas.

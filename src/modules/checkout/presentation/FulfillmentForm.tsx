@@ -1,15 +1,14 @@
-import { postalCodeField } from "@cardapio/contracts"
+import type { PostalAddress } from "@cardapio/contracts"
+import type { DeliveryAddress } from "@cardapio/domain/delivery-address"
+import PostalCodeLookup from "../../../app/presentation/PostalCodeLookup"
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 import type { CheckoutOptions } from "@cardapio/domain/quote"
 import { emptyCommerce } from "@cardapio/domain/commerce"
 import { normalizeName } from "@cardapio/domain/validation"
 import { formatMoney } from "@cardapio/domain/money"
 import { useMenu } from "../../../app/presentation/MenuScope"
-import { useServices } from "../../../app/presentation/ServicesProvider"
-import { useMutation } from "../../../shared/presentation/use-mutation"
-import ErrorNotice from "../../../shared/presentation/ErrorNotice"
-import { InputField, SelectField } from "../../../shared/presentation/Fields"
+import { SelectField } from "../../../shared/presentation/Fields"
 import ReferenceMap from "../../../app/presentation/ReferenceMap"
 export default function FulfillmentForm({
   value,
@@ -22,18 +21,15 @@ export default function FulfillmentForm({
 }: {
   value: CheckoutOptions
   cep: string
-  address: string
+  address: DeliveryAddress
   onChange(value: CheckoutOptions): void
   onCep(value: string): void
-  onAddress(value: string): void
+  onAddress(value: PostalAddress): void
   disabled: boolean
 }) {
   const { menu } = useMenu(),
-    { maps } = useServices(),
-    delivery = menu.commerce?.delivery ?? emptyCommerce().delivery,
-    mutation = useMutation()
+    delivery = menu.commerce?.delivery ?? emptyCommerce().delivery
   const [notice, setNotice] = useState("")
-  const lookupGeneration = useRef({ value: 0 })
   const fulfillment = value.fulfillment ?? { mode: "DELIVERY" },
     zones = useMemo(() => delivery.zones.filter((z) => z.active), [delivery.zones]),
     selected = zones.find((z) => z.id === fulfillment.zoneId)
@@ -43,42 +39,25 @@ export default function FulfillmentForm({
     ),
     [city, setCity] = useState(selected ? `${selected.city} / ${selected.state}` : "")
   const currentCity = selected ? `${selected.city} / ${selected.state}` : city
-  useEffect(() => {
-    const generation = lookupGeneration.current
-    generation.value++
-    return () => {
-      generation.value++
-    }
-  }, [cep, address, fulfillment.mode, fulfillment.zoneId, menu.revision, city])
-  async function lookup() {
-    if (!maps || !postalCodeField.safeParse(cep).success) return
-    const request = ++lookupGeneration.current.value
-    const result = await mutation.run(() => maps.lookup(cep.replace(/\D/g, "")))
-    if (request !== lookupGeneration.current.value) return
-    if (result?.ok) {
-      const address = result.value,
-        zone = zones.find(
-          (z) =>
-            z.state === address.state &&
-            normalizeName(z.city) === normalizeName(address.city) &&
-            normalizeName(z.neighborhood) === normalizeName(address.neighborhood),
-        )
-      onAddress(
-        [address.street, address.neighborhood, address.city + " / " + address.state]
-          .filter(Boolean)
-          .join(", "),
-      )
-      setCity(`${address.city} / ${address.state}`)
-      if (zone && delivery.mode === "ZONES")
-        onChange({ ...value, fulfillment: { mode: "DELIVERY", zoneId: zone.id } })
-      else if (delivery.mode === "ZONES")
-        onChange({ ...value, fulfillment: { mode: "DELIVERY" } })
-      setNotice(
-        zone || delivery.mode !== "ZONES"
-          ? "Endereço encontrado. Acrescente o número e o complemento abaixo."
-          : "Confira se seu bairro está entre as regiões atendidas. A busca por CEP não garante a entrega.",
-      )
-    }
+  function found(found: PostalAddress) {
+    const zone = zones.find(
+      (zone) =>
+        zone.state === found.state &&
+        normalizeName(zone.city) === normalizeName(found.city) &&
+        normalizeName(zone.neighborhood) === normalizeName(found.neighborhood),
+    )
+    onAddress(found)
+    setCity(zone ? `${zone.city} / ${zone.state}` : "")
+    if (delivery.mode === "ZONES")
+      onChange({
+        ...value,
+        fulfillment: { mode: "DELIVERY", ...(zone ? { zoneId: zone.id } : {}) },
+      })
+    setNotice(
+      zone || delivery.mode !== "ZONES"
+        ? "Endereço localizado. Confira rua, número e complemento; o CEP não identifica a entrada do imóvel."
+        : "O CEP não corresponde a um bairro atendido. Confira as regiões disponíveis; a busca não garante a entrega.",
+    )
   }
   return (
     <fieldset className="fulfillment-form" disabled={disabled}>
@@ -113,28 +92,20 @@ export default function FulfillmentForm({
       </div>
       {fulfillment.mode === "DELIVERY" && (
         <>
-          {maps && (
-            <div className="postal-search">
-              <InputField
-                label="CEP (opcional)"
-                autoComplete="postal-code"
-                inputMode="numeric"
-                validation="cep"
-                value={cep}
-                maxLength={9}
-                onChange={(e) => onCep(e.target.value)}
-              />
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={mutation.pending}
-                onClick={() => void lookup()}
-              >
-                {mutation.pending ? "Buscando…" : "Buscar CEP"}
-              </button>
-            </div>
-          )}
-          {mutation.error && <ErrorNotice error={mutation.error} />}{" "}
+          <PostalCodeLookup
+            value={cep}
+            onChange={onCep}
+            onFound={found}
+            disabled={disabled}
+            section="customer"
+            contextKey={JSON.stringify({
+              address: { ...address, postalCode: undefined },
+              mode: fulfillment.mode,
+              zone: fulfillment.zoneId,
+              revision: menu.revision,
+              selectedCity: city,
+            })}
+          />
           {notice && (
             <p className="field-help" role="status">
               {notice}

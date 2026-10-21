@@ -30,6 +30,8 @@ import {
   validationMessage,
 } from "./fields.js"
 export * from "./fields.js"
+export * from "./delivery-address.js"
+import { deliveryAddressDraftSchema, deliveryAddressSchema } from "./delivery-address.js"
 export const password = passwordField
 export const loginSchema = z.strictObject({ email, password: currentPasswordField })
 export const registrationSchema = z.strictObject({
@@ -132,7 +134,8 @@ export const cartSchema = z.strictObject({
 export const deliverySchema = z.strictObject({
   name,
   phone: z.string().max(30),
-  address: z.string().trim().max(500),
+  address: z.string().trim().max(1000),
+  deliveryAddress: deliveryAddressSchema.optional(),
   notes: z.string().max(500),
   payment: z.enum(["Pix", "Cartão na Entrega", "Dinheiro"]),
   cashChange: z.string().max(30),
@@ -141,7 +144,8 @@ export const deliveryInputSchema = deliverySchema
   .extend({
     name: personNameField,
     phone: phoneField,
-    address: textField(500),
+    address: textField(1000).default(""),
+    deliveryAddress: deliveryAddressDraftSchema.optional(),
     notes: textField(500),
     cashChange: textField(30),
   })
@@ -164,12 +168,23 @@ export const checkoutSchema = z
     options: checkoutOptionsSchema.optional(),
   })
   .superRefine((value, context) => {
-    if (value.options?.fulfillment?.mode !== "PICKUP" && !value.details.address.trim())
+    if (value.options?.fulfillment?.mode === "PICKUP") return
+    if (!value.details.deliveryAddress) {
       context.addIssue({
         code: "custom",
-        path: ["details", "address"],
-        message: "Informe rua, número, bairro e complemento para a entrega.",
+        path: ["details", "deliveryAddress"],
+        message: "Preencha os campos do endereço: rua, número, bairro, cidade e UF.",
       })
+      return
+    }
+    const address = deliveryAddressSchema.safeParse(value.details.deliveryAddress)
+    if (!address.success)
+      for (const issue of address.error.issues)
+        context.addIssue({
+          code: "custom",
+          path: ["details", "deliveryAddress", ...issue.path],
+          message: validationMessage(issue),
+        })
   })
 export type CheckoutInput = z.infer<typeof checkoutSchema>
 export const orderStatusSchema = z.enum([

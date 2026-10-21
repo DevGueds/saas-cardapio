@@ -1,7 +1,8 @@
 import { moneyField } from "@cardapio/contracts"
 import { parseMoney, formatMoney } from "@cardapio/domain/money"
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
-import ValidatedTextarea from "../../../shared/presentation/form-validation/ValidatedTextarea"
+import DeliveryAddressForm from "./DeliveryAddressForm"
+import { emptyDeliveryAddress } from "@cardapio/domain/delivery-address"
 import ValidatedSelect from "../../../shared/presentation/form-validation/ValidatedSelect"
 import type { DeliveryDetails, Payment } from "../domain/order-message"
 
@@ -11,12 +12,14 @@ export default function DeliveryForm({
   disabled,
   pickup = false,
   total,
+  regionLocked = false,
 }: {
   value: DeliveryDetails
   onChange(value: DeliveryDetails): void
   disabled: boolean
   pickup?: boolean
   total?: number
+  regionLocked?: boolean
 }) {
   function update<K extends keyof DeliveryDetails>(key: K, next: DeliveryDetails[K]) {
     onChange({ ...value, [key]: next })
@@ -34,7 +37,8 @@ export default function DeliveryForm({
             <span>Seu nome completo *</span>
             <ValidatedInput
               required
-              autoComplete="name"
+              name="customer-name"
+              autoComplete="section-customer shipping name"
               placeholder="Como podemos chamar você?"
               maxLength={120}
               validation="personName"
@@ -47,7 +51,8 @@ export default function DeliveryForm({
             <ValidatedInput
               required
               type="tel"
-              autoComplete="tel"
+              name="customer-phone"
+              autoComplete="section-customer shipping tel"
               maxLength={30}
               placeholder="(11) 99999-9999"
               value={value.phone}
@@ -55,25 +60,29 @@ export default function DeliveryForm({
             />
           </label>
           {!pickup && (
-            <label className="field">
-              <span>Endereço de entrega completo *</span>
-              <ValidatedTextarea
-                required
-                rows={2}
-                autoComplete="street-address"
-                placeholder="Rua, número, bairro e complemento"
-                maxLength={500}
-                value={value.address}
-                onChange={(event) => update("address", event.target.value)}
+            <>
+              {value.address && (
+                <p className="info-notice">
+                  Endereço salvo anteriormente: {value.address}. Confira e distribua os
+                  dados nos campos abaixo.
+                </p>
+              )}
+              <DeliveryAddressForm
+                value={value.deliveryAddress ?? emptyDeliveryAddress()}
+                onChange={(address) => update("deliveryAddress", address)}
+                regionLocked={regionLocked}
               />
-            </label>
+            </>
           )}
           <label className="field">
             <span>
-              {pickup ? "Observações para retirada" : "Observações para entrega"}
+              {pickup
+                ? "Observações para retirada"
+                : "Instruções adicionais para entrega"}
             </span>
             <ValidatedInput
               maxLength={500}
+              autoComplete="off"
               placeholder="Ex.: tocar o interfone do apartamento 12"
               value={value.notes}
               onChange={(event) => update("notes", event.target.value)}

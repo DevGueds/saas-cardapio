@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { brazilianStates } from "@cardapio/domain/delivery-address"
 import { brazilianPhone, imageReference } from "@cardapio/domain/validation"
 import { parseMoney } from "@cardapio/domain/money"
 
@@ -162,35 +163,7 @@ export const imageUploadSchema = z.object({
     .positive("O arquivo está vazio.")
     .max(5 * 1024 * 1024, "A imagem deve ter no máximo 5 MB."),
 })
-export const brazilianStates = [
-  "AC",
-  "AL",
-  "AP",
-  "AM",
-  "BA",
-  "CE",
-  "DF",
-  "ES",
-  "GO",
-  "MA",
-  "MT",
-  "MS",
-  "MG",
-  "PA",
-  "PB",
-  "PR",
-  "PE",
-  "PI",
-  "RJ",
-  "RN",
-  "RS",
-  "RO",
-  "RR",
-  "SC",
-  "SP",
-  "SE",
-  "TO",
-] as const
+export { brazilianStates } from "@cardapio/domain/delivery-address"
 export const stateField = z.enum(brazilianStates, {
   error: "Selecione um estado brasileiro válido.",
 })

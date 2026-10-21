@@ -46,7 +46,7 @@ Novidades: **adicionais reutilizáveis, três modelos de cardápio, QR Codes com
 - **Enviar pedido para a loja** registra um pedido real no MySQL, com validação dos valores atuais e proteção contra repetição da tentativa.
 - Painel de pedidos: novos → em preparo → prontos → em entrega → concluídos; cancelamento antes da saída, detalhes e paginação. Atualização a cada 15 segundos.
 - Combos com produtos fixos, grupos de escolha e adicionais; promoções automáticas/cupons com período, teto, mínimo e limite de usos.
-- Entrega com taxa por cidade/bairro, retirada, atribuição de entregador e acompanhamento público das etapas por link privado. Leaflet/OpenStreetMap e busca explícita de CEP pela BrasilAPI auxiliam o endereço.
+- Entrega por taxa única, cidade/bairro ou raio, retirada, atribuição de entregador e acompanhamento por link privado. Endereço com campos validados, autocomplete e busca assistida de CEP pela BrasilAPI com alternativa ViaCEP; Leaflet/OpenStreetMap auxilia a confirmação do ponto.
 - Equipe com proprietário, gerente, caixa, cozinha, entregador e consulta. Cadastro de equipe separado da criação de loja.
 - Rascunhos Redux persistidos: carrinho, checkout e formulários administrativos; isolamento por loja/usuário, expiração e aviso de conflito entre abas.
 - WhatsApp opcional após o envio e mensagens automáticas por Evolution API, após parear o número da loja e ativar o canal. Cada cliente precisa autorizar; a preferência é revogável. Registrar o pedido não confirma aceitação pelo restaurante nem pagamento.
@@ -99,7 +99,7 @@ Instale o navegador antes dos testes: `pnpm exec playwright install chromium`. O
 - `packages/contracts/`: schemas e tipos de entrada/saída compartilhados.
 - `.agents/skills/ux-ui-design-principles/`: skill de revisão de interface, referenciada no `AGENTS.md`.
 
-Leia [Arquitetura](docs/architecture.md), [Backend, segurança e desenvolvimento](docs/backend.md), [Diagnóstico](docs/diagnostics.md), [UI/UX](docs/ui-ux.md), [Combos, entrega, equipe e rascunhos](docs/mvp-expansion.md), [Entrega por bairro e raio](docs/delivery-radius.md), [Desempenho e organização financeira](docs/frontend-performance.md) e [Resiliência e benchmark](docs/resilience.md).
+Leia [Arquitetura](docs/architecture.md), [Backend, segurança e desenvolvimento](docs/backend.md), [Diagnóstico](docs/diagnostics.md), [UI/UX](docs/ui-ux.md), [Combos, entrega, equipe e rascunhos](docs/mvp-expansion.md), [Entrega por bairro e raio](docs/delivery-radius.md), [Endereço e preenchimento assistido](docs/delivery-address.md), [Desempenho e organização financeira](docs/frontend-performance.md) e [Resiliência e benchmark](docs/resilience.md).
 
 ## Limites desta etapa
 

@@ -6,6 +6,7 @@ import type { Product } from "./catalog.js"
 import type { Cart } from "./cart.js"
 
 import { formatMoney } from "./money.js"
+import type { DeliveryAddress } from "./delivery-address.js"
 
 export type Payment = "Pix" | "Cartão na Entrega" | "Dinheiro"
 
@@ -13,6 +14,7 @@ export interface DeliveryDetails {
   name: string
   phone: string
   address: string
+  deliveryAddress?: DeliveryAddress
   notes: string
   payment: Payment
   cashChange: string
