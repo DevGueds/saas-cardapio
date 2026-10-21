@@ -1,3 +1,4 @@
+import { sampleAddress } from "./address-fixture"
 import { describe, expect, it, vi } from "vitest"
 
 import { Failure } from "../src/shared/domain/failure"
@@ -36,6 +37,7 @@ const customer: DeliveryDetails = {
   name: "Cliente Teste",
   phone: "11999998888",
   address: "Rua de Teste, 1",
+  deliveryAddress: sampleAddress(),
   notes: "",
   payment: "Pix",
   cashChange: "",
@@ -311,7 +313,7 @@ describe("checkout", () => {
   it.each([
     { phone: "1" },
     { name: "" },
-    { address: "" },
+    { deliveryAddress: undefined },
     { payment: "Dinheiro" as const, cashChange: "10,00" },
     { payment: "Dinheiro" as const, cashChange: "Infinity" },
   ])("valida dados de entrega e troco %j", async (patch) => {

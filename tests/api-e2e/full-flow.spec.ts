@@ -1,3 +1,4 @@
+import { fillDeliveryAddress } from "../browser-address"
 import { expect, test } from "@playwright/test"
 import { randomUUID } from "node:crypto"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
@@ -86,7 +87,7 @@ test("frete por raio sincroniza ponto, endereço, faixas e total em HTTP local",
   await customer.getByRole("button", { name: "Abrir carrinho com 1 item" }).click()
   await customer.getByLabel("Seu nome completo *").fill("Cliente do Raio")
   await customer.getByLabel("Seu WhatsApp com DDD *").fill("11999999999")
-  await customer.getByLabel("Endereço de entrega completo *").fill("Rua do Cliente, 10")
+  await fillDeliveryAddress(customer, "Rua do Cliente")
   const send = customer.getByRole("button", {
     name: "Enviar pedido para a loja",
     exact: true,
@@ -104,7 +105,7 @@ test("frete por raio sincroniza ponto, endereço, faixas e total em HTTP local",
   await expect(send).toBeDisabled()
   await customer.getByRole("button", { name: "Confirmar ponto do endereço" }).click()
   await expect(customer.locator(".order-summary__total")).toContainText("12,03")
-  await customer.getByLabel("Endereço de entrega completo *").fill("Rua Nova, 20")
+  await customer.getByLabel("Número do imóvel").fill("20")
   await expect(send).toBeDisabled()
   await customer.getByText("Informar coordenadas", { exact: true }).click()
   await customer.getByLabel("Latitude do ponto").fill("0")
@@ -226,7 +227,36 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
   await menu.getByRole("button", { name: "Abrir carrinho com 1 item" }).click()
   await menu.getByLabel("Seu nome completo *").fill("Cliente Açaí")
   await menu.getByLabel("Seu WhatsApp com DDD *").fill("11999999999")
-  await menu.getByLabel("Endereço de entrega completo *").fill("Rua São João, 10")
+  await menu.route("**/public/addresses/01001000", (route) =>
+    route.fulfill({
+      json: {
+        ok: true,
+        value: {
+          cep: "01001000",
+          state: "SP",
+          city: "São Paulo",
+          neighborhood: "Centro",
+          street: "Rua São João",
+          latitude: null,
+          longitude: null,
+        },
+      },
+    }),
+  )
+  await menu.getByLabel("CEP (opcional)").fill("01001000")
+  await menu.getByLabel("CEP (opcional)").press("Tab")
+  await expect(menu.getByLabel("Rua, avenida ou estrada")).toHaveValue("Rua São João")
+  await expect(menu.getByLabel("Cidade do endereço")).toHaveValue("São Paulo")
+  await expect(menu.getByLabel("Número do imóvel")).toHaveValue("")
+  await menu
+    .getByRole("button", { name: "Enviar pedido para a loja", exact: true })
+    .click()
+  await expect(menu.getByLabel("Número do imóvel")).toBeFocused()
+  await menu.getByLabel("Número do imóvel").fill("10")
+  await menu.getByLabel("Tipo de local").selectOption("APARTMENT")
+  await menu
+    .getByLabel("Complemento / bloco / apartamento")
+    .fill("Bloco B, apartamento 12")
   await menu.getByLabel("Pagamento", { exact: true }).selectOption("Cartão na Entrega")
   await menu
     .getByRole("button", { name: "Enviar pedido para a loja", exact: true })
@@ -246,6 +276,9 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
   await page.screenshot({ path: ".cache/api-orders-desktop.png", fullPage: true })
   await page.getByRole("button", { name: "Ver detalhes", exact: true }).click()
   await expect(page.getByRole("dialog")).toContainText("Rua São João, 10")
+  await expect(page.getByRole("dialog")).toContainText(
+    "Complemento: Bloco B, apartamento 12",
+  )
   await page.route("**/orders/*/status", (route) => route.abort())
   await page.getByRole("button", { name: "Cancelar pedido", exact: true }).click()
   await page.getByRole("button", { name: "Confirmar cancelamento", exact: true }).click()
@@ -585,7 +618,7 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
   await customer.getByRole("button", { name: "Abrir carrinho com 1 item" }).click()
   await customer.getByLabel("Seu nome completo *").fill("Cliente Privado")
   await customer.getByLabel("Seu WhatsApp com DDD *").fill("11999999999")
-  await customer.getByLabel("Endereço de entrega completo *").fill("Rua Reservada, 1")
+  await fillDeliveryAddress(customer, "Rua Reservada", "1")
   await expect(customer.locator(".order-summary__total")).toContainText("22,50")
   const ordered = customer.waitForResponse(
     (r) =>
@@ -771,19 +804,18 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
     .selectOption({ label: "Centro · R$ 7,00" })
   await customer.getByLabel("Seu nome completo *").fill("João Açúcar")
   await customer.getByLabel("Seu WhatsApp com DDD *").fill("11999999999")
-  await customer.getByLabel("Endereço de entrega completo *").fill("Praça da Sé, 10")
+  await fillDeliveryAddress(customer, "Praça da Sé", "10", false)
   await customer.getByLabel("Cupom de desconto").fill("PRACA10")
   await customer.reload()
   await expect(customer.getByLabel("Seu nome completo *")).toHaveValue("João Açúcar")
-  await expect(customer.getByLabel("Endereço de entrega completo *")).toHaveValue(
-    "Praça da Sé, 10",
-  )
+  await expect(customer.getByLabel("Rua, avenida ou estrada")).toHaveValue("Praça da Sé")
   await expect(customer.getByLabel("Cupom de desconto")).toHaveValue("PRACA10")
   await expect(customer.locator(".order-summary__total")).toContainText("40,30")
   await customer
     .getByLabel("Bairro de entrega")
     .selectOption({ label: "Vila Nova · R$ 9,00" })
   await expect(customer.locator(".order-summary__total")).toContainText("42,30")
+  await expect(customer.getByLabel("Bairro do endereço")).toHaveValue("Vila Nova")
   await customer
     .getByLabel("Bairro de entrega")
     .selectOption({ label: "Centro · R$ 7,00" })

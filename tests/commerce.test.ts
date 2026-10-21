@@ -1,3 +1,4 @@
+import { sampleAddress } from "./address-fixture"
 import { describe, it, expect } from "vitest"
 import {
   emptyCommerce,
@@ -59,6 +60,7 @@ const details = {
   name: "Cliente",
   phone: "11999999999",
   address: "Rua A, 1",
+  deliveryAddress: sampleAddress(),
   notes: "",
   payment: "Pix" as const,
   cashChange: "",

@@ -131,7 +131,7 @@ export default function LoginPage() {
                   type="email"
                   required
                   maxLength={254}
-                  autoComplete="email"
+                  autoComplete={signup ? "email" : "username"}
                   autoCapitalize="none"
                 />
               </label>

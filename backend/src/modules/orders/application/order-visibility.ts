@@ -21,6 +21,7 @@ export function visibleOrder(order: OrderView, role: Role): OrderView {
       name: "Cliente",
       phone: "",
       address: "Dados restritos",
+      deliveryAddress: undefined,
       cashChange: "",
       ...(role === "VIEWER" ? { notes: "" } : {}),
     },

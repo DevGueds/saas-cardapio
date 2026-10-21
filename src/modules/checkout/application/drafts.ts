@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { addonSelectionsSchema } from "@cardapio/contracts"
+import { addonSelectionsSchema, deliveryAddressDraftSchema } from "@cardapio/contracts"
 const id = z.string().min(1).max(100)
 export const cartDraftSchema = z.strictObject({
   restaurantId: id,
@@ -24,6 +24,7 @@ export const customerDraftSchema = z.strictObject({
   name: z.string().max(120),
   phone: z.string().max(30),
   address: z.string().max(500),
+  deliveryAddress: deliveryAddressDraftSchema.optional(),
   notes: z.string().max(500),
   payment: z.enum(["Pix", "Cartão na Entrega", "Dinheiro"]),
   cashChange: z.string().max(30),
@@ -36,7 +37,7 @@ export const checkoutDraftSchema = z.strictObject({
     })
     .nullable()
     .default(null),
-  destinationAddress: z.string().max(1000).default(""),
+  destinationAddress: z.string().max(2000).default(""),
   whatsappConsent: z.boolean().default(false),
   details: customerDraftSchema,
   mode: z.enum(["DELIVERY", "PICKUP"]),

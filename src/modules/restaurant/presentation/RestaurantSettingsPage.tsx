@@ -129,6 +129,14 @@ export default function RestaurantSettingsPage() {
         {required ? " *" : ""}
       </span>
       <ValidatedInput
+        name={`store-${key}`}
+        autoComplete={
+          key === "name"
+            ? "section-store organization"
+            : key === "whatsapp"
+              ? "section-store tel"
+              : "off"
+        }
         aria-labelledby={`label-${key}`}
         validation={
           key === "whatsapp"

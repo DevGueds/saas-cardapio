@@ -1,5 +1,10 @@
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
-import { useCallback, useState, type FormEvent } from "react"
+import { useCallback, useMemo, useState, type FormEvent } from "react"
+import {
+  deliveryAddressSignature,
+  emptyDeliveryAddress,
+} from "@cardapio/domain/delivery-address"
+import { deliveryAddressSchema } from "@cardapio/contracts"
 import type { GeoPoint } from "@cardapio/domain/delivery-radius"
 import { Link } from "react-router"
 import { CheckCircle2, MessageCircle, ShoppingBag } from "lucide-react"
@@ -41,6 +46,7 @@ export default function CheckoutDrawer({
         name: "",
         phone: "",
         address: "",
+        deliveryAddress: emptyDeliveryAddress(),
         notes: "",
         payment: "Pix" as const,
         cashChange: "",
@@ -58,13 +64,24 @@ export default function CheckoutDrawer({
   const value = draft.value,
     details = value.details,
     receipts = useReceipts(menu.restaurant.id)
+  const address = useMemo(
+    () => details.deliveryAddress ?? { ...emptyDeliveryAddress(), postalCode: value.cep },
+    [details.deliveryAddress, value.cep],
+  )
+  const addressKey = deliveryAddressSignature(address)
+  const addressReady = useMemo(
+    () => deliveryAddressSchema.safeParse(address).success,
+    [address],
+  )
   const setDraft = draft.set
   const changeDestination = useCallback(
     (destination: GeoPoint | null) =>
       setDraft((v) => ({
         ...v,
         destination,
-        destinationAddress: destination ? v.details.address : "",
+        destinationAddress: destination
+          ? deliveryAddressSignature(v.details.deliveryAddress)
+          : "",
       })),
     [setDraft],
   )
@@ -78,7 +95,7 @@ export default function CheckoutDrawer({
       ...(value.mode === "DELIVERY" &&
       delivery.mode === "RADIUS" &&
       value.destination &&
-      value.destinationAddress === details.address
+      value.destinationAddress === addressKey
         ? { destination: value.destination }
         : {}),
     },
@@ -334,33 +351,77 @@ export default function CheckoutDrawer({
           )}
           <FulfillmentForm
             value={options}
-            cep={value.cep}
-            address={details.address}
-            onCep={(cep) => draft.set((v) => ({ ...v, cep }))}
-            onAddress={(address) =>
+            cep={address.postalCode}
+            address={address}
+            onCep={(postalCode) =>
               draft.set((v) => ({
                 ...v,
-                details: { ...v.details, address },
+                details: {
+                  ...v.details,
+                  deliveryAddress: {
+                    ...(v.details.deliveryAddress ?? address),
+                    postalCode,
+                  },
+                },
+                destination: null,
+                destinationAddress: "",
+              }))
+            }
+            onAddress={(found) =>
+              draft.set((v) => ({
+                ...v,
+                details: {
+                  ...v.details,
+                  deliveryAddress: {
+                    ...(v.details.deliveryAddress ?? address),
+                    street: found.street,
+                    city: found.city,
+                    neighborhood: found.neighborhood,
+                    state: found.state,
+                    postalCode: found.cep,
+                  },
+                },
                 destination: null,
                 destinationAddress: "",
               }))
             }
             onChange={(next) =>
-              draft.set((v) => ({
-                ...v,
-                mode: next.fulfillment?.mode ?? "DELIVERY",
-                zoneId: next.fulfillment?.zoneId ?? "",
-              }))
+              draft.set((v) => {
+                const mode = next.fulfillment?.mode ?? "DELIVERY"
+                const zone = delivery.zones.find(
+                  (zone) => zone.active && zone.id === next.fulfillment?.zoneId,
+                )
+                return {
+                  ...v,
+                  mode,
+                  zoneId: next.fulfillment?.zoneId ?? "",
+                  ...(delivery.mode === "ZONES" && mode === "DELIVERY"
+                    ? {
+                        details: {
+                          ...v.details,
+                          deliveryAddress: {
+                            ...(v.details.deliveryAddress ?? address),
+                            neighborhood: zone?.neighborhood ?? "",
+                            city: zone?.city ?? "",
+                            state: zone?.state ?? "",
+                          },
+                        },
+                      }
+                    : {}),
+                }
+              })
             }
             disabled={blocked}
           />
           <DeliveryForm
-            value={details}
+            value={{ ...details, deliveryAddress: address }}
+            regionLocked={delivery.mode === "ZONES"}
             onChange={(details) =>
               draft.set((v) => ({
                 ...v,
                 details,
-                ...(details.address !== v.details.address
+                ...(deliveryAddressSignature(details.deliveryAddress) !==
+                deliveryAddressSignature(v.details.deliveryAddress)
                   ? { destination: null, destinationAddress: "" }
                   : {}),
               }))
@@ -371,13 +432,11 @@ export default function CheckoutDrawer({
           />
           {delivery.mode === "RADIUS" && value.mode === "DELIVERY" && (
             <LocationPicker
-              key={details.address}
+              key={addressKey}
               title="Ponto de entrega"
               center={delivery.radius?.origin}
-              value={
-                value.destinationAddress === details.address ? value.destination : null
-              }
-              disabled={blocked || !details.address.trim()}
+              value={value.destinationAddress === addressKey ? value.destination : null}
+              disabled={blocked || !addressReady}
               onChange={changeDestination}
             />
           )}
