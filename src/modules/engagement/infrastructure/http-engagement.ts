@@ -13,7 +13,9 @@ import {
 import type { ApiClient } from "../../../shared/infrastructure/api-client"
 import { waitForNetworkRetry } from "../../../shared/infrastructure/network-retry"
 import type { EngagementService, PushTarget } from "../application/ports"
-const done = z.unknown().transform(() => undefined)
+// Successful void operations serialize as { ok: true }, because JSON omits undefined.
+// Keep the acknowledgement strict: unexpected payloads must not become success.
+const done = z.undefined().optional()
 const storePath = (id: string) => `/restaurants/${encodeURIComponent(id)}`
 const customerPath = (target: Extract<PushTarget, { slug: string }>) =>
   `/public/restaurants/${encodeURIComponent(target.slug)}/orders/${encodeURIComponent(target.orderId)}`

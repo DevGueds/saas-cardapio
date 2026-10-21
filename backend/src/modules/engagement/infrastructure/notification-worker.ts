@@ -193,7 +193,8 @@ export class NotificationWorker {
     job: NonNullable<Awaited<ReturnType<NotificationWorker["claim"]>>>,
   ) {
     let state = "SKIPPED",
-      retry = false
+      retry = false,
+      whatsappAttempted = false
     try {
       const event = job.event,
         scope = { tenantId: event.tenantId, restaurantId: event.restaurantId },
@@ -230,14 +231,14 @@ export class NotificationWorker {
           if (!connected) {
             retry = job.attempts < 5
             state = retry ? "PENDING" : "FAILED"
-          } else
-            state = /^55\d{10,11}$/.test(number)
-              ? await this.whatsapp.send(
-                  scope,
-                  number,
-                  `${order.restaurant.name}\n${text.title}\n${text.message}\nPara interromper estas mensagens, desative o WhatsApp no acompanhamento do pedido.`,
-                )
-              : "FAILED"
+          } else if (/^55\d{10,11}$/.test(number)) {
+            whatsappAttempted = true
+            state = await this.whatsapp.send(
+              scope,
+              number,
+              `${order.restaurant.name}\n${text.title}\n${text.message}\nPara interromper estas mensagens, desative o WhatsApp no acompanhamento do pedido.`,
+            )
+          } else state = "FAILED"
         } else if (job.channel === "PUSH") {
           const sub = await this.db.run((tx) =>
             tx.pushSubscription.findFirst({
@@ -299,7 +300,15 @@ export class NotificationWorker {
       }
     } catch (cause) {
       this.operation.error("notifications.delivery", cause)
-      state = job.channel === "WHATSAPP" ? "UNKNOWN" : "FAILED"
+      // A failed preflight did not submit a message and can safely be retried.
+      // Once send has been called, an exception may hide an accepted message.
+      retry = job.channel === "WHATSAPP" && !whatsappAttempted && job.attempts < 5
+      state =
+        job.channel === "WHATSAPP" && whatsappAttempted
+          ? "UNKNOWN"
+          : retry
+            ? "PENDING"
+            : "FAILED"
     }
     if (state === "FAILED" || state === "UNKNOWN")
       this.operation.error(

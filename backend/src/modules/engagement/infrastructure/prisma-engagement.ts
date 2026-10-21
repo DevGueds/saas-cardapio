@@ -84,9 +84,19 @@ export class PrismaEngagement implements EngagementRepository {
     })
   }
   async consent(scope: TenantScope, id: string, consent: boolean, now: Date) {
+    // Repeating the same preference must not invalidate events already authorized.
+    // A new consent after revocation starts a fresh eligibility window.
     await this.db.run((tx) =>
       tx.order.updateMany({
-        where: { ...scope, id },
+        where: {
+          ...scope,
+          id,
+          ...(consent
+            ? {
+                OR: [{ whatsappConsentAt: null }, { whatsappRevokedAt: { not: null } }],
+              }
+            : { whatsappRevokedAt: null }),
+        },
         data: consent
           ? { whatsappConsentAt: now, whatsappRevokedAt: null }
           : { whatsappRevokedAt: now },

@@ -382,20 +382,18 @@ test("tracking token protects consent; push endpoints are restricted and encrypt
     ).whatsapp,
     false,
   )
-  assert.equal(
-    (await request("PUT", endpoint, { whatsapp: true }, headers)).statusCode,
-    200,
-  )
+  const enabled = await request("PUT", endpoint, { whatsapp: true }, headers)
+  assert.equal(enabled.statusCode, 200)
+  assert.deepEqual(JSON.parse(enabled.body), { ok: true })
   assert.equal(
     value<{ whatsapp: boolean }>(
       (await request("GET", endpoint, undefined, headers)).body,
     ).whatsapp,
     true,
   )
-  assert.equal(
-    (await request("PUT", endpoint, { whatsapp: false }, headers)).statusCode,
-    200,
-  )
+  const disabled = await request("PUT", endpoint, { whatsapp: false }, headers)
+  assert.equal(disabled.statusCode, 200)
+  assert.deepEqual(JSON.parse(disabled.body), { ok: true })
   const subscription = pushFixture()
   for (const bad of [
     "http://127.0.0.1:3001",
@@ -419,6 +417,48 @@ test("tracking token protects consent; push endpoints are restricted and encrypt
     new SubscriptionCipher(server.runtime.config.secret).open(rows[0]!.encrypted),
     subscription,
   )
+})
+
+test("repeated WhatsApp consent preserves queued event eligibility; reconsent starts a new window", async () => {
+  const created = await order(true),
+    endpoint = `${publicRoute()}/orders/${created.orderId}/notifications`,
+    headers = { "x-order-token": created.trackingToken! },
+    firstConsent = new Date(Date.now() - 60000),
+    db = server.runtime.db.client
+  await db.order.update({
+    where: { id: created.orderId! },
+    data: { whatsappConsentAt: firstConsent },
+  })
+  assert.equal(
+    (await request("PUT", endpoint, { whatsapp: true }, headers)).statusCode,
+    200,
+  )
+  const unchanged = await db.order.findUniqueOrThrow({
+    where: { id: created.orderId! },
+    select: { whatsappConsentAt: true, whatsappRevokedAt: true },
+  })
+  assert.equal(unchanged.whatsappConsentAt?.getTime(), firstConsent.getTime())
+  assert.equal(unchanged.whatsappRevokedAt, null)
+  assert.equal(
+    (await request("PUT", endpoint, { whatsapp: false }, headers)).statusCode,
+    200,
+  )
+  const revoked = await db.order.findUniqueOrThrow({
+    where: { id: created.orderId! },
+    select: { whatsappRevokedAt: true },
+  })
+  assert.ok(revoked.whatsappRevokedAt)
+  assert.equal(
+    (await request("PUT", endpoint, { whatsapp: true }, headers)).statusCode,
+    200,
+  )
+  const renewed = await db.order.findUniqueOrThrow({
+    where: { id: created.orderId! },
+    select: { whatsappConsentAt: true, whatsappRevokedAt: true },
+  })
+  assert.ok(renewed.whatsappConsentAt! >= revoked.whatsappRevokedAt)
+  assert.notEqual(renewed.whatsappConsentAt?.getTime(), firstConsent.getTime())
+  assert.equal(renewed.whatsappRevokedAt, null)
 })
 
 test("inbox filters finance by role and read markers never move backward", async () => {
