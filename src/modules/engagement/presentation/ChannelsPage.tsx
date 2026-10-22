@@ -239,6 +239,12 @@ function ChannelControls({
               disabled={mutation.pending}
               onChange={() => setConfirmation("whatsapp")}
             />
+            <p className="field-help">
+              Envio pelo sistema, sem depender de uma mensagem do cliente. Priorizamos
+              confirmação, retirada, saída para entrega, cancelamento e saldo de
+              pagamento. Preparo e conclusão ficam no acompanhamento. Recebimentos
+              registrados em sequência são agrupados por 10 segundos.
+            </p>
           </>
         )}
       </section>
@@ -305,7 +311,7 @@ function ChannelControls({
             <p role="status">
               {deliveries.loading
                 ? "Carregando envios…"
-                : "Ainda não há envios nesta loja. Para enviar pelo WhatsApp, conecte o número, ative o canal e aguarde uma nova etapa ou pagamento de um pedido cujo cliente já autorizou as mensagens. Etapas anteriores não são reenviadas."}
+                : "Ainda não há envios nesta loja. Conecte o número e ative o canal. O sistema envia automaticamente os avisos importantes dos pedidos autorizados e uma confirmação na primeira autorização feita pelo acompanhamento. Etapas anteriores não são reenviadas."}
             </p>
           )
         )}

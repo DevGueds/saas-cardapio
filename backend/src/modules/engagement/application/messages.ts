@@ -1,4 +1,5 @@
 import type { NotificationView } from "@cardapio/contracts"
+import { staffNotificationText } from "./staff-notifications.js"
 export function notificationText(event: {
   kind: string
   status: string
@@ -34,7 +35,7 @@ export function notificationView(event: {
     id: event.id,
     orderId: event.orderId,
     kind: event.kind as NotificationView["kind"],
-    ...notificationText(event),
+    ...staffNotificationText(event),
     createdAt: event.createdAt.toISOString(),
   }
 }

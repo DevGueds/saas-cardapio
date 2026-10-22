@@ -242,6 +242,8 @@ export class PrismaOrders implements OrdersRepository {
           "CONFLICT",
           "O pedido mudou. Atualize antes de atribuir o entregador.",
         )
+      if (row.courierId !== courierId)
+        await orderEvent(tx, scope, id, "ORDER", "ASSIGNED")
       return view({ ...row, courierId, revision: row.revision + 1 })
     })
   }

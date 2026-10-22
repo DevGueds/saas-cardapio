@@ -262,6 +262,11 @@ export default function CheckoutDrawer({
             Seu número é <strong>#{prepared.orderId.slice(0, 8).toUpperCase()}</strong>.
             Aguarde a confirmação da loja. O pagamento será combinado diretamente com ela.
           </p>
+          <p>
+            A equipe já recebe o pedido pelo sistema. Você não precisa enviar uma mensagem
+            para confirmar o envio. Se autorizou o WhatsApp e o canal da loja está ativo,
+            os avisos importantes serão enviados automaticamente.
+          </p>
           {prepared.trackingToken && (
             <Link
               className="primary-button"
@@ -283,6 +288,11 @@ export default function CheckoutDrawer({
             >
               Conversar com a loja no WhatsApp
             </a>
+          )}
+          {prepared.url && (
+            <p className="field-help">
+              Contato opcional, com os detalhes do pedido já registrado.
+            </p>
           )}
           {prepared.recovered && (
             <button
@@ -451,8 +461,9 @@ export default function CheckoutDrawer({
                 }
               />
               <p className="field-help">
-                Opcional. Se a loja ativou esse canal, enviaremos mensagens ao número
-                informado. Você pode cancelar no acompanhamento do pedido.
+                Opcional. Com o canal da loja ativo, os avisos importantes chegam
+                automaticamente ao número informado. Não precisa iniciar uma conversa.
+                Você pode cancelar no acompanhamento do pedido.
               </p>
             </div>
           )}

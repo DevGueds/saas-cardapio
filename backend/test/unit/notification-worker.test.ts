@@ -35,6 +35,10 @@ function fixture() {
     diagnostics: Parameters<DiagnosticLogger["record"]>[0][] = [],
     order = {
       id: orderId,
+      status: "NEW",
+      fulfillment: { mode: "DELIVERY" },
+      total: 2022,
+      eta: "30–40 min",
       whatsappConsentAt: new Date(now - 2000),
       whatsappRevokedAt: null as Date | null,
       customer: { phone: "11999999999" },
@@ -42,9 +46,16 @@ function fixture() {
     }
   let failReads = false,
     sends = 0,
+    message = "",
+    latestFinancialId: string = event.id,
+    paid = 1011,
     sendResult: "SENT" | "UNKNOWN" | "THROW" = "SENT"
   const client = {
-    notificationEvent: { findMany: async () => [] },
+    notificationEvent: {
+      findMany: async () => [],
+      findFirst: async () => ({ id: latestFinancialId }),
+    },
+    payment: { aggregate: async () => ({ _sum: { amount: paid } }) },
     notificationDelivery: {
       count: async () => 0,
       findFirst: async () =>
@@ -86,19 +97,26 @@ function fixture() {
     state: async () => ({ state: "connected", qr: null }),
     connect: async () => ({ state: "connected", qr: null }),
     disconnect: async () => {},
-    send: async () => {
+    send: async (_scope, _number, text) => {
       sends++
+      message = text
       if (sendResult === "THROW") throw new Error("private provider payload")
       return sendResult
     },
   }
   return {
     delivery,
+    event,
     order,
     diagnostics,
     failReads: (value: boolean) => (failReads = value),
     sendResult: (value: typeof sendResult) => (sendResult = value),
     sends: () => sends,
+    message: () => message,
+    finance: (id: string, amount: number) => {
+      latestFinancialId = id
+      paid = amount
+    },
     worker: new NotificationWorker(
       db,
       new SubscriptionCipher("test-only"),
@@ -128,6 +146,37 @@ test("WhatsApp preflight database failures retry without claiming an uncertain d
   assert.equal(f.delivery.state, "SENT")
   assert.equal(f.delivery.attempts, 2)
   assert.equal(f.sends(), 1)
+})
+
+test("queued obsolete stages are skipped and consent activation sends automatically", async () => {
+  const outdated = fixture()
+  outdated.order.status = "COMPLETED"
+  await outdated.worker.tick()
+  assert.equal(outdated.delivery.state, "SKIPPED")
+  assert.equal(outdated.sends(), 0)
+  const subscribed = fixture()
+  subscribed.event.kind = "SUBSCRIBED"
+  subscribed.order.status = "PREPARING"
+  await subscribed.worker.tick()
+  assert.equal(subscribed.sends(), 1)
+  assert.match(subscribed.message(), /Avisos automáticos ativados/)
+  assert.match(subscribed.message(), /Em preparo/)
+})
+
+test("financial dispatch skips superseded events and sends the current integer balance once", async () => {
+  const old = fixture()
+  old.event.kind = "PAYMENT"
+  old.finance(randomUUID(), 2022)
+  await old.worker.tick()
+  assert.equal(old.delivery.state, "SKIPPED")
+  assert.equal(old.sends(), 0)
+  const latest = fixture()
+  latest.event.kind = "PAYMENT"
+  latest.finance(latest.event.id, 1011)
+  await latest.worker.tick()
+  await latest.worker.tick()
+  assert.equal(latest.sends(), 1)
+  assert.match(latest.message(), /Saldo a pagar: \*R\$\s10,11\*/)
 })
 
 test("WhatsApp preflight retries stop after five attempts and recheck consent", async () => {
