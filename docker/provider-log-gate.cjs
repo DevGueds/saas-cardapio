@@ -6,17 +6,51 @@ const { spawn } = require("node:child_process")
 const { StringDecoder } = require("node:string_decoder")
 
 const levels = new Set(["trace", "debug", "info", "warn", "error", "fatal"])
-const numericLevels = { 10: "trace", 20: "debug", 30: "info", 40: "warn", 50: "error", 60: "fatal" }
+const numericLevels = {
+  10: "trace",
+  20: "debug",
+  30: "info",
+  40: "warn",
+  50: "error",
+  60: "fatal",
+}
 const codes = new Set([
-  "ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "EPIPE", "ENOTFOUND", "EAI_AGAIN",
-  "ENETUNREACH", "EHOSTUNREACH", "EACCES", "EPERM", "ENOENT", "ENOMEM", "ENOSPC",
-  "ERR_STREAM_DESTROYED", "ERR_SOCKET_CLOSED", "ERR_INVALID_ARG_TYPE",
-  "ERR_INVALID_ARG_VALUE", "ERR_TLS_CERT_ALTNAME_INVALID", "CERT_HAS_EXPIRED",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ETIMEDOUT",
+  "EPIPE",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "ENETUNREACH",
+  "EHOSTUNREACH",
+  "EACCES",
+  "EPERM",
+  "ENOENT",
+  "ENOMEM",
+  "ENOSPC",
+  "ERR_STREAM_DESTROYED",
+  "ERR_SOCKET_CLOSED",
+  "ERR_INVALID_ARG_TYPE",
+  "ERR_INVALID_ARG_VALUE",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+  "CERT_HAS_EXPIRED",
 ])
-const types = new Set(["Error", "TypeError", "RangeError", "SyntaxError", "ReferenceError", "AggregateError"])
+const types = new Set([
+  "Error",
+  "TypeError",
+  "RangeError",
+  "SyntaxError",
+  "ReferenceError",
+  "AggregateError",
+])
 const events = new Set([
-  "connection.update", "connection.open", "connection.close", "creds.update",
-  "messages.upsert", "messages.update", "messages.delete",
+  "connection.update",
+  "connection.open",
+  "connection.close",
+  "creds.update",
+  "messages.upsert",
+  "messages.update",
+  "messages.delete",
 ])
 const signals = new Set(["SIGTERM", "SIGINT", "SIGHUP", "SIGKILL", "SIGABRT", "SIGSEGV"])
 const maximumLineBytes = 16 * 1024
@@ -29,9 +63,17 @@ function metadata(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {}
   const nested = value.err && typeof value.err === "object" ? value.err : value.error
   return {
-    level: allowed(value.level, levels) ?? numericLevels[value.level],
+    level:
+      allowed(value.level, levels) ??
+      (typeof value.level === "number" && Object.hasOwn(numericLevels, value.level)
+        ? numericLevels[value.level]
+        : undefined),
     code: allowed(value.code, codes) ?? allowed(nested?.code, codes),
-    type: allowed(value.type, types) ?? allowed(value.name, types) ?? allowed(nested?.type, types) ?? allowed(nested?.name, types),
+    type:
+      allowed(value.type, types) ??
+      allowed(value.name, types) ??
+      allowed(nested?.type, types) ??
+      allowed(nested?.name, types),
     event: allowed(value.event, events),
   }
 }
@@ -39,7 +81,14 @@ function metadata(value) {
 function createCollector(emit) {
   let pending
   function reset() {
-    pending = { records: { stdout: 0, stderr: 0 }, oversized: 0, levels: {}, codes: {}, types: {}, events: {} }
+    pending = {
+      records: { stdout: 0, stderr: 0 },
+      oversized: 0,
+      levels: {},
+      codes: {},
+      types: {},
+      events: {},
+    }
   }
   reset()
   function increment(target, key) {
@@ -50,7 +99,11 @@ function createCollector(emit) {
     if (oversized) pending.oversized += 1
     let data = {}
     if (!oversized) {
-      try { data = metadata(JSON.parse(line)) } catch { /* Raw text is intentionally discarded. */ }
+      try {
+        data = metadata(JSON.parse(line))
+      } catch {
+        /* Raw text is intentionally discarded. */
+      }
     }
     increment(pending.levels, data.level ?? (stream === "stderr" ? "error" : "info"))
     increment(pending.codes, data.code)
@@ -79,8 +132,10 @@ function createCollector(emit) {
         const fragment = text.slice(offset, end)
         if (!oversized) {
           byteLength += Buffer.byteLength(fragment)
-          if (byteLength > maximumLineBytes) { oversized = true; buffered = "" }
-          else buffered += fragment
+          if (byteLength > maximumLineBytes) {
+            oversized = true
+            buffered = ""
+          } else buffered += fragment
         }
         if (newline === -1) break
         record(stream, buffered, oversized)
@@ -91,7 +146,9 @@ function createCollector(emit) {
       } while (offset < text.length)
     }
     return {
-      write(chunk) { consume(decoder.write(chunk)) },
+      write(chunk) {
+        consume(decoder.write(chunk))
+      },
       end() {
         consume(decoder.end())
         if (buffered || oversized) record(stream, buffered, oversized)
@@ -105,9 +162,14 @@ function createCollector(emit) {
 }
 
 function run(command, args) {
-  const emit = (stream, record) => process[stream].write(JSON.stringify({
-    time: new Date().toISOString(), component: "evolution", ...record,
-  }) + "\n")
+  const emit = (stream, record) =>
+    process[stream].write(
+      JSON.stringify({
+        time: new Date().toISOString(),
+        component: "evolution",
+        ...record,
+      }) + "\n",
+    )
   // A closed log collector must not turn into an unhandled exception with a stack.
   process.stdout.on("error", () => {})
   process.stderr.on("error", () => {})
@@ -138,14 +200,22 @@ function run(command, args) {
       try {
         if (child.pid && process.platform !== "win32") process.kill(-child.pid, signal)
         else child.kill(signal)
-      } catch { /* A process that already exited needs no signal. */ }
+      } catch {
+        /* A process that already exited needs no signal. */
+      }
     }
     handlers.set(signal, handler)
     process.on(signal, handler)
   }
-  child.on("spawn", () => emit("stdout", { event: "provider_process_started", level: "info" }))
+  child.on("spawn", () =>
+    emit("stdout", { event: "provider_process_started", level: "info" }),
+  )
   child.on("error", (error) => {
-    emit("stderr", { event: "provider_supervisor_error", level: "error", ...metadata(error) })
+    emit("stderr", {
+      event: "provider_supervisor_error",
+      level: "error",
+      ...metadata(error),
+    })
   })
   child.on("close", (code, signal) => {
     clearInterval(timer)
@@ -153,8 +223,10 @@ function run(command, args) {
     for (const [name, handler] of handlers) process.off(name, handler)
     const exitCode = Number.isInteger(code) && code >= 0 && code <= 255 ? code : 1
     emit(exitCode ? "stderr" : "stdout", {
-      event: "provider_process_exited", level: exitCode ? "error" : "info",
-      exitCode, ...(signals.has(signal) ? { signal } : {}),
+      event: "provider_process_exited",
+      level: exitCode ? "error" : "info",
+      exitCode,
+      ...(signals.has(signal) ? { signal } : {}),
     })
     process.exitCode = exitCode
   })

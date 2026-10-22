@@ -27,6 +27,11 @@ function Preferences({
   return (
     <section className="customer-notifications">
       <h2>Receber atualizações</h2>
+      {resource.loading && !resource.data && (
+        <p className="field-help" role="status">
+          Consultando suas preferências…
+        </p>
+      )}
       {resource.error && (
         <ErrorNotice error={resource.error} onRetry={() => void resource.reload()} />
       )}
@@ -52,7 +57,7 @@ function Preferences({
           />
           <p className="field-help">
             {resource.data.available
-              ? "Após autorizar, você receberá as próximas atualizações de etapas e pagamentos no número informado no pedido."
+              ? "A autorização vale para as próximas atualizações de etapas e pagamentos no número informado no pedido. Etapas anteriores não são reenviadas."
               : "A loja ainda não ativou o envio por WhatsApp. Sua preferência será salva, mas as mensagens só poderão ser enviadas após a ativação pela loja."}
           </p>
         </>
