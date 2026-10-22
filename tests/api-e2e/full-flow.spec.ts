@@ -872,12 +872,13 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   await expect(
     customer.getByText(/A loja ainda não ativou o envio por WhatsApp/),
   ).toBeVisible()
-  await whatsappPreference.check()
+  // The controlled preference changes only after server confirmation, not at click time.
+  await whatsappPreference.click()
   await expect(whatsappPreference).toBeChecked()
   await expect(customer.locator(".customer-notifications [role=alert]")).toHaveCount(0)
   await customer.reload()
   await expect(whatsappPreference).toBeChecked()
-  await whatsappPreference.uncheck()
+  await whatsappPreference.click()
   await expect(whatsappPreference).not.toBeChecked()
   await expect(customer.locator(".customer-notifications [role=alert]")).toHaveCount(0)
   await customer.reload()
