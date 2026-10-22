@@ -382,20 +382,18 @@ test("tracking token protects consent; push endpoints are restricted and encrypt
     ).whatsapp,
     false,
   )
-  assert.equal(
-    (await request("PUT", endpoint, { whatsapp: true }, headers)).statusCode,
-    200,
-  )
+  const enabled = await request("PUT", endpoint, { whatsapp: true }, headers)
+  assert.equal(enabled.statusCode, 200)
+  assert.deepEqual(JSON.parse(enabled.body), { ok: true })
   assert.equal(
     value<{ whatsapp: boolean }>(
       (await request("GET", endpoint, undefined, headers)).body,
     ).whatsapp,
     true,
   )
-  assert.equal(
-    (await request("PUT", endpoint, { whatsapp: false }, headers)).statusCode,
-    200,
-  )
+  const disabled = await request("PUT", endpoint, { whatsapp: false }, headers)
+  assert.equal(disabled.statusCode, 200)
+  assert.deepEqual(JSON.parse(disabled.body), { ok: true })
   const subscription = pushFixture()
   for (const bad of [
     "http://127.0.0.1:3001",
@@ -419,6 +417,48 @@ test("tracking token protects consent; push endpoints are restricted and encrypt
     new SubscriptionCipher(server.runtime.config.secret).open(rows[0]!.encrypted),
     subscription,
   )
+})
+
+test("repeated WhatsApp consent preserves queued event eligibility; reconsent starts a new window", async () => {
+  const created = await order(true),
+    endpoint = `${publicRoute()}/orders/${created.orderId}/notifications`,
+    headers = { "x-order-token": created.trackingToken! },
+    firstConsent = new Date(Date.now() - 60000),
+    db = server.runtime.db.client
+  await db.order.update({
+    where: { id: created.orderId! },
+    data: { whatsappConsentAt: firstConsent },
+  })
+  assert.equal(
+    (await request("PUT", endpoint, { whatsapp: true }, headers)).statusCode,
+    200,
+  )
+  const unchanged = await db.order.findUniqueOrThrow({
+    where: { id: created.orderId! },
+    select: { whatsappConsentAt: true, whatsappRevokedAt: true },
+  })
+  assert.equal(unchanged.whatsappConsentAt?.getTime(), firstConsent.getTime())
+  assert.equal(unchanged.whatsappRevokedAt, null)
+  assert.equal(
+    (await request("PUT", endpoint, { whatsapp: false }, headers)).statusCode,
+    200,
+  )
+  const revoked = await db.order.findUniqueOrThrow({
+    where: { id: created.orderId! },
+    select: { whatsappRevokedAt: true },
+  })
+  assert.ok(revoked.whatsappRevokedAt)
+  assert.equal(
+    (await request("PUT", endpoint, { whatsapp: true }, headers)).statusCode,
+    200,
+  )
+  const renewed = await db.order.findUniqueOrThrow({
+    where: { id: created.orderId! },
+    select: { whatsappConsentAt: true, whatsappRevokedAt: true },
+  })
+  assert.ok(renewed.whatsappConsentAt! >= revoked.whatsappRevokedAt)
+  assert.notEqual(renewed.whatsappConsentAt?.getTime(), firstConsent.getTime())
+  assert.equal(renewed.whatsappRevokedAt, null)
 })
 
 test("inbox filters finance by role and read markers never move backward", async () => {
@@ -466,6 +506,133 @@ test("inbox filters finance by role and read markers never move backward", async
       data: { role: "OWNER" },
     })
   }
+})
+
+test("automatic WhatsApp confirms late consent once and groups receipts without manual customer messages", async () => {
+  const db = server.runtime.db,
+    scope = { tenantId: store.tenantId, restaurantId: store.id }
+  await db.client.notificationEvent.updateMany({
+    where: scope,
+    data: { expandedAt: new Date() },
+  })
+  await db.client.storeChannel.update({
+    where: { restaurantId: store.id },
+    data: { whatsappEnabled: true },
+  })
+  const messages: string[] = []
+  const provider: WhatsappProvider = {
+    configured: true,
+    state: async () => ({ state: "connected", qr: null }),
+    connect: async () => ({ state: "connected", qr: null }),
+    disconnect: async () => {},
+    send: async (_scope, _phone, text) => {
+      messages.push(text)
+      return "SENT"
+    },
+  }
+  const worker = new NotificationWorker(
+    db,
+    new SubscriptionCipher(server.runtime.config.secret),
+    provider,
+    { configured: false, send: async () => "SENT" },
+    server.runtime.operation,
+  )
+  const created = await order(false),
+    endpoint = `${publicRoute()}/orders/${created.orderId}/notifications`,
+    headers = { "x-order-token": created.trackingToken! }
+  await worker.tick()
+  assert.equal(messages.length, 0)
+  for (let i = 0; i < 2; i++)
+    assert.equal(
+      (await request("PUT", endpoint, { whatsapp: true }, headers)).statusCode,
+      200,
+    )
+  assert.equal(
+    await db.client.notificationEvent.count({
+      where: { ...scope, orderId: created.orderId!, kind: "SUBSCRIBED" },
+    }),
+    1,
+  )
+  await worker.tick()
+  assert.equal(messages.length, 1)
+  assert.match(messages[0]!, /Avisos automáticos ativados/)
+  await request("PUT", endpoint, { whatsapp: false }, headers)
+  await request("PUT", endpoint, { whatsapp: true }, headers)
+  await worker.tick()
+  assert.equal(messages.length, 1)
+  assert.ok(
+    value<Inbox>((await request("GET", `${route()}/notifications`)).body).items.every(
+      (event) => String(event.kind) !== "SUBSCRIBED",
+    ),
+  )
+
+  await db.client.restaurant.update({
+    where: { id: store.id },
+    data: { whatsapp: "5511988888888", whatsappConfigured: true },
+  })
+  const automatic = await order(true)
+  const contactText = new URL(automatic.url).searchParams.get("text")!
+  assert.match(contactText, /já registrado/)
+  assert.match(contactText, /Queijo/)
+  assert.match(contactText, /Rua Particular/)
+  assert.match(contactText, /Forma de pagamento escolhida/)
+  await worker.tick()
+  assert.equal(messages.length, 2)
+  assert.match(messages[1]!, /Pedido recebido/)
+  for (const [revision, status] of ["PREPARING", "READY", "OUT_FOR_DELIVERY"].entries()) {
+    // This fixture isolates message policy; status transition authorization is covered separately.
+    await db.client.order.update({
+      where: { id: automatic.orderId! },
+      data: { status: status as "PREPARING" | "READY" | "OUT_FOR_DELIVERY" },
+    })
+    await db.client.notificationEvent.create({
+      data: {
+        ...scope,
+        id: randomUUID(),
+        orderId: automatic.orderId!,
+        kind: "ORDER",
+        status,
+      },
+    })
+    await worker.tick()
+    assert.equal(messages.length, revision === 2 ? 3 : 2)
+  }
+  assert.match(messages[2]!, /saiu para entrega/)
+  for (let i = 0; i < 2; i++) {
+    const payment = await request("POST", `${route()}/payments`, {
+      requestId: randomUUID(),
+      orderId: automatic.orderId,
+      amount: "0,10",
+      expectedPaid: i * 10,
+      method: "PIX",
+      description: "",
+    })
+    assert.equal(payment.statusCode, 201)
+  }
+  await worker.tick()
+  const queued = await db.client.notificationDelivery.findMany({
+    where: {
+      event: { ...scope, orderId: automatic.orderId!, kind: "PAYMENT" },
+      channel: "WHATSAPP",
+    },
+  })
+  assert.equal(queued.length, 2)
+  assert.ok(queued.every((job) => job.availableAt > job.createdAt))
+  assert.equal(messages.length, 3)
+  await db.client.notificationDelivery.updateMany({
+    where: { id: { in: queued.map((job) => job.id) } },
+    data: { availableAt: new Date(0) },
+  })
+  await worker.tick()
+  assert.equal(messages.length, 4)
+  assert.match(messages[3]!, /Saldo a pagar: \*R\$\s20,02\*/)
+  assert.equal(
+    await db.client.notificationDelivery.count({
+      where: { id: { in: queued.map((job) => job.id) }, state: "SKIPPED" },
+    }),
+    1,
+  )
+  await worker.close()
 })
 
 test("outbox checks consent and session again; ambiguous WhatsApp delivery is never retried", async () => {

@@ -1,6 +1,5 @@
 import { randomUUID, createHash } from "node:crypto"
 import { boardSnapshotSchema, deliveriesSchema, type Role } from "@cardapio/contracts"
-import { can } from "@cardapio/domain/permissions"
 import { Failure, requireValid } from "@cardapio/domain/failure"
 import type { Database } from "../../../shared/infrastructure/database.js"
 import type { TenantScope } from "../../identity/domain/identity.js"
@@ -10,6 +9,7 @@ import type {
   PushInput,
 } from "../application/ports.js"
 import { notificationView } from "../application/messages.js"
+import { staffNotificationFilter } from "../application/staff-notifications.js"
 import type { SubscriptionCipher } from "./subscription-cipher.js"
 export class PrismaEngagement implements EngagementRepository {
   constructor(
@@ -84,14 +84,39 @@ export class PrismaEngagement implements EngagementRepository {
     })
   }
   async consent(scope: TenantScope, id: string, consent: boolean, now: Date) {
-    await this.db.run((tx) =>
-      tx.order.updateMany({
-        where: { ...scope, id },
+    // Repeating the same preference must not invalidate events already authorized.
+    // A new consent after revocation starts a fresh eligibility window.
+    await this.db.transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM \`Order\` WHERE id = ${id} AND tenantId = ${scope.tenantId} AND restaurantId = ${scope.restaurantId} FOR UPDATE`
+      const previous = await tx.order.findFirst({ where: { ...scope, id } })
+      if (!previous) throw new Failure("NOT_FOUND", "Pedido indisponível.")
+      const changed = await tx.order.updateMany({
+        where: {
+          ...scope,
+          id,
+          ...(consent
+            ? {
+                OR: [{ whatsappConsentAt: null }, { whatsappRevokedAt: { not: null } }],
+              }
+            : { whatsappRevokedAt: null }),
+        },
         data: consent
           ? { whatsappConsentAt: now, whatsappRevokedAt: null }
           : { whatsappRevokedAt: now },
-      }),
-    )
+      })
+      // Only the first late opt-in produces a welcome. Retrying/toggling never replays it.
+      if (consent && changed.count && previous.whatsappConsentAt === null)
+        await tx.notificationEvent.create({
+          data: {
+            ...scope,
+            id: randomUUID(),
+            orderId: id,
+            kind: "SUBSCRIBED",
+            status: previous.status,
+            createdAt: now,
+          },
+        })
+    })
   }
   async subscribe(
     scope: TenantScope,
@@ -151,8 +176,7 @@ export class PrismaEngagement implements EngagementRepository {
         )?.readAt ?? new Date(0)
       const where = {
         ...scope,
-        ...(!can(role, "payments:read") ? { kind: "ORDER" } : {}),
-        ...(role === "COURIER" ? { order: { courierId: userId } } : {}),
+        ...staffNotificationFilter(role, userId),
         createdAt: { gte: new Date(Date.now() - 30 * 86400000) },
       }
       const items = await tx.notificationEvent.findMany({

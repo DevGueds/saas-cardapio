@@ -1,10 +1,19 @@
 import { randomUUID } from "node:crypto"
-import { can } from "@cardapio/domain/permissions"
 import { Failure } from "@cardapio/domain/failure"
 import type { Database } from "../../../shared/infrastructure/database.js"
 import type { Operation } from "../../../shared/application/operation.js"
 import type { WhatsappProvider } from "../application/ports.js"
 import { notificationText } from "../application/messages.js"
+import {
+  staffNotificationRelevant,
+  staffNotificationText,
+} from "../application/staff-notifications.js"
+import {
+  customerMessageRelevant,
+  customerWhatsappMessage,
+  financialMessageDelayMs,
+  isFinancialEvent,
+} from "../application/customer-messages.js"
 import type { SubscriptionCipher } from "./subscription-cipher.js"
 import type { PushSender } from "./web-push.js"
 export class NotificationWorker {
@@ -98,7 +107,7 @@ export class NotificationWorker {
         return
       const scope = { tenantId: event.tenantId, restaurantId: event.restaurantId },
         recipients: { channel: string; recipient: string }[] = []
-      if (this.push.configured) {
+      if (this.push.configured && event.kind !== "SUBSCRIBED") {
         const subscriptions = await tx.pushSubscription.findMany({
           where: {
             ...scope,
@@ -125,14 +134,13 @@ export class NotificationWorker {
           select: { id: true, userId: true },
         })
         for (const sub of subscriptions) {
+          if (!sub.userId && !customerMessageRelevant(event, event.order)) continue
           if (sub.userId) {
             const member = members.find((m) => m.userId === sub.userId)
             if (
               !sessions.some((s) => s.id === sub.sessionId && s.userId === sub.userId) ||
               !member ||
-              !can(member.role, "orders:read") ||
-              (event.kind !== "ORDER" && !can(member.role, "payments:read")) ||
-              (member.role === "COURIER" && event.order.courierId !== sub.userId)
+              !staffNotificationRelevant(member.role, sub.userId, event, event.order)
             )
               continue
           }
@@ -141,6 +149,7 @@ export class NotificationWorker {
       }
       if (
         this.whatsapp.configured &&
+        customerMessageRelevant(event, event.order) &&
         event.restaurant.channel?.whatsappEnabled &&
         event.order.whatsappConsentAt &&
         !event.order.whatsappRevokedAt &&
@@ -153,7 +162,15 @@ export class NotificationWorker {
             ...r,
             id: randomUUID(),
             eventId: id,
-            availableAt: now,
+            availableAt:
+              r.channel === "WHATSAPP" && isFinancialEvent(event)
+                ? new Date(
+                    Math.max(
+                      now.getTime(),
+                      event.createdAt.getTime() + financialMessageDelayMs,
+                    ),
+                  )
+                : now,
           })),
           skipDuplicates: true,
         })
@@ -193,7 +210,8 @@ export class NotificationWorker {
     job: NonNullable<Awaited<ReturnType<NotificationWorker["claim"]>>>,
   ) {
     let state = "SKIPPED",
-      retry = false
+      retry = false,
+      whatsappAttempted = false
     try {
       const event = job.event,
         scope = { tenantId: event.tenantId, restaurantId: event.restaurantId },
@@ -215,8 +233,37 @@ export class NotificationWorker {
           order.restaurant.channel?.whatsappEnabled &&
           order.whatsappConsentAt &&
           order.whatsappConsentAt <= event.createdAt &&
-          !order.whatsappRevokedAt
+          !order.whatsappRevokedAt &&
+          customerMessageRelevant(event, order)
         ) {
+          // Coalesce successive manual receipts/reversals into the most recent balance.
+          // The transaction keeps the selected financial event and summed cents consistent.
+          const finance = isFinancialEvent(event)
+            ? await this.db.transaction(async (tx) => {
+                const latest = await tx.notificationEvent.findFirst({
+                  where: {
+                    ...scope,
+                    orderId: order.id,
+                    kind: { in: ["PAYMENT", "REVERSAL"] },
+                  },
+                  orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+                  select: { id: true },
+                })
+                const received = await tx.payment.aggregate({
+                  where: { ...scope, orderId: order.id, reversedAt: null },
+                  _sum: { amount: true },
+                })
+                return {
+                  current: latest?.id === event.id,
+                  paid: received._sum.amount ?? 0,
+                }
+              })
+            : null
+          if (finance && !finance.current) {
+            await this.finish(job, "SKIPPED", false)
+            return
+          }
+          const message = customerWhatsappMessage(event, order, finance?.paid)
           const customer = order.customer as { phone?: unknown },
             raw =
               typeof customer.phone === "string" ? customer.phone.replace(/\D/g, "") : "",
@@ -230,21 +277,21 @@ export class NotificationWorker {
           if (!connected) {
             retry = job.attempts < 5
             state = retry ? "PENDING" : "FAILED"
-          } else
-            state = /^55\d{10,11}$/.test(number)
-              ? await this.whatsapp.send(
-                  scope,
-                  number,
-                  `${order.restaurant.name}\n${text.title}\n${text.message}\nPara interromper estas mensagens, desative o WhatsApp no acompanhamento do pedido.`,
-                )
-              : "FAILED"
+          } else if (/^55\d{10,11}$/.test(number)) {
+            whatsappAttempted = true
+            state = await this.whatsapp.send(scope, number, message)
+          } else state = "FAILED"
         } else if (job.channel === "PUSH") {
           const sub = await this.db.run((tx) =>
             tx.pushSubscription.findFirst({
               where: { ...scope, id: job.recipient, expiresAt: { gt: now } },
             }),
           )
-          let allowed = !!sub && sub.orderId === order.id
+          let allowed =
+            !!sub &&
+            sub.orderId === order.id &&
+            event.kind !== "SUBSCRIBED" &&
+            customerMessageRelevant(event, order)
           if (sub?.userId) {
             const session = sub.sessionId
               ? await this.db.run((tx) =>
@@ -272,15 +319,14 @@ export class NotificationWorker {
             allowed =
               !!session &&
               !!member &&
-              can(member.role, "orders:read") &&
-              (event.kind === "ORDER" || can(member.role, "payments:read")) &&
-              (member.role !== "COURIER" || order.courierId === sub.userId)
+              staffNotificationRelevant(member.role, sub.userId, event, order)
           }
           if (sub && allowed) {
+            const content = sub.userId ? staffNotificationText(event) : text
             const result = await this.push.send(this.cipher.open(sub.encrypted), {
-              title: text.title,
-              body: text.message,
-              tag: event.id,
+              title: content.title,
+              body: content.message,
+              tag: `order:${order.id}:${isFinancialEvent(event) ? "payment" : "stage"}`,
               url: sub.userId
                 ? `/admin/orders?restaurant=${scope.restaurantId}`
                 : `/menu/${order.restaurant.slug}`,
@@ -299,7 +345,15 @@ export class NotificationWorker {
       }
     } catch (cause) {
       this.operation.error("notifications.delivery", cause)
-      state = job.channel === "WHATSAPP" ? "UNKNOWN" : "FAILED"
+      // A failed preflight did not submit a message and can safely be retried.
+      // Once send has been called, an exception may hide an accepted message.
+      retry = job.channel === "WHATSAPP" && !whatsappAttempted && job.attempts < 5
+      state =
+        job.channel === "WHATSAPP" && whatsappAttempted
+          ? "UNKNOWN"
+          : retry
+            ? "PENDING"
+            : "FAILED"
     }
     if (state === "FAILED" || state === "UNKNOWN")
       this.operation.error(
@@ -311,7 +365,14 @@ export class NotificationWorker {
           `notification_${job.channel.toLowerCase()}_${state.toLowerCase()}`,
         ),
       )
-    await this.db.run((tx) =>
+    await this.finish(job, state, retry)
+  }
+  private finish(
+    job: NonNullable<Awaited<ReturnType<NotificationWorker["claim"]>>>,
+    state: string,
+    retry: boolean,
+  ) {
+    return this.db.run((tx) =>
       tx.notificationDelivery.updateMany({
         where: { id: job.id, state: "PROCESSING", claimedAt: job.claimedAt },
         data: {
