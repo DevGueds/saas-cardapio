@@ -301,11 +301,13 @@ function ChannelControls({
             </table>
           </div>
         ) : (
-          <p>
-            {deliveries.loading
-              ? "Carregando envios…"
-              : "Ainda não há envios nesta loja."}
-          </p>
+          !deliveries.error && (
+            <p role="status">
+              {deliveries.loading
+                ? "Carregando envios…"
+                : "Ainda não há envios nesta loja. Para enviar pelo WhatsApp, conecte o número, ative o canal e aguarde uma nova etapa ou pagamento de um pedido cujo cliente já autorizou as mensagens. Etapas anteriores não são reenviadas."}
+            </p>
+          )
         )}
       </section>
       {confirmation && (
