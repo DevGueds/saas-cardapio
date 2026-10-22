@@ -57,7 +57,7 @@ function Preferences({
           />
           <p className="field-help">
             {resource.data.available
-              ? "A autorização vale para as próximas atualizações de etapas e pagamentos no número informado no pedido. Etapas anteriores não são reenviadas."
+              ? "Os avisos importantes são automáticos: confirmação, retirada ou saída para entrega, cancelamento e pagamentos. Ao autorizar pela primeira vez, enviaremos a situação atual; não é preciso mandar mensagem à loja. Etapas anteriores não são reenviadas."
               : "A loja ainda não ativou o envio por WhatsApp. Sua preferência será salva, mas as mensagens só poderão ser enviadas após a ativação pela loja."}
           </p>
         </>

@@ -39,13 +39,13 @@ export function orderMessage(
     }))
   const items = lines.map(
     (line) =>
-      `${line.quantity}x ${line.name} — ${formatMoney(line.unitPrice * line.quantity)}${line.components?.length ? "\n  " + line.components.join("; ") : ""}${line.note.trim() ? `\n  Obs.: ${line.note.trim()}` : ""}`,
+      `• ${line.quantity}x ${whatsappInline(line.name)} — *${formatMoney(line.unitPrice * line.quantity)}*${line.components?.length ? "\n  " + line.components.map(whatsappInline).join("; ") : ""}${line.note.trim() ? `\n  Obs.: ${whatsappInline(line.note)}` : ""}`,
   )
 
   return [
-    `NOVO PEDIDO — ${menu.restaurant.name}`,
+    `*PEDIDO — ${whatsappInline(menu.restaurant.name)}*`,
     "",
-    "Itens do pedido:",
+    "*Itens do pedido*",
     ...items,
     "",
 
@@ -53,28 +53,44 @@ export function orderMessage(
     `Taxa de entrega: ${formatMoney(quote?.deliveryFee ?? menu.restaurant.deliveryFee)}`,
 
     ...(quote?.discount
-      ? [`Desconto (${quote.promotionName}): -${formatMoney(quote.discount)}`]
+      ? [
+          `Desconto (${whatsappInline(quote.promotionName ?? "Promoção")}): -${formatMoney(quote.discount)}`,
+        ]
       : []),
     ...(quote
       ? [
           `Modalidade: ${quote.fulfillment.mode === "PICKUP" ? "Retirada" : "Entrega"}`,
-          `Região: ${quote.region}`,
-          `Prazo estimado: ${quote.eta}`,
+          ...(quote.fulfillment.mode === "DELIVERY"
+            ? [`Região: ${whatsappInline(quote.region)}`]
+            : []),
+          `Prazo estimado: ${whatsappInline(quote.eta)}`,
         ]
       : []),
-    `TOTAL: ${formatMoney(total)}`,
+    `*TOTAL: ${formatMoney(total)}*`,
     "",
-    "Dados para entrega:",
+    quote?.fulfillment.mode === "PICKUP"
+      ? "*Retirada no estabelecimento*"
+      : "*Dados para entrega*",
 
-    `Nome: ${customer.name}`,
+    `Nome: ${whatsappInline(customer.name)}`,
     `WhatsApp: ${customer.phone}`,
-    `Endereço: ${customer.address}`,
+    ...(quote?.fulfillment.mode === "PICKUP"
+      ? []
+      : [`Endereço: ${whatsappInline(customer.address)}`]),
 
-    `Pagamento: ${customer.payment}`,
+    `Forma de pagamento escolhida: ${customer.payment}`,
     ...(change !== undefined ? [`Troco para: ${formatMoney(change)}`] : []),
 
-    ...(customer.notes ? [`Observações: ${customer.notes}`] : []),
+    ...(customer.notes ? [`Observações: ${whatsappInline(customer.notes)}`] : []),
     "",
-    "Pedido preparado pelo cardápio digital. Confirme o recebimento com a loja.",
+    "A forma de pagamento escolhida não confirma quitação.",
   ].join("\n")
+}
+
+/** Preserve content while preventing free text from changing the message hierarchy. */
+export function whatsappInline(value: string) {
+  return value
+    .replace(/[*_~`\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 }

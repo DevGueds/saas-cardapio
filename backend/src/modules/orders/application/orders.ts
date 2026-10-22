@@ -120,7 +120,7 @@ export class Orders {
           return {
             checkoutRevision: menu.revision,
             whatsappUrl: checkout.phone
-              ? `https://wa.me/${checkout.phone}?text=${encodeURIComponent(checkout.message)}`
+              ? `https://wa.me/${checkout.phone}?text=${encodeURIComponent(`*Pedido #${id.slice(0, 8).toUpperCase()} já registrado*\nContato sobre este pedido — não criar outro.\n\n${checkout.message}`)}`
               : "",
             trackingHash: this.secrets.hash(trackingToken(id)),
             trackingExpiresAt: new Date(now.getTime() + 30 * 86400000),
