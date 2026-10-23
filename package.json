@@ -34,7 +34,7 @@
     "dev:full": "node scripts/dev-full.mjs",
     "check:all": "pnpm check && pnpm api:check",
     "build:api": "pnpm check:text && tsc --noEmit && vite build --mode api",
-    "test:e2e:api": "pnpm api:build && pnpm --filter @cardapio/api db:migrate:test && playwright test --config playwright.api.config.ts",
+    "test:e2e:api": "pnpm api:build && pnpm --filter @cardapio/api db:migrate:test && node scripts/test-api-browser.mjs",
     "test:e2e:api:cleanup": "pnpm --filter @cardapio/api exec node scripts/cleanup-browser-tests.mjs",
     "build:shared": "pnpm --filter @cardapio/domain build && pnpm --filter @cardapio/contracts build",
     "api:maintenance": "pnpm --filter @cardapio/api maintenance",
