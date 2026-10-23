@@ -48,6 +48,8 @@ Gitleaks 8.30.1 é baixado do release oficial, com SHA-256 fixado e validado ant
 
 As simulações de MFA incluem sessão incompleta, CSRF, acesso entre organizações, perfil sem permissão, reutilização de TOTP/recuperação, corrida com duas requisições, configuração vinculada à sessão, expiração e limitação de tentativas. Testes usam somente banco com sufixo `_test` e contas sintéticas.
 
+`test:e2e:api` executa cada arquivo de cenários em seu próprio servidor de teste, com segredo de sessão aleatório por execução. Isso isola as cotas de cadastro entre grupos de testes: os limites reais no Redis permanecem habilitados, sem aumentar limites da aplicação nem apagar contadores compartilhados. Os testes de integração verificam a aplicação desses limites e o compartilhamento entre réplicas.
+
 `test:docker:security` sobe um container temporário da imagem real da API em `127.0.0.1:8082`, conectado exclusivamente ao banco `_test`. `NODE_ENV=test` impede iniciar o worker de mensagens. Verifica execução sem root, escrita recusada no filesystem, autenticação, payloads de injeção, origem/CSRF, cache e tentativas de bypass/replay do MFA. A limpeza remove somente contas geradas pela execução e o próprio container. Não altera pedidos reais, contas existentes, pareamento WhatsApp ou volumes da aplicação. Requer imagens construídas, migrações de teste e backend compilado; é executado pela CI.
 
 ## Referências e limites
