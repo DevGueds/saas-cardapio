@@ -32,6 +32,12 @@ export const router = createBrowserRouter(
         },
         { path: "/login", Component: LoginPage },
         {
+          path: "/mfa",
+          lazy: async () => ({
+            Component: (await import("../modules/identity/presentation/MfaPage")).default,
+          }),
+        },
+        {
           path: "/pedido/:slug/:orderId",
           lazy: async () => ({
             Component: (await import("../modules/orders/presentation/TrackingPage"))
@@ -45,6 +51,13 @@ export const router = createBrowserRouter(
           path: "/admin",
           Component: AdminRoute,
           children: [
+            {
+              path: "security",
+              lazy: async () => ({
+                Component: (await import("../modules/identity/presentation/SecurityPage"))
+                  .default,
+              }),
+            },
             { index: true, Component: AdminAlias },
             {
               path: "channels",

@@ -9,6 +9,7 @@ export * from "./commerce.js"
 export * from "./payments.js"
 export * from "./menu-options.js"
 export * from "./engagement.js"
+export * from "./security.js"
 import { addonSelectionsSchema } from "./menu-options.js"
 import {
   checkoutOptionsSchema,
@@ -66,6 +67,7 @@ export const sessionSchema = z.strictObject({
   user: z.strictObject({ id: uuid, name }),
   csrfToken: z.string().regex(/^[a-f0-9]{64}$/),
   expiresAt: z.iso.datetime(),
+  mfa: z.enum(["NONE", "ENROLL", "VERIFY", "VERIFIED"]).optional(),
 })
 export type SessionView = z.infer<typeof sessionSchema>
 export const restaurantAccessSchema = z.strictObject({

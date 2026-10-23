@@ -1,4 +1,5 @@
 import type { CanActivate, ExecutionContext } from "@nestjs/common"
+import { SetMetadata } from "@nestjs/common"
 import { Reflector } from "@nestjs/core"
 import type { FastifyRequest } from "fastify"
 import { Failure } from "@cardapio/domain/failure"
@@ -9,6 +10,8 @@ import type {
   AuthenticatedSession,
 } from "../application/authentication.js"
 export type SessionRequest = FastifyRequest & { session?: AuthenticatedSession }
+const MFA_ALLOWED = Symbol("mfa-allowed")
+export const MfaAllowed = () => SetMetadata(MFA_ALLOWED, true)
 export function authenticated(request: SessionRequest) {
   if (!request.session)
     throw new Failure("UNAUTHENTICATED", "Entre na sua conta para continuar.")
@@ -31,6 +34,17 @@ export class SessionGuard implements CanActivate {
       return true
     const request = context.switchToHttp().getRequest<SessionRequest>()
     request.session = await this.auth.authenticate(request.cookies[this.cookieName])
+    if (
+      ["ENROLL", "VERIFY"].includes(request.session.view.mfa ?? "") &&
+      !this.reflector.getAllAndOverride<boolean>(MFA_ALLOWED, [
+        context.getHandler(),
+        context.getClass(),
+      ])
+    )
+      throw new Failure(
+        "MFA_REQUIRED",
+        "Confirme a verificação em duas etapas para continuar.",
+      )
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
       const csrf = request.headers["x-csrf-token"]
       if (

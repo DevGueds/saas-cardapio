@@ -4,7 +4,9 @@ import { Failure } from "../domain/failure"
 import type { Executor } from "../application/execute"
 export class ApiClient {
   private csrf = ""
-  private readonly expired = new Set<() => void>()
+  private readonly expired = new Set<
+    (reason?: "UNAUTHENTICATED" | "MFA_REQUIRED") => void
+  >()
   constructor(
     private readonly base: unknown,
     private readonly executor: Executor,
@@ -12,7 +14,7 @@ export class ApiClient {
   setCsrf(value: string) {
     this.csrf = value
   }
-  subscribeExpired(listener: () => void) {
+  subscribeExpired(listener: (reason?: "UNAUTHENTICATED" | "MFA_REQUIRED") => void) {
     this.expired.add(listener)
     return () => {
       this.expired.delete(listener)
@@ -109,11 +111,13 @@ export class ApiClient {
         )
       if (
         !result.data.ok &&
-        result.data.error.code === "UNAUTHENTICATED" &&
+        (result.data.error.code === "UNAUTHENTICATED" ||
+          result.data.error.code === "MFA_REQUIRED") &&
         path !== "/auth/login"
       ) {
-        this.csrf = ""
-        this.expired.forEach((listener) => listener())
+        if (result.data.error.code === "UNAUTHENTICATED") this.csrf = ""
+        const reason = result.data.error.code
+        this.expired.forEach((listener) => listener(reason))
       }
       return result.data as Result<T>
     })

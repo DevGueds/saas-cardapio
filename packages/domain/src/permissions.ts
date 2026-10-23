@@ -15,6 +15,7 @@ export type Permission =
   | "orders:write"
   | "orders:dispatch"
   | "members:write"
+  | "security:write"
   | "payments:read"
   | "payments:write"
   | "payments:reverse"
@@ -36,12 +37,14 @@ const permissions: Record<Role, readonly Permission[]> = {
     "orders:write",
     "orders:dispatch",
     "members:write",
+    "security:write",
     "payments:read",
     "payments:write",
     "payments:reverse",
     "reports:read",
   ],
   MANAGER: [
+    "security:write",
     "payments:read",
     "payments:write",
     "payments:reverse",

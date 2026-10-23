@@ -31,6 +31,10 @@ export default function ApiAdminRoute() {
       setData(null)
       return
     }
+    if (["ENROLL", "VERIFY"].includes(session.value.mfa ?? "")) {
+      navigate("/mfa", { replace: true })
+      return
+    }
     const stores = await auth.restaurants()
     if (!stores.ok) {
       setError(stores.error)
@@ -39,14 +43,14 @@ export default function ApiAdminRoute() {
     }
     setData({ session: session.value, stores: stores.value })
     setError(null)
-  }, [auth])
+  }, [auth, navigate])
   useEffect(() => {
     void reload()
   }, [reload])
   useEffect(
     () =>
-      auth?.subscribeExpired(() =>
-        navigate("/login", {
+      auth?.subscribeExpired((reason) =>
+        navigate(reason === "MFA_REQUIRED" ? "/mfa" : "/login", {
           replace: true,
           state: { returnTo: location.pathname + location.search },
         }),

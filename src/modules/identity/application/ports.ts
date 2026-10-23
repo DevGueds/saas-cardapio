@@ -22,5 +22,7 @@ export interface IdentityService {
     restaurantName: string
     slug: string
   }): Promise<Result<{ tenantId: string; restaurantId: string }>>
-  subscribeExpired(listener: () => void): () => void
+  subscribeExpired(
+    listener: (reason?: "UNAUTHENTICATED" | "MFA_REQUIRED") => void,
+  ): () => void
 }

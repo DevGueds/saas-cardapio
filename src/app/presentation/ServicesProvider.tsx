@@ -1,5 +1,6 @@
 import type { IdGenerator } from "../../shared/application/ports"
 import type { TeamService } from "../../modules/identity/application/team"
+import type { SecurityService } from "../../modules/identity/application/security"
 import type { EngagementService } from "../../modules/engagement/application/ports"
 import type { DevicePush } from "../../shared/application/push"
 import type { DeviceLocation } from "../../shared/application/location"
@@ -41,6 +42,7 @@ export interface ApplicationServices {
   mode?: "demo" | "api"
   auth?: IdentityService
   team?: TeamService
+  security?: SecurityService
   payments?: PaymentsService
   documents?: DocumentExporter
   orders?: OrdersService

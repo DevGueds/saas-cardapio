@@ -17,6 +17,8 @@
     "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm build:demo",
     "format": "prettier --write .",
     "check:text": "node scripts/check-text.mjs",
+    "security:secrets": "node scripts/check-secrets.mjs",
+    "test:docker:security": "node scripts/test-docker-security.mjs",
     "format:check": "prettier --check .",
     "postinstall": "pnpm --filter @cardapio/domain build && pnpm --filter @cardapio/contracts build && pnpm --filter @cardapio/api db:generate",
     "api:dev": "pnpm --filter @cardapio/api dev",

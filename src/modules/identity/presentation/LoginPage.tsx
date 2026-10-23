@@ -59,6 +59,10 @@ export default function LoginPage() {
         : auth.login(credentials),
     )
     if (result?.ok) {
+      if (["ENROLL", "VERIFY"].includes(result.value.mfa ?? "")) {
+        navigate("/mfa", { replace: true })
+        return
+      }
       const returnTo: unknown = location.state?.returnTo
       navigate(
         typeof returnTo === "string" && /^\/admin(?:[/?]|$)/.test(returnTo)

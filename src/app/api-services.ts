@@ -38,6 +38,7 @@ export function apiServices(): ApplicationServices {
     drafts,
     auth,
     team: new HttpTeam(client),
+    security: new HttpSecurity(client),
     commerce,
     maps: commerce,
     quote: (slug, revision, cart, options) =>
@@ -75,3 +76,4 @@ export function apiServices(): ApplicationServices {
       }),
   }
 }
+import { HttpSecurity } from "../modules/identity/infrastructure/http-security"

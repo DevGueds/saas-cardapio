@@ -17,6 +17,7 @@ import type { Operation } from "../../../shared/application/operation.js"
 import { validate } from "../../../shared/application/validate.js"
 import type { Actor } from "../domain/identity.js"
 import type { IdentityRepository, SessionInput, SessionRecord } from "./ports.js"
+import { mfaPending, mfaState } from "./mfa-state.js"
 
 export interface AuthenticatedSession {
   actor: Actor
@@ -93,6 +94,7 @@ export class Authentication {
           user: { id: user.id, name: user.name },
           csrfToken: session.csrfToken,
           expiresAt: session.record.expiresAt.toISOString(),
+          mfa: "NONE" as const,
         },
       }
     })
@@ -110,13 +112,14 @@ export class Authentication {
       if (!user || !valid || !user.active)
         throw new Failure("UNAUTHENTICATED", "E-mail ou senha inválidos.")
       const session = this.newSession(user.id)
-      await this.repository.createSession(session.record)
+      await this.repository.createSession(session.record, user.passwordHash)
       return {
         token: session.token,
         session: {
           user: { id: user.id, name: user.name },
           csrfToken: session.csrfToken,
           expiresAt: session.record.expiresAt.toISOString(),
+          mfa: mfaState({ ...session.record, user, revokedAt: null }),
         },
       }
     })
@@ -130,6 +133,15 @@ export class Authentication {
     )
     if (!record)
       throw new Failure("UNAUTHENTICATED", "Sua sessão expirou. Entre novamente.")
+    if (
+      mfaPending(record) &&
+      (!record.createdAt ||
+        this.clock.now().getTime() - record.createdAt.getTime() > 600_000)
+    )
+      throw new Failure(
+        "UNAUTHENTICATED",
+        "O tempo para confirmar o acesso terminou. Entre novamente.",
+      )
     return {
       actor: { userId: record.userId, sessionId: record.id },
       csrfHash: record.csrfHash,
@@ -141,6 +153,7 @@ export class Authentication {
       user: { id: record.user.id, name: record.user.name },
       csrfToken,
       expiresAt: record.expiresAt.toISOString(),
+      mfa: mfaState(record),
     }
   }
   logout(actor: Actor) {
@@ -156,6 +169,7 @@ export class Authentication {
       const session = await this.repository.sessionByActor(actor, this.clock.now())
       if (
         !session ||
+        mfaPending(session) ||
         !(await this.passwords.verify(session.user.passwordHash, data.currentPassword))
       )
         throw new Failure(
