@@ -61,7 +61,37 @@ Os testes de integração usam banco `_test`: preços/revisões, SSE real, delta
 
 Referências: [Evolution API](https://github.com/EvolutionAPI/evolution-api), [Web Push](https://github.com/web-push-libs/web-push), [WebKit — push em apps na Tela de Início](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/), [Fetch Event Source](https://github.com/Azure/fetch-event-source), [QR Code Styling](https://github.com/kozakdenys/qr-code-styling).
 
-Formatação de mensagens: [central oficial do WhatsApp](https://faq.whatsapp.com/539178204879377/?locale=pt_BR). O conteúdo usa recursos básicos de texto para manter legibilidade nos clientes móveis.
+Formatação de mensagens: [central oficial do WhatsApp](https://faq.whatsapp.com/539178204879377/?locale=pt_BR). Os modelos usam título em negrito, identidade da loja e número do pedido, listas, blocos separados e poucos emojis com rótulos de texto. A hierarquia prioriza etapa, próxima ação e valores, inspirada na experiência de [acompanhamento do iFood](https://institucional.ifood.com.br/ajuda/como-funciona-a-entrega-do-ifood/), sem reproduzir sua marca nem prometer rastreamento por GPS.
+
+A confirmação e a primeira autorização mostram um resumo do pedido salvo, com até seis linhas de produtos e três adicionais por linha. Carrinhos maiores remetem aos demais detalhes no acompanhamento. O resumo verifica a soma em centavos antes do envio e não usa preços atuais do catálogo. Não inclui observações livres do cliente, endereço nem telefone. O prazo é rotulado como **estimado na confirmação** e só aparece enquanto o pedido está recebido/em preparo; saída para entrega e retirada não reiniciam essa estimativa. Avisos seguintes destacam apenas a mudança relevante e sua próxima ação. O rodapé informa onde acompanhar e desativar os avisos. Esses recursos usam texto nativo, sem depender de botões interativos incompatíveis com a integração atual.
+
+Exemplo ilustrativo de confirmação (a formatação é interpretada pelo WhatsApp):
+
+```text
+*✅ Pedido recebido*
+*Bistrô da Praça* · Pedido *#ABCD1234*
+
+Etapa atual: *Recebido pela loja*
+
+Tudo certo! Seu pedido já está no sistema da loja. Não é necessário reenviá-lo pelo WhatsApp.
+
+🧾 *Resumo do pedido*
+- 2 × Lanche especial · R$ 20,00
+  Queijo extra
+
+Subtotal dos produtos: R$ 20,00
+Taxa de entrega: R$ 2,22
+Desconto: −R$ 2,00
+Total do pedido: *R$ 20,22*
+
+🛵 *Entrega no endereço informado*
+Prazo estimado na confirmação: *30–40 min*
+
+Esta atualização de etapa não confirma pagamento.
+
+📲 Acompanhe todas as etapas na página do pedido.
+Para parar os avisos, desative o WhatsApp nessa página.
+```
 
 ### Regressões de rede e leitura
 

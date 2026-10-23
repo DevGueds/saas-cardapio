@@ -28,68 +28,102 @@ enum OrderStatus {
 }
 
 model User {
-  id           String       @id @db.Char(36)
-  name         String       @db.VarChar(120)
-  email        String       @unique @db.VarChar(254)
-  passwordHash String       @db.VarChar(255)
-  active       Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  memberships  Membership[]
-  sessions     Session[]
+  id             String          @id @db.Char(36)
+  name           String          @db.VarChar(120)
+  email          String          @unique @db.VarChar(254)
+  passwordHash   String          @db.VarChar(255)
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  memberships    Membership[]
+  sessions       Session[]
+  mfa            MfaCredential?
+  securityEvents SecurityEvent[]
 }
 
 model Tenant {
   id          String       @id @db.Char(36)
   name        String       @db.VarChar(120)
   active      Boolean      @default(true)
+  mfaRequired Boolean      @default(false)
   createdAt   DateTime     @default(now())
   memberships Membership[]
   restaurants Restaurant[]
 }
 
 model Membership {
-  tenantId String  @db.Char(36)
-  userId   String  @db.Char(36)
-  role     Role
-  active   Boolean @default(true)
-  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  user     User    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  tenantId    String      @db.Char(36)
+  userId      String      @db.Char(36)
+  role        Role
+  active      Boolean     @default(true)
+  mfaOverride MfaOverride @default(INHERIT)
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@id([tenantId, userId])
   @@index([userId, active])
 }
 
 model Session {
-  id        String    @id @db.Char(36)
-  userId    String    @db.Char(36)
-  tokenHash String    @unique @db.Char(64)
-  csrfHash  String    @db.Char(64)
-  expiresAt DateTime
-  revokedAt DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String    @id @db.Char(36)
+  userId        String    @db.Char(36)
+  tokenHash     String    @unique @db.Char(64)
+  csrfHash      String    @db.Char(64)
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  mfaVerifiedAt DateTime?
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
 }
 
+enum MfaOverride {
+  INHERIT
+  REQUIRED
+  EXEMPT
+}
+
+model MfaCredential {
+  userId           String    @id @db.Char(36)
+  secret           String    @db.VarChar(512)
+  enabledAt        DateTime?
+  pendingSessionId String?   @db.Char(36)
+  pendingExpiresAt DateTime?
+  lastCounter      BigInt    @default(-1)
+  recoveryHashes   Json
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SecurityEvent {
+  id            String   @id @db.Char(36)
+  actorUserId   String   @db.Char(36)
+  tenantId      String?  @db.Char(36)
+  subjectUserId String?  @db.Char(36)
+  action        String   @db.VarChar(40)
+  createdAt     DateTime @default(now())
+  actor         User     @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, createdAt])
+}
+
 model Restaurant {
-  id                 String     @id @db.Char(36)
-  tenantId           String     @db.Char(36)
-  tenant             Tenant     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  slug               String     @unique @db.VarChar(80)
-  name               String     @db.VarChar(120)
-  description        String     @db.Text
-  whatsapp           String     @db.VarChar(30)
-  whatsappConfigured Boolean    @default(false)
-  address            String     @db.VarChar(500)
-  logoUrl            String     @db.MediumText
-  coverUrl           String     @db.MediumText
-  deliveryFee        Int        @default(0)
-  minOrder           Int        @default(0)
-  eta                String     @db.VarChar(80)
-  isOpen             Boolean    @default(false)
-  revision           Int        @default(0)
-  createdAt          DateTime   @default(now())
+  id                 String              @id @db.Char(36)
+  tenantId           String              @db.Char(36)
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  slug               String              @unique @db.VarChar(80)
+  name               String              @db.VarChar(120)
+  description        String              @db.Text
+  whatsapp           String              @db.VarChar(30)
+  whatsappConfigured Boolean             @default(false)
+  address            String              @db.VarChar(500)
+  logoUrl            String              @db.MediumText
+  coverUrl           String              @db.MediumText
+  deliveryFee        Int                 @default(0)
+  minOrder           Int                 @default(0)
+  eta                String              @db.VarChar(80)
+  isOpen             Boolean             @default(false)
+  revision           Int                 @default(0)
+  createdAt          DateTime            @default(now())
   categories         Category[]
   products           Product[]
   orders             Order[]
@@ -135,38 +169,38 @@ model Product {
 }
 
 model Order {
-  id               String      @id @db.Char(36)
-  tenantId         String      @db.Char(36)
-  restaurantId     String      @db.Char(36)
-  restaurant       Restaurant  @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict)
-  revision         Int         @default(0)
-  status           OrderStatus @default(NEW)
-  customer         Json
-  items            Json
-  subtotal         Int
-  deliveryFee      Int
-  total            Int
-  discount         Int         @default(0)
-  fulfillment      Json?
-  promotionId      String?     @db.Char(36)
-  promotionName    String?     @db.VarChar(120)
-  region           String      @default("") @db.VarChar(300)
-  eta              String      @default("") @db.VarChar(80)
-  courierId        String?     @db.Char(36)
-  history          Json?
-  trackingHash     String?     @db.Char(64)
-  trackingExpiresAt DateTime?
-  checkoutRevision Int
-  whatsappUrl      String      @db.MediumText
-  idempotencyHash  String      @db.Char(64)
-  payloadHash      String      @db.Char(64)
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
-  payments         Payment[]
-  whatsappConsentAt DateTime?
-  whatsappRevokedAt DateTime?
+  id                 String              @id @db.Char(36)
+  tenantId           String              @db.Char(36)
+  restaurantId       String              @db.Char(36)
+  restaurant         Restaurant          @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict)
+  revision           Int                 @default(0)
+  status             OrderStatus         @default(NEW)
+  customer           Json
+  items              Json
+  subtotal           Int
+  deliveryFee        Int
+  total              Int
+  discount           Int                 @default(0)
+  fulfillment        Json?
+  promotionId        String?             @db.Char(36)
+  promotionName      String?             @db.VarChar(120)
+  region             String              @default("") @db.VarChar(300)
+  eta                String              @default("") @db.VarChar(80)
+  courierId          String?             @db.Char(36)
+  history            Json?
+  trackingHash       String?             @db.Char(64)
+  trackingExpiresAt  DateTime?
+  checkoutRevision   Int
+  whatsappUrl        String              @db.MediumText
+  idempotencyHash    String              @db.Char(64)
+  payloadHash        String              @db.Char(64)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  payments           Payment[]
+  whatsappConsentAt  DateTime?
+  whatsappRevokedAt  DateTime?
   notificationEvents NotificationEvent[]
-  pushSubscriptions PushSubscription[]
+  pushSubscriptions  PushSubscription[]
 
   @@unique([tenantId, restaurantId, id])
   @@unique([tenantId, restaurantId, idempotencyHash])
@@ -183,23 +217,24 @@ model RateLimit {
 }
 
 model Payment {
-  id String @id @db.Char(36)
-  tenantId String @db.Char(36)
-  restaurantId String @db.Char(36)
-  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict, map: "Payment_restaurant_fkey")
-  orderId String? @db.Char(36)
-  order Order? @relation(fields: [tenantId, restaurantId, orderId], references: [tenantId, restaurantId, id], onDelete: Restrict, map: "Payment_order_fkey")
-  amount Int
-  method String @db.VarChar(10)
-  description String @db.VarChar(160)
-  source String @default("MANUAL") @db.VarChar(20)
-  requestHash String @db.Char(64)
-  payloadHash String @db.Char(64)
-  recordedBy String @db.Char(36)
-  createdAt DateTime @default(now())
-  reversedAt DateTime?
-  reversedBy String? @db.Char(36)
-  reversalReason String? @db.VarChar(300)
+  id             String     @id @db.Char(36)
+  tenantId       String     @db.Char(36)
+  restaurantId   String     @db.Char(36)
+  restaurant     Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict, map: "Payment_restaurant_fkey")
+  orderId        String?    @db.Char(36)
+  order          Order?     @relation(fields: [tenantId, restaurantId, orderId], references: [tenantId, restaurantId, id], onDelete: Restrict, map: "Payment_order_fkey")
+  amount         Int
+  method         String     @db.VarChar(10)
+  description    String     @db.VarChar(160)
+  source         String     @default("MANUAL") @db.VarChar(20)
+  requestHash    String     @db.Char(64)
+  payloadHash    String     @db.Char(64)
+  recordedBy     String     @db.Char(36)
+  createdAt      DateTime   @default(now())
+  reversedAt     DateTime?
+  reversedBy     String?    @db.Char(36)
+  reversalReason String?    @db.VarChar(300)
+
   @@unique([tenantId, restaurantId, requestHash])
   @@index([tenantId, restaurantId, createdAt, id])
   @@index([tenantId, restaurantId, reversedAt])
@@ -207,81 +242,87 @@ model Payment {
 }
 
 model StoreCommerce {
-  restaurantId String @id @db.Char(36)
-  tenantId String @db.Char(36)
-  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict)
-  combos Json
-  promotions Json
-  delivery Json
-  addonGroups Json?
-  appearance Json?
+  restaurantId String     @id @db.Char(36)
+  tenantId     String     @db.Char(36)
+  restaurant   Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict)
+  combos       Json
+  promotions   Json
+  delivery     Json
+  addonGroups  Json?
+  appearance   Json?
+
   @@unique([tenantId, restaurantId])
 }
 
 model StoreChannel {
-  restaurantId String @id @db.Char(36)
-  tenantId String @db.Char(36)
-  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
-  revision Int @default(0)
-  boardEnabled Boolean @default(false)
-  boardVersion String @db.Char(36)
-  whatsappEnabled Boolean @default(false)
+  restaurantId    String     @id @db.Char(36)
+  tenantId        String     @db.Char(36)
+  restaurant      Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
+  revision        Int        @default(0)
+  boardEnabled    Boolean    @default(false)
+  boardVersion    String     @db.Char(36)
+  whatsappEnabled Boolean    @default(false)
+
   @@unique([tenantId, restaurantId])
 }
 
 model NotificationEvent {
-  id String @id @db.Char(36)
-  tenantId String @db.Char(36)
-  restaurantId String @db.Char(36)
-  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
-  orderId String @db.Char(36)
-  order Order @relation(fields: [tenantId, restaurantId, orderId], references: [tenantId, restaurantId, id], onDelete: Cascade)
-  kind String @db.VarChar(10)
-  status String @db.VarChar(20)
-  createdAt DateTime @default(now())
-  expandedAt DateTime?
-  deliveries NotificationDelivery[]
+  id           String                 @id @db.Char(36)
+  tenantId     String                 @db.Char(36)
+  restaurantId String                 @db.Char(36)
+  restaurant   Restaurant             @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
+  orderId      String                 @db.Char(36)
+  order        Order                  @relation(fields: [tenantId, restaurantId, orderId], references: [tenantId, restaurantId, id], onDelete: Cascade)
+  kind         String                 @db.VarChar(10)
+  status       String                 @db.VarChar(20)
+  createdAt    DateTime               @default(now())
+  expandedAt   DateTime?
+  deliveries   NotificationDelivery[]
+
   @@index([expandedAt, createdAt])
   @@index([tenantId, restaurantId, createdAt])
 }
 
 model PushSubscription {
-  id String @id @db.Char(36)
-  tenantId String @db.Char(36)
-  restaurantId String @db.Char(36)
-  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
-  orderId String? @db.Char(36)
-  order Order? @relation(fields: [tenantId, restaurantId, orderId], references: [tenantId, restaurantId, id], onDelete: Cascade)
-  userId String? @db.Char(36)
-  sessionId String? @db.Char(36)
-  endpointHash String @db.Char(64)
-  encrypted String @db.Text
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id           String     @id @db.Char(36)
+  tenantId     String     @db.Char(36)
+  restaurantId String     @db.Char(36)
+  restaurant   Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
+  orderId      String?    @db.Char(36)
+  order        Order?     @relation(fields: [tenantId, restaurantId, orderId], references: [tenantId, restaurantId, id], onDelete: Cascade)
+  userId       String?    @db.Char(36)
+  sessionId    String?    @db.Char(36)
+  endpointHash String     @db.Char(64)
+  encrypted    String     @db.Text
+  expiresAt    DateTime
+  createdAt    DateTime   @default(now())
+
   @@unique([tenantId, restaurantId, endpointHash])
   @@index([tenantId, restaurantId, orderId, userId])
 }
 
 model NotificationDelivery {
-  id String @id @db.Char(36)
-  eventId String @db.Char(36)
-  event NotificationEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  channel String @db.VarChar(10)
-  recipient String @db.VarChar(100)
-  state String @default("PENDING") @db.VarChar(12)
-  attempts Int @default(0)
-  availableAt DateTime @default(now())
-  claimedAt DateTime?
-  createdAt DateTime @default(now())
+  id          String            @id @db.Char(36)
+  eventId     String            @db.Char(36)
+  event       NotificationEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  channel     String            @db.VarChar(10)
+  recipient   String            @db.VarChar(100)
+  state       String            @default("PENDING") @db.VarChar(12)
+  attempts    Int               @default(0)
+  availableAt DateTime          @default(now())
+  claimedAt   DateTime?
+  createdAt   DateTime          @default(now())
+
   @@unique([eventId, channel, recipient])
   @@index([state, availableAt])
 }
 
 model InboxRead {
-  tenantId String @db.Char(36)
-  restaurantId String @db.Char(36)
-  userId String @db.Char(36)
-  restaurant Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
-  readAt DateTime
+  tenantId     String     @db.Char(36)
+  restaurantId String     @db.Char(36)
+  userId       String     @db.Char(36)
+  restaurant   Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
+  readAt       DateTime
+
   @@id([tenantId, restaurantId, userId])
 }

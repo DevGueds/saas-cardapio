@@ -45,11 +45,14 @@ export async function createFirstStore(
 export class PrismaIdentity implements IdentityRepository {
   constructor(private readonly db: Database) {}
   findAccount(email: string) {
-    return this.db.run((client) => client.user.findUnique({ where: { email } }))
+    return this.db.run((client) =>
+      client.user.findUnique({ where: { email }, include: identityRelations }),
+    )
   }
   createAccount(account: Account, store: FirstStore | null, session: SessionInput) {
     return this.db.transaction(async (tx) => {
-      await tx.user.create({ data: account })
+      const { id, name, email, passwordHash, active } = account
+      await tx.user.create({ data: { id, name, email, passwordHash, active } })
       if (store)
         await createFirstStore(
           tx,
@@ -60,8 +63,15 @@ export class PrismaIdentity implements IdentityRepository {
       await tx.session.create({ data: session })
     })
   }
-  createSession(session: SessionInput) {
-    return this.db.run(async (client) => {
+  createSession(session: SessionInput, expectedPasswordHash: string) {
+    return this.db.transaction(async (client) => {
+      await client.$queryRaw`SELECT id FROM User WHERE id = ${session.userId} FOR UPDATE`
+      const user = await client.user.findFirst({
+        where: { id: session.userId, passwordHash: expectedPasswordHash, active: true },
+        select: { id: true },
+      })
+      if (!user)
+        throw new Failure("UNAUTHENTICATED", "As credenciais mudaram. Entre novamente.")
       await client.session.create({ data: session })
     })
   }
@@ -74,7 +84,7 @@ export class PrismaIdentity implements IdentityRepository {
           expiresAt: { gt: now },
           user: { active: true },
         },
-        include: { user: true },
+        include: { user: { include: identityRelations } },
       }),
     )
   }
@@ -88,7 +98,7 @@ export class PrismaIdentity implements IdentityRepository {
           expiresAt: { gt: now },
           user: { active: true },
         },
-        include: { user: true },
+        include: { user: { include: identityRelations } },
       }),
     )
   }
@@ -115,3 +125,13 @@ export class PrismaIdentity implements IdentityRepository {
     })
   }
 }
+export const identityRelations = {
+  mfa: { select: { enabledAt: true } },
+  memberships: {
+    select: {
+      active: true,
+      mfaOverride: true,
+      tenant: { select: { active: true, mfaRequired: true } },
+    },
+  },
+} as const

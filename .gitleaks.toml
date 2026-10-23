@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+# Human-readable placeholders in the documented example, never real credentials.
+[[allowlists]]
+description = "Exact setup instructions in backend/.env.example"
+condition = "AND"
+paths = ['''^backend/\.env\.example$''']
+regexTarget = "secret"
+regexes = ['''^GERE_64_CARACTERES_HEXADECIMAIS$''', '''^GERE_UM_SEGREDO_ALEATORIO_COM_PELO_MENOS_32_CARACTERES$''']

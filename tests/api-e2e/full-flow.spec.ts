@@ -487,12 +487,12 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
     })
   ).json()
   expect(result.ok).toBe(true)
-  const logo = new PNG({ width: 64, height: 64 })
+  const logo = new PNG({ width: 256, height: 64 })
   for (let y = 0; y < 64; y++)
-    for (let x = 0; x < 64; x++) {
-      const offset = (y * 64 + x) * 4,
-        white = (x > 24 && x < 39) || (y > 24 && y < 39)
-      logo.data.set(white ? [255, 255, 255, 255] : [27, 80, 63, 255], offset)
+    for (let x = 0; x < 256; x++) {
+      const offset = (y * 256 + x) * 4,
+        white = (x > 110 && x < 140) || (y > 24 && y < 39)
+      logo.data.set(white ? [255, 255, 255, 0] : [27, 80, 63, 255], offset)
     }
   result = await (
     await page.request.put(`${api}/restaurants/${id}/settings`, {
@@ -541,6 +541,14 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
   await expect(page.getByRole("dialog")).toHaveCount(0)
   await expect(page.getByRole("heading", { name: "Turbine seu lanche" })).toBeVisible()
   await page.setViewportSize({ width: 1280, height: 900 })
+  // Exercise Docker's image/connect restrictions without intercepting the LAN
+  // document (Chromium classifies fulfilled documents as a different address space).
+  await page.evaluate(() => {
+    const policy = document.createElement("meta")
+    policy.httpEquiv = "Content-Security-Policy"
+    policy.content = "connect-src 'self'; img-src 'self' data: blob: https:"
+    document.head.append(policy)
+  })
   await page.getByRole("link", { name: "Aparência e QR Code", exact: true }).click()
   await page.getByLabel("Modelo do cardápio", { exact: true }).selectOption("COMPACT")
   await page.getByLabel("Cor de destaque", { exact: true }).selectOption("PLUM")
@@ -564,6 +572,12 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
       decoded = jsQR(new Uint8ClampedArray(png.data), png.width, png.height)
     expect(decoded?.data).toBe(`${origin}/menu/${slug}`)
   }
+  const svgDownload = page.waitForEvent("download")
+  await page.getByRole("button", { name: "Baixar SVG", exact: true }).click()
+  await (await svgDownload).saveAs(".cache/menu-qr-logo.svg")
+  const svg = await readFile(".cache/menu-qr-logo.svg", "utf8")
+  expect(svg).toContain("data:image/png;base64,")
+  expect(svg).not.toMatch(/(?:href|src)="https?:/)
   await expect(
     page.getByRole("button", { name: "Publicar aparência", exact: true }),
   ).toBeEnabled()

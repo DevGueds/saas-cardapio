@@ -67,7 +67,7 @@ export class HttpIdentity implements IdentityService {
       { method: "POST", body: input },
     )
   }
-  subscribeExpired(listener: () => void) {
+  subscribeExpired(listener: (reason?: "UNAUTHENTICATED" | "MFA_REQUIRED") => void) {
     return this.client.subscribeExpired(listener)
   }
 }

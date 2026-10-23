@@ -27,6 +27,9 @@ import { Authorization } from "../modules/identity/application/authorization.js"
 import { Tenancy } from "../modules/identity/application/tenancy.js"
 import { PrismaIdentity } from "../modules/identity/infrastructure/prisma-identity.js"
 import { PrismaAccess } from "../modules/identity/infrastructure/prisma-access.js"
+import { Mfa } from "../modules/identity/application/mfa.js"
+import { PrismaMfa } from "../modules/identity/infrastructure/prisma-mfa.js"
+import { Totp } from "../modules/identity/infrastructure/totp.js"
 import { Catalog } from "../modules/catalog/application/catalog.js"
 import { PrismaMenu } from "../modules/catalog/infrastructure/prisma-menu.js"
 import { Orders } from "../modules/orders/application/orders.js"
@@ -54,6 +57,7 @@ export async function compose(config: ApiConfig) {
     const identity = new PrismaIdentity(db),
       memberships = new PrismaAccess(db)
     const access = new Authorization(identity, memberships, clock)
+    const passwords = await ArgonPasswords.create()
     const menus = new CachedMenu(new PrismaMenu(db), redis)
     const cipher = new SubscriptionCipher(config.secret),
       whatsapp = new EvolutionWhatsapp(config.evolutionUrl, config.evolutionKey),
@@ -70,6 +74,19 @@ export async function compose(config: ApiConfig) {
       operation,
     )
     return {
+      mfa: new Mfa(
+        new PrismaMfa(db),
+        identity,
+        access,
+        passwords,
+        new Totp(config.secret),
+        secrets,
+        ids,
+        clock,
+        limiter,
+        operation,
+        config.sessionTtl,
+      ),
       notificationWorker,
       engagement: new Engagement(
         new PrismaEngagement(db, cipher),
@@ -100,7 +117,7 @@ export async function compose(config: ApiConfig) {
       limiter,
       auth: new Authentication(
         identity,
-        await ArgonPasswords.create(),
+        passwords,
         secrets,
         ids,
         clock,

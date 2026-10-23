@@ -44,6 +44,16 @@ export default function AdminNavigation({ onNavigate }: { onNavigate?: () => voi
       </div>
       <p className="nav-section-label">Gerenciar</p>
       <nav className="admin-nav" aria-label="Navegação principal">
+        {api && can(account?.restaurant.role, "security:write") && (
+          <NavLink
+            to={`/admin/security${query}`}
+            onClick={onNavigate}
+            className={({ isActive }) => (isActive ? "is-active" : "")}
+          >
+            <Settings size={20} aria-hidden="true" />
+            <span>Segurança da equipe</span>
+          </NavLink>
+        )}
         <NavLink
           to={`/admin/menu${query}`}
           onClick={onNavigate}
