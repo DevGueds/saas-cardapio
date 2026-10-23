@@ -34,11 +34,7 @@ export default function MfaPage() {
       : status
   }, [auth, security])
   const resource = useResource(load)
-  if (
-    resource.error?.code === "UNAUTHENTICATED" ||
-    mutation.error?.code === "UNAUTHENTICATED"
-  )
-    return <Navigate to="/login" replace />
+  if (resource.error?.code === "UNAUTHENTICATED" || mutation.error?.code === "UNAUTHENTICATED") return <Navigate to="/login" replace />
   const pending = ["ENROLL", "VERIFY"].includes(resource.data?.session.mfa ?? "")
   async function start(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -178,16 +174,7 @@ export default function MfaPage() {
                     Configuração válida por 10 minutos. Esta chave é pessoal; não envie a
                     outras pessoas.
                   </p>
-                  <button
-                    className="text-button"
-                    disabled={mutation.pending}
-                    onClick={() => {
-                      setSetup(null)
-                      mutation.clearError()
-                    }}
-                  >
-                    Gerar nova configuração
-                  </button>
+                  <button className="text-button" disabled={mutation.pending} onClick={() => { setSetup(null); mutation.clearError() }}>Gerar nova configuração</button>
                 </>
               )}
               {(setup || resource.data.session.mfa === "VERIFY") && (

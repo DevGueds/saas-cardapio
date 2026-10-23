@@ -195,7 +195,7 @@ try {
       owner,
     ),
     verified = session(verifiedResult, true)
-  assert.ok(verified.cookie !== owner.cookie, "MFA must rotate the session cookie")
+  assert.notEqual(verified.cookie, owner.cookie)
   assert.equal((await request("GET", "/me/restaurants", undefined, owner)).status, 401)
   const challenge = session(await request("POST", "/auth/login", { email, password }))
   assert.equal(
