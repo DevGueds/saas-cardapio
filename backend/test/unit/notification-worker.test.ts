@@ -38,6 +38,18 @@ function fixture() {
       status: "NEW",
       fulfillment: { mode: "DELIVERY" },
       total: 2022,
+      subtotal: 2022,
+      deliveryFee: 0,
+      discount: 0,
+      items: [
+        {
+          productId: randomUUID(),
+          name: "Test item",
+          quantity: 1,
+          unitPrice: 2022,
+          note: "",
+        },
+      ],
       eta: "30–40 min",
       whatsappConsentAt: new Date(now - 2000),
       whatsappRevokedAt: null as Date | null,
