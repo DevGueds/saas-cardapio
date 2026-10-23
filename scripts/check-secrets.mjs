@@ -53,7 +53,8 @@ async function check() {
       [
         "-NoProfile",
         "-NonInteractive",
-        "-OutputFormat", "Text",
+        "-OutputFormat",
+        "Text",
         "-EncodedCommand",
         Buffer.from(command, "utf16le").toString("base64"),
       ],
