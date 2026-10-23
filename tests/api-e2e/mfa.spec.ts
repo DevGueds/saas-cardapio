@@ -27,7 +27,7 @@ test("MFA guides enrollment, mobile recovery, login and per-person management ex
       },
     })
   ).json()
-  expect(registered.ok).toBe(true)
+  expect(registered.ok, registered.error?.code).toBe(true)
   const stores = await (await page.request.get("/api/v1/me/restaurants")).json(),
     store = stores.value[0]
   const staff = await browser.newContext(),
@@ -39,7 +39,7 @@ test("MFA guides enrollment, mobile recovery, login and per-person management ex
       data: { name: "Pessoa da Cozinha", email: staffEmail, password },
     })
   ).json()
-  expect(staffAccount.ok).toBe(true)
+  expect(staffAccount.ok, staffAccount.error?.code).toBe(true)
   const added = await (
     await page.request.post(`/api/v1/tenants/${store.tenantId}/members`, {
       headers: { origin: baseURL!, "x-csrf-token": registered.value.csrfToken },
