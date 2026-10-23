@@ -4,6 +4,7 @@ import type { Clock } from "../../../shared/application/ports.js"
 import { validate } from "../../../shared/application/validate.js"
 import { assertPermission, type Actor, type Permission } from "../domain/identity.js"
 import type { AccessPolicy, AccessRepository, IdentityRepository } from "./ports.js"
+import { mfaPending } from "./mfa-state.js"
 
 export class Authorization implements AccessPolicy {
   constructor(
@@ -12,8 +13,15 @@ export class Authorization implements AccessPolicy {
     private readonly clock: Clock,
   ) {}
   async session(actor: Actor) {
-    if (!actor || !(await this.identities.sessionByActor(actor, this.clock.now())))
+    const session =
+      actor && (await this.identities.sessionByActor(actor, this.clock.now()))
+    if (!session)
       throw new Failure("UNAUTHENTICATED", "Sua sessão expirou. Entre novamente.")
+    if (mfaPending(session))
+      throw new Failure(
+        "MFA_REQUIRED",
+        "Confirme a verificação em duas etapas para continuar.",
+      )
   }
   async restaurant(actor: Actor, restaurantId: string, permission: Permission) {
     return (await this.grant(actor, restaurantId, permission)).scope

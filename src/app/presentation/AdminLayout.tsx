@@ -23,27 +23,29 @@ export default function AdminLayout() {
   const main = useRef<HTMLElement>(null)
   const location = useLocation()
   const { restaurant } = menu
-  const section = location.pathname.endsWith("addons")
-    ? "Adicionais"
-    : location.pathname.endsWith("appearance")
-      ? "Aparência e QR Code"
-      : location.pathname.endsWith("channels")
-        ? "Painel e notificações"
-        : location.pathname.endsWith("finance")
-          ? "Caixa e relatórios"
-          : location.pathname.endsWith("offers")
-            ? "Combos e promoções"
-            : location.pathname.endsWith("delivery")
-              ? "Entregas e retirada"
-              : location.pathname.endsWith("team")
-                ? "Equipe e permissões"
-                : location.pathname.endsWith("settings")
-                  ? "Configurações"
-                  : location.pathname.endsWith("orders")
-                    ? services.mode === "api"
-                      ? "Pedidos"
-                      : "Pedidos demonstrativos"
-                    : "Cardápio"
+  const section = location.pathname.endsWith("security")
+    ? "Segurança da equipe"
+    : location.pathname.endsWith("addons")
+      ? "Adicionais"
+      : location.pathname.endsWith("appearance")
+        ? "Aparência e QR Code"
+        : location.pathname.endsWith("channels")
+          ? "Painel e notificações"
+          : location.pathname.endsWith("finance")
+            ? "Caixa e relatórios"
+            : location.pathname.endsWith("offers")
+              ? "Combos e promoções"
+              : location.pathname.endsWith("delivery")
+                ? "Entregas e retirada"
+                : location.pathname.endsWith("team")
+                  ? "Equipe e permissões"
+                  : location.pathname.endsWith("settings")
+                    ? "Configurações"
+                    : location.pathname.endsWith("orders")
+                      ? services.mode === "api"
+                        ? "Pedidos"
+                        : "Pedidos demonstrativos"
+                      : "Cardápio"
 
   useEffect(() => {
     document.title = `${section} · ${restaurant.name}`

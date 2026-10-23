@@ -7,6 +7,12 @@ export interface Account {
   email: string
   passwordHash: string
   active: boolean
+  mfa?: { enabledAt: Date | null } | null
+  memberships?: {
+    active: boolean
+    mfaOverride: string
+    tenant: { active: boolean; mfaRequired: boolean }
+  }[]
 }
 export interface SessionRecord {
   id: string
@@ -16,6 +22,8 @@ export interface SessionRecord {
   expiresAt: Date
   revokedAt: Date | null
   user: Account
+  createdAt?: Date
+  mfaVerifiedAt?: Date | null
 }
 export interface SessionInput {
   id: string
@@ -23,6 +31,7 @@ export interface SessionInput {
   tokenHash: string
   csrfHash: string
   expiresAt: Date
+  mfaVerifiedAt?: Date | null
 }
 export interface FirstStore {
   tenantId: string
@@ -37,7 +46,7 @@ export interface IdentityRepository {
     store: FirstStore | null,
     session: SessionInput,
   ): Promise<void>
-  createSession(session: SessionInput): Promise<void>
+  createSession(session: SessionInput, expectedPasswordHash: string): Promise<void>
   sessionByToken(tokenHash: string, now: Date): Promise<SessionRecord | null>
   sessionByActor(actor: Actor, now: Date): Promise<SessionRecord | null>
   revoke(actor: Actor, now: Date): Promise<void>

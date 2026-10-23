@@ -13,7 +13,7 @@ import {
 import type { FastifyReply } from "fastify"
 import { RUNTIME, type Runtime } from "../../../app/composition.js"
 import { Public } from "../../../shared/presentation/http.js"
-import { authenticated, type SessionRequest } from "./session-guard.js"
+import { authenticated, MfaAllowed, type SessionRequest } from "./session-guard.js"
 @Controller()
 export class IdentityController {
   constructor(@Inject(RUNTIME) private readonly app: Runtime) {}
@@ -57,10 +57,10 @@ export class IdentityController {
   ) {
     return this.establish(this.app.auth.login(input, request.ip), reply)
   }
-  @Get("auth/session") session(@Req() request: SessionRequest) {
+  @MfaAllowed() @Get("auth/session") session(@Req() request: SessionRequest) {
     return { ok: true, value: authenticated(request).view }
   }
-  @Post("auth/logout") async logout(
+  @MfaAllowed() @Post("auth/logout") async logout(
     @Req() request: SessionRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
