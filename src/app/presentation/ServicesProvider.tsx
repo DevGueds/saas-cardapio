@@ -1,4 +1,6 @@
 import type { IdGenerator } from "../../shared/application/ports"
+import type { PrintingService } from "../../modules/printing/application/printing"
+import type { ReceiptOutputRenderer } from "../../modules/printing/application/receipt-output"
 import type { TeamService } from "../../modules/identity/application/team"
 import type { SecurityService } from "../../modules/identity/application/security"
 import type { EngagementService } from "../../modules/engagement/application/ports"
@@ -45,6 +47,8 @@ export interface ApplicationServices {
   security?: SecurityService
   payments?: PaymentsService
   documents?: DocumentExporter
+  printing?: PrintingService
+  receiptOutput?: ReceiptOutputRenderer
   orders?: OrdersService
   commerce?: CommerceService
   maps?: MapsService

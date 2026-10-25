@@ -52,6 +52,14 @@ export const router = createBrowserRouter(
           Component: AdminRoute,
           children: [
             {
+              path: "printing",
+              lazy: async () => ({
+                Component: (
+                  await import("../modules/printing/presentation/PrintingSettingsPage")
+                ).default,
+              }),
+            },
+            {
               path: "security",
               lazy: async () => ({
                 Component: (await import("../modules/identity/presentation/SecurityPage"))

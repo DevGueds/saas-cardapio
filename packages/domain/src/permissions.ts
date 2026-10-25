@@ -20,6 +20,7 @@ export type Permission =
   | "payments:write"
   | "payments:reverse"
   | "reports:read"
+  | "printing:configure"
 export const roleLabels: Record<Role, string> = {
   OWNER: "Proprietário",
   MANAGER: "Gerente",
@@ -31,6 +32,7 @@ export const roleLabels: Record<Role, string> = {
 }
 const permissions: Record<Role, readonly Permission[]> = {
   OWNER: [
+    "printing:configure",
     "catalog:read",
     "catalog:write",
     "orders:read",
@@ -44,6 +46,7 @@ const permissions: Record<Role, readonly Permission[]> = {
     "reports:read",
   ],
   MANAGER: [
+    "printing:configure",
     "security:write",
     "payments:read",
     "payments:write",

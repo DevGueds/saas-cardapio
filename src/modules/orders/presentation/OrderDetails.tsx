@@ -1,4 +1,5 @@
 import { can, canAdvance } from "@cardapio/domain/permissions"
+import ReceiptButton from "../../printing/presentation/ReceiptButton"
 import OrderPayments from "../../payments/presentation/OrderPayments"
 import { useAccount } from "../../identity/presentation/AccountContext"
 import CourierAssignment from "./CourierAssignment"
@@ -41,6 +42,17 @@ export default function OrderDetails({
         <p className="eyebrow">
           {orderLabels[order.status]} · {orderTime(order.createdAt)}
         </p>
+        <div className="form-actions">
+          {(["ORDER", "KITCHEN", "DELIVERY"] as const).map((kind) => (
+            <ReceiptButton
+              key={kind}
+              restaurantId={order.restaurantId}
+              sourceId={order.id}
+              kind={kind}
+              disabled={disabled || busy}
+            />
+          ))}
+        </div>
         <section>
           <h3>Cliente e entrega</h3>
           <p>

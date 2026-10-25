@@ -44,6 +44,7 @@ function PaymentHistory({
   return (
     <>
       <PaymentTable
+        restaurantId={restaurantId}
         payments={payments}
         range={range}
         reverse={reverse}
