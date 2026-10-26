@@ -133,6 +133,7 @@ model Restaurant {
   notifications      NotificationEvent[]
   pushSubscriptions  PushSubscription[]
   inboxReads         InboxRead[]
+  printing           StorePrinting?
 
   @@unique([tenantId, id])
   @@index([tenantId, createdAt])
@@ -239,6 +240,16 @@ model Payment {
   @@index([tenantId, restaurantId, createdAt, id])
   @@index([tenantId, restaurantId, reversedAt])
   @@index([tenantId, restaurantId, orderId])
+}
+
+model StorePrinting {
+  restaurantId String     @id @db.Char(36)
+  tenantId     String     @db.Char(36)
+  revision     Int        @default(0)
+  configuration Json
+  restaurant   Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, restaurantId])
 }
 
 model StoreCommerce {

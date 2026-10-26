@@ -1,6 +1,7 @@
 import { DeliveryController } from "../modules/delivery/presentation/delivery.controller.js"
 import { EngagementController } from "../modules/engagement/presentation/engagement.controller.js"
 import { PaymentsController } from "../modules/payments/presentation/payments.controller.js"
+import { PrintingController } from "../modules/printing/presentation/printing.controller.js"
 import { Bulkhead } from "../shared/application/bulkhead.js"
 import { CommerceController } from "../modules/commerce/presentation/commerce.controller.js"
 import { SessionGuard } from "../modules/identity/presentation/session-guard.js"
@@ -36,6 +37,7 @@ export async function createApplication(config: ApiConfig) {
       DeliveryController,
       EngagementController,
       PaymentsController,
+      PrintingController,
       SystemController,
     ],
     providers: [
@@ -93,9 +95,11 @@ export async function createApplication(config: ApiConfig) {
         )
       route.bodyLimit = acceptsImages
         ? 15 * 1024 * 1024
-        : route.url.endsWith("/delivery")
-          ? 256 * 1024
-          : 32 * 1024
+        : route.url.endsWith("/printing/settings")
+          ? 512 * 1024
+          : route.url.endsWith("/delivery")
+            ? 256 * 1024
+            : 32 * 1024
     })
     const capacity = new Bulkhead(config.maxInFlight)
     const releases = new WeakMap<object, () => void>()

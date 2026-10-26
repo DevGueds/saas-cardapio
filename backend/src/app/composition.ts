@@ -6,6 +6,8 @@ import { EvolutionWhatsapp } from "../modules/engagement/infrastructure/evolutio
 import { WebPushSender } from "../modules/engagement/infrastructure/web-push.js"
 import { NotificationWorker } from "../modules/engagement/infrastructure/notification-worker.js"
 import { Payments } from "../modules/payments/application/payments.js"
+import { Printing } from "../modules/printing/application/printing.js"
+import { PrismaPrinting } from "../modules/printing/infrastructure/prisma-printing.js"
 import { createDiagnostics } from "../shared/infrastructure/logging.js"
 import { PrismaPayments } from "../modules/payments/infrastructure/prisma-payments.js"
 import { BrasilApiAddress } from "../modules/delivery/infrastructure/brasil-api-address.js"
@@ -102,6 +104,7 @@ export async function compose(config: ApiConfig) {
       ),
       config,
       diagnostics,
+      printing: new Printing(new PrismaPrinting(db), access, operation, clock),
       payments: new Payments(
         new PrismaPayments(db),
         access,

@@ -1,4 +1,5 @@
 import { memo } from "react"
+import ReceiptButton from "../../printing/presentation/ReceiptButton"
 import type { PaymentView, ReportRange } from "@cardapio/contracts"
 import { paymentActivity } from "@cardapio/domain/payments"
 import { formatMoney } from "@cardapio/domain/money"
@@ -9,12 +10,14 @@ function PaymentTable({
   reverse,
   disabled,
   onReverse,
+  restaurantId,
 }: {
   payments: PaymentView[]
   range?: ReportRange
   reverse: boolean
   disabled: boolean
   onReverse(payment: PaymentView): void
+  restaurantId?: string
 }) {
   return (
     <div
@@ -37,7 +40,7 @@ function PaymentTable({
               </>
             )}
             <th>Situação atual</th>
-            {reverse && <th>Ações</th>}
+            {(reverse || restaurantId) && <th>Ações</th>}
           </tr>
         </thead>
         <tbody>
@@ -70,9 +73,18 @@ function PaymentTable({
                   </small>
                 )}
               </td>
-              {reverse && (
+              {(reverse || restaurantId) && (
                 <td>
-                  {!payment.reversedAt && (
+                  {restaurantId && (
+                    <ReceiptButton
+                      restaurantId={restaurantId}
+                      sourceId={payment.id}
+                      kind="PAYMENT"
+                      compact
+                      disabled={disabled}
+                    />
+                  )}
+                  {reverse && !payment.reversedAt && (
                     <button
                       type="button"
                       className="text-button"

@@ -1,4 +1,6 @@
 import { sha256Fingerprint } from "../shared/infrastructure/sha256-fingerprint"
+import { HttpPrinting } from "../modules/printing/infrastructure/http-printing"
+import { BrowserReceiptOutputRenderer } from "../modules/printing/infrastructure/browser-receipt-output"
 import { HttpTeam } from "../modules/identity/infrastructure/http-team"
 import { HttpEngagement } from "../modules/engagement/infrastructure/http-engagement"
 import { BrowserPush } from "../shared/infrastructure/device-push"
@@ -35,6 +37,8 @@ export function apiServices(): ApplicationServices {
     deviceLocation: new BrowserLocation(executor),
     payments: new HttpPayments(client),
     documents: new PdfDocuments(executor),
+    printing: new HttpPrinting(client),
+    receiptOutput: new BrowserReceiptOutputRenderer(executor),
     drafts,
     auth,
     team: new HttpTeam(client),
