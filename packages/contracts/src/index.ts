@@ -10,6 +10,7 @@ export * from "./payments.js"
 export * from "./menu-options.js"
 export * from "./engagement.js"
 export * from "./security.js"
+export * from "./printing.js"
 import { addonSelectionsSchema } from "./menu-options.js"
 import {
   checkoutOptionsSchema,

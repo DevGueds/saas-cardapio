@@ -86,6 +86,8 @@ Banco e autorização ficam sempre atrás do backend. Veja [backend.md](backend.
 
 ## Extensões de comércio e resiliência
 
+O módulo `printing` mantém configuração privada por loja e constrói snapshots autorizados a partir de pedidos/recebimentos em transação. `PrintingService` desacopla o frontend do HTTP; `ReceiptOutputRenderer` gera PDF, HTML isolado e bytes ESC/POS sem enviar comandos a dispositivos. Tipos, permissões e validações vivem nos pacotes compartilhados. O layout usa Editor.js apenas na apresentação; ferramentas aceitam texto simples e seções conhecidas. Veja [printing.md](printing.md).
+
 `packages/domain/commerce*.ts` concentra invariantes e comandos de combos, promoções e entrega. `quote.ts` calcula linhas, composição, modalidade, frete e o benefício aplicável; frontend demo e API usam a mesma implementação. A API relê dados autorizados ao cotar e grava o pedido numa transação. `StoreCommerce` guarda a configuração versionada junto ao agregado; o contador de usos de promoções é preservado em edições e incrementado no mesmo commit do pedido. Dados antigos sem comércio recebem a modalidade legada de taxa fixa, sem inventar produtos/ofertas.
 
 `CachedMenu` decora o repositório para leitura pública com TTL curto e single-flight por processo. Acesso administrativo, cotação e checkout continuam lendo o banco. `CacheStore`, `RequestLimiter` e `AddressLookup` são portas; Redis e BrasilAPI são adaptadores. `Bulkhead` limita concorrência sem filas ilimitadas. `ResilientHttp` concentra timeout, limite de resposta, retry finito e circuit breaker de consultas externas.

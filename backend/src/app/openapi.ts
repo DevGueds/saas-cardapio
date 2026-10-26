@@ -16,6 +16,7 @@ const requestSchemas = {
   SecurityMember: contracts.securityMemberChangeSchema,
   Payment: contracts.paymentInputSchema,
   PaymentReversal: contracts.reversalSchema,
+  PrintingSettings: contracts.updatePrintingSettingsSchema,
   AccountRegistration: contracts.accountRegistrationSchema,
   Combo: contracts.saveComboSchema,
   Promotion: contracts.savePromotionSchema,
@@ -36,6 +37,10 @@ const requestSchemas = {
   Open: contracts.openSchema,
 }
 const operations = [
+  ["/restaurants/{restaurantId}/printing/settings", "get"],
+  ["/restaurants/{restaurantId}/printing/settings", "put", "PrintingSettings"],
+  ["/restaurants/{restaurantId}/orders/{orderId}/documents/{kind}", "get"],
+  ["/restaurants/{restaurantId}/payments/{paymentId}/document", "get"],
   ["/restaurants/{restaurantId}/addons", "put", "Addon"],
   ["/restaurants/{restaurantId}/addons/{groupId}", "delete", "Delete"],
   ["/restaurants/{restaurantId}/appearance", "put", "Appearance"],

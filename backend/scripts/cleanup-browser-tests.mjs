@@ -6,7 +6,11 @@ const database = process.env.TEST_DATABASE_URL
 if (!database || !new URL(database).pathname.endsWith("_test"))
   throw new Error("Somente banco _test pode receber limpeza de testes.")
 const ids = []
-for (const filename of ["api-browser-users.json", "mfa-browser-users.json"]) {
+for (const filename of [
+  "api-browser-users.json",
+  "mfa-browser-users.json",
+  "printing-browser-users.json",
+]) {
   try {
     ids.push(
       ...JSON.parse(
