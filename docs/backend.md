@@ -2,7 +2,7 @@
 
 ## Stack e execução
 
-NestJS 11 com Fastify 5, TypeScript estrito, Prisma **7.10** e MySQL **8.4 LTS**. Prisma 7 foi fixado porque esta implementação usa seu adaptador MySQL/MariaDB. Não atualizar automaticamente para Prisma 8 RC, cuja compatibilidade precisa de nova avaliação.
+NestJS 11 com Fastify 5, TypeScript estrito, Prisma **7.10** e PostgreSQL **18.6**. Prisma 7.10 permanece fixado junto com `@prisma/adapter-pg` 7.10 e `pg` 8.23.1; o serviço utiliza pooling limitado por réplica. Não atualizar automaticamente para Prisma 8 RC, cuja compatibilidade precisa de nova avaliação.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -26,37 +26,40 @@ Depois de `pnpm setup:local`, execute `pnpm docker:up` e abra http://localhost:8
 
 `docker/Dockerfile` compila os workspaces e cria imagens separadas: API apenas com dependências de execução, frontend estático com Caddy. As imagens base estão fixadas por digest; atualizações exigem nova validação. A API e o frontend usam usuários sem root, filesystem somente leitura, tmpfs limitado, nenhuma capability Linux e `no-new-privileges`. Segredos e artefatos locais ficam fora do contexto de build pelo `.dockerignore`.
 
-Frontend publica 8080, MySQL 3307 e Redis 6380, todos em loopback por padrão. `pnpm setup:lan --host <IP>` permite expor somente o frontend para testes em aparelhos da rede, com lista exata de origens e sem mudar as exigências de produção. A API fica na rede interna. Caddy entrega a SPA e balanceia `/api/*` entre duas APIs; não registra access logs e remove o objeto de requisição dos logs de erro, incluindo headers, tokens e IP. O navegador usa `VITE_API_BASE_URL=/api/v1`. O proxy fornece CSP, proteção contra iframes, nosniff e política de referrer. A API continua verificando sessão, origem, CSRF e escopo.
+Frontend publica 8080, PostgreSQL 5433 e Redis 6380, todos em loopback por padrão. `pnpm setup:lan --host <IP>` permite expor somente o frontend para testes em aparelhos da rede, com lista exata de origens e sem mudar as exigências de produção. A API fica na rede interna. Caddy entrega a SPA e balanceia `/api/*` entre duas APIs; não registra access logs e remove o objeto de requisição dos logs de erro, incluindo headers, tokens e IP. O navegador usa `VITE_API_BASE_URL=/api/v1`. O proxy fornece CSP, proteção contra iframes, nosniff e política de referrer. A API continua verificando sessão, origem, CSRF e escopo.
 
-O perfil `tools` entrega a credencial DDL somente ao processo de migrations. O perfil `app` recebe somente a credencial DML da aplicação. O Compose é de desenvolvimento: HTTP local, cadastro habilitado e TLS do banco desabilitado. Publicação em produção precisa de HTTPS, MySQL e Redis com TLS verificado, gestão de segredos e configuração de origens e proxy próprias. Não exponha este Compose diretamente à internet.
+O perfil `tools` entrega a credencial DDL somente ao processo de migrations. O perfil `app` recebe somente a credencial DML da aplicação. O Compose é de desenvolvimento: HTTP local, cadastro habilitado e TLS do banco desabilitado. Publicação em produção precisa de HTTPS, PostgreSQL e Redis com TLS verificado, gestão de segredos e configuração de origens e proxy próprias. Não exponha este Compose diretamente à internet.
 
 ## Ambiente
 
-| Variável                                           | Regra                                                                         |
-| -------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `NODE_ENV`                                         | Obrigatória: development, test ou production                                  |
-| `HOST`, `PORT`                                     | Padrões 127.0.0.1:3001; configure bind de container explicitamente            |
-| `DATABASE_URL`                                     | URL mysql com usuário/senha e banco; sem query parameters                     |
-| `DATABASE_TLS`                                     | Obrigatória: true/false; produção exige true                                  |
-| `DATABASE_CA_FILE`                                 | CA opcional para verificação TLS do banco                                     |
-| `MIGRATION_DATABASE_URL`                           | Credencial separada para DDL, usada somente pelo CLI Prisma                   |
-| `REDIS_URL`                                        | URL autenticada; produção exige `rediss://` com TLS verificado                |
-| `TRUSTED_PROXY_CIDRS`                              | Lista explícita de IPs/CIDRs confiáveis; vazia por padrão                     |
-| `HTTP_RATE_LIMIT`                                  | Limite global por IP/minuto; 600 por padrão, máximo 100000                    |
-| `MAX_IN_FLIGHT`                                    | Requisições ativas por API; 128 por padrão, máximo 1024                       |
-| `MAP_TILE_URL`                                     | Template HTTPS de tiles; padrão OpenStreetMap, carregado sob demanda          |
-| `SESSION_SECRET`                                   | 64–128 caracteres hexadecimais aleatórios                                     |
-| `SESSION_TTL_SECONDS`                              | 300–86400; padrão 28800 (8 horas), expiração absoluta                         |
-| `CORS_ORIGINS`                                     | Lista exata de origens separadas por vírgula; produção exige HTTPS            |
-| `SIGNUP_ENABLED`                                   | false por padrão; setup local define true                                     |
-| `DOCS_ENABLED`                                     | false por padrão; true somente fora de produção                               |
-| `TEST_DATABASE_URL`, `TEST_MIGRATION_DATABASE_URL` | Bancos exclusivos com nome terminado em `_test`                               |
-| `VITE_APP_MODE`                                    | `api` para integrar ou `demo` explícito para demonstração                     |
-| `VITE_API_BASE_URL`                                | URL HTTPS terminada em `/api/v1`, loopback local ou `/api/v1` na mesma origem |
+| Variável                                           | Regra                                                                                         |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                                         | Obrigatória: development, test ou production                                                  |
+| `HOST`, `PORT`                                     | Padrões 127.0.0.1:3001; configure bind de container explicitamente                            |
+| `DATABASE_URL`                                     | URL postgresql com usuário/senha e banco; sem query parameters                                |
+| `DATABASE_TLS`                                     | Obrigatória: true/false; produção exige true                                                  |
+| `DATABASE_POOL_MAX`                                | Conexões por réplica: padrão 10, de 2 a 50; somar todas as réplicas ao dimensionar o servidor |
+| `DATABASE_CONNECTION_TIMEOUT_MS`                   | Espera para conexão do pool: padrão 5000 ms, de 100 a 30000                                   |
+| `DATABASE_MIGRATION_PENDING`                       | true bloqueia o runtime do banco principal até a importação ser conferida                     |
+| `DATABASE_CA_FILE`                                 | CA opcional para verificação TLS do banco                                                     |
+| `MIGRATION_DATABASE_URL`                           | Credencial separada para DDL, usada somente pelo CLI Prisma                                   |
+| `REDIS_URL`                                        | URL autenticada; produção exige `rediss://` com TLS verificado                                |
+| `TRUSTED_PROXY_CIDRS`                              | Lista explícita de IPs/CIDRs confiáveis; vazia por padrão                                     |
+| `HTTP_RATE_LIMIT`                                  | Limite global por IP/minuto; 600 por padrão, máximo 100000                                    |
+| `MAX_IN_FLIGHT`                                    | Requisições ativas por API; 128 por padrão, máximo 1024                                       |
+| `MAP_TILE_URL`                                     | Template HTTPS de tiles; padrão OpenStreetMap, carregado sob demanda                          |
+| `SESSION_SECRET`                                   | 64–128 caracteres hexadecimais aleatórios                                                     |
+| `SESSION_TTL_SECONDS`                              | 300–86400; padrão 28800 (8 horas), expiração absoluta                                         |
+| `CORS_ORIGINS`                                     | Lista exata de origens separadas por vírgula; produção exige HTTPS                            |
+| `SIGNUP_ENABLED`                                   | false por padrão; setup local define true                                                     |
+| `DOCS_ENABLED`                                     | false por padrão; true somente fora de produção                                               |
+| `TEST_DATABASE_URL`, `TEST_MIGRATION_DATABASE_URL` | Bancos exclusivos com nome terminado em `_test`                                               |
+| `VITE_APP_MODE`                                    | `api` para integrar ou `demo` explícito para demonstração                                     |
+| `VITE_API_BASE_URL`                                | URL HTTPS terminada em `/api/v1`, loopback local ou `/api/v1` na mesma origem                 |
 
 As variáveis `VITE_*` são públicas e incorporadas ao bundle. Nunca contêm senha, segredo de sessão ou URL do banco. `backend/.env` é ignorado pelo Git; `.env.example` contém somente placeholders. Em produção forneça segredos pelo ambiente/gerenciador de segredos. Frontend e API devem compartilhar o mesmo site para cookies SameSite=Lax (ex.: `app.exemplo.com` e `api.exemplo.com`).
 
-O Compose é **local**, com porta vinculada a loopback por padrão, volume persistente e healthcheck. O init cria `cardapio`/`cardapio_test` e dá ao usuário da aplicação apenas SELECT/INSERT/UPDATE/DELETE. O root é utilizado exclusivamente nas migrations locais. Em produção, crie um usuário de migrations com DDL no banco específico, um usuário de execução com DML e configure TLS/backup/restore no MySQL gerenciado.
+O Compose é **local**, com porta vinculada a loopback por padrão, volume persistente e healthcheck. O init cria `cardapio`/`cardapio_test` e dá ao usuário da aplicação apenas SELECT/INSERT/UPDATE/DELETE. O superusuário inicializa o cluster; `cardapio_migrator`, sem superusuário e sem permissão de criar bancos, é o proprietário e executa migrations. O usuário `cardapio` não cria schema, não executa TRUNCATE e não modifica `_prisma_migrations`. Em produção, crie um usuário de migrations com DDL no banco específico, um usuário de execução com DML e configure TLS/backup/restore no PostgreSQL gerenciado.
 
 ## Autenticação e autorização
 
@@ -145,14 +148,18 @@ pnpm audit --prod
 
 Use o comando `migrate:dev` somente em banco descartável de desenvolvimento com shadow database configurado; produção usa exclusivamente `migrate deploy` (`pnpm db:migrate`). Nunca use `db push` como substituto de migrations versionadas. Faça backup antes de mudanças de schema em ambientes com dados reais.
 
-Testes unitários não dependem do banco. Integração/browser recusam conexão de teste sem sufixo `_test`; a limpeza remove somente IDs gerados pela execução. Nunca fazem truncate nem limpam o banco da aplicação. Dados de clientes dos testes são fictícios. CI executa os mesmos comandos com MySQL e Redis reais via Compose.
+Testes unitários não dependem do banco. Integração/browser recusam conexão de teste sem sufixo `_test`; a limpeza remove somente IDs gerados pela execução. Nunca fazem truncate nem limpam o banco da aplicação. Dados de clientes dos testes são fictícios. CI executa os mesmos comandos com PostgreSQL e Redis reais via Compose.
 
 Após `pnpm api:build`, sessões expiradas/revogadas e contadores expirados podem ser limpos com `pnpm api:maintenance` (ou `docker compose --env-file backend/.env exec api node dist/maintenance.js`); pedidos não são apagados por esse comando. Rotina de retenção de pedidos/dados pessoais e backups deve ser definida antes da operação pública.
 
-Overrides de `fastify`, `mariadb`, `mysql2` e `deepmerge-ts` no workspace corrigem advisories de versões transitivas da stack fixada. Mantenha-os até versões upstream incorporarem as correções e reexecute migrations, testes de MySQL e navegação ao atualizar. `pnpm audit` complementa testes; ausência de advisories não constitui auditoria completa da aplicação.
+Overrides de `fastify`, `fast-uri` (linhas 3 e 4), `mysql2` e `deepmerge-ts` no workspace corrigem advisories da stack fixada. `mysql2` é exclusivamente uma dependência de desenvolvimento para importar a origem legada; não faz parte do runtime da API. Mantenha-os até versões upstream incorporarem as correções e reexecute migrations, testes de PostgreSQL e navegação ao atualizar. `pnpm audit` complementa testes; ausência de advisories não constitui auditoria completa da aplicação.
 
 ## Próximas etapas delimitadas
 
 MFA e auditoria das mudanças de segurança estão implementados: consulte [Segurança](security.md). Permanecem como extensões: verificação/recuperação de e-mail, convites por e-mail, auditoria das demais operações administrativas, cobrança e quotas, armazenamento de imagens, observabilidade externa, retenção e infraestrutura de produção. O checkout aceita taxa fixa, bairros, raio em linha reta e retirada. O cálculo por raio é compartilhado e revalidado no servidor; o pedido preserva a faixa e as coordenadas originais. Não há cálculo de trajeto por ruas nem validação geográfica do número da rua: o cliente confirma o ponto e o restaurante confere o endereço informado. Consulte [Entrega por raio](delivery-radius.md). Cadastros públicos devem continuar restritos aos ambientes previstos até implementar o ciclo de verificação de conta.
 
-Referências de implementação: [NestJS/Fastify](https://docs.nestjs.com/techniques/performance), [Prisma 7 e MySQL](https://www.prisma.io/docs/orm/v7/core-concepts/supported-databases/mysql), [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html), [Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) e [Logging](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html).
+Referências de implementação: [NestJS/Fastify](https://docs.nestjs.com/techniques/performance), [Prisma 7 e PostgreSQL](https://www.prisma.io/docs/orm/v7/core-concepts/supported-databases/postgresql), [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html), [Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [Authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) e [Logging](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html).
+
+As correções `fast-uri` 3.1.9 e 4.2.3 são fixadas sem trocar o major exigido por cada consumidor. Corrigem normalização/identificação de URIs; consulte o [aviso do mantenedor](https://github.com/fastify/fast-uri/security/advisories/GHSA-w74x-v6f9-j3xg).
+
+`.pnpmfile.cjs` remove somente o peer opcional da CLI em `@prisma/client` 7.10.0. A CLI continua em devDependencies para geração/migrations; o cliente gerado usa `@prisma/client/runtime`. Isso mantém Studio, engines de desenvolvimento e drivers de bancos não usados fora da imagem da API. Ao atualizar Prisma, revise a regra e valide geração, deploy e testes novamente.

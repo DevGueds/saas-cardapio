@@ -1,3 +1,4 @@
+import "./app/validation-config"
 import React from "react"
 
 import ReactDOM from "react-dom/client"

@@ -1,3 +1,4 @@
+import { lockRestaurant } from "../../../shared/infrastructure/row-locks.js"
 import {
   orderSchema,
   paymentSchema,
@@ -122,14 +123,14 @@ async function store(tx: Transaction, scope: TenantScope) {
 export class PrismaPrinting implements PrintingRepository {
   constructor(private readonly db: Database) {}
   settings(scope: TenantScope) {
-    return this.db.transaction(async (tx) => {
+    return this.db.snapshot(async (tx) => {
       await store(tx, scope)
       return settingsView(await tx.storePrinting.findFirst({ where: scope }))
     })
   }
   update(scope: TenantScope, input: UpdatePrintingSettings) {
     return this.db.transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM Restaurant WHERE id = ${scope.restaurantId} AND tenantId = ${scope.tenantId} FOR UPDATE`
+      await lockRestaurant(tx, scope)
       await store(tx, scope)
       const previous = await tx.storePrinting.findFirst({ where: scope })
       settingsView(previous)
@@ -166,7 +167,7 @@ export class PrismaPrinting implements PrintingRepository {
     id: string,
     operator: { userId: string; role: Role },
   ) {
-    return this.db.transaction(async (tx) => {
+    return this.db.snapshot(async (tx) => {
       const restaurant = await store(tx, scope)
       const settings = settingsView(await tx.storePrinting.findFirst({ where: scope }))
       const paymentRow =

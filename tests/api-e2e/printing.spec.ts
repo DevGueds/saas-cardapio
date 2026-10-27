@@ -176,7 +176,9 @@ test("impressão configura Bluetooth, editor, logo e gera PDF/ESC-POS com recebi
     .click()
   await expect(paymentReceipt.locator("body")).toContainText("RECEBIMENTO REVERTIDO")
   await expect(paymentReceipt.locator("body")).toContainText("não comprova devolução")
-  await paymentDialog.getByLabel("Perfil de impressão").selectOption("a4")
+  await paymentDialog
+    .getByLabel("Perfil de impressão")
+    .selectOption({ label: "Impressora A4 · 210 mm" })
   await expect(paymentReceipt.locator("svg").first()).toHaveAttribute("width", "210mm")
   await page.screenshot({ path: ".cache/printing-reversed-a4.png", fullPage: true })
   // A network failure must hide the previous printable snapshot until a successful reload.

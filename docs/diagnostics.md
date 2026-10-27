@@ -41,7 +41,7 @@ A demonstração permanece independente. No modo API, a autorização, as revis�
 
 1. Confira o estado com `docker compose --env-file backend/.env --profile app ps` e a prontidão em `http://localhost:8080/api/v1/health/ready`.
 2. Consulte `docker compose --env-file backend/.env logs api` e procure o `diagnosticId` exibido. A API registra somente metadados sanitizados; não habilite logs de payload ou queries para investigar.
-3. Em falha de inicialização, confira se `backend/.env` existe e as migrations foram aplicadas. `setup:local` preserva os segredos existentes. Trocar a senha no arquivo não altera automaticamente a senha de um volume MySQL já inicializado.
+3. Em falha de inicialização, confira se `backend/.env` existe e as migrations foram aplicadas. `setup:local` preserva os segredos existentes. Trocar a senha no arquivo não altera automaticamente a senha de um volume PostgreSQL já inicializado.
 4. Em conflito, atualize o catálogo/pedido e confira a alteração antes de reenviar. Em erro de envio, preserve a tentativa: a mesma chave de idempotência recupera o resultado sem duplicar o pedido.
 5. Nunca use exclusão de volume, seeds, dados demo ou limpeza de banco como recuperação automática. Faça backup antes de intervir em dados persistidos.
 
@@ -57,7 +57,7 @@ Verificações completas: `pnpm check:all`, `pnpm api:test:db`, `pnpm test:e2e` 
 
 ## Acesso pelo IP no celular
 
-- **A página não abre:** confirme computador/celular na mesma rede, IPv4 atual e porta 8080. Execute `pnpm setup:lan --host <IP>` e `pnpm docker:up`; mudar somente o `.env` não recria containers existentes. Confira `docker compose --env-file backend/.env --profile app ps`. O firewall deve permitir a porta na rede usada, sem expor MySQL/Redis.
+- **A página não abre:** confirme computador/celular na mesma rede, IPv4 atual e porta 8080. Execute `pnpm setup:lan --host <IP>` e `pnpm docker:up`; mudar somente o `.env` não recria containers existentes. Confira `docker compose --env-file backend/.env --profile app ps`. O firewall deve permitir a porta na rede usada, sem expor PostgreSQL/Redis.
 - **A página abre, mas salvar/enviar retorna ACCESS_DENIED:** confira `DOCKER_CORS_ORIGINS` (Docker) ou `CORS_ORIGINS` (Vite) em `backend/.env`. Inclua exatamente protocolo, IP e porta usados no navegador. `setup:lan` realiza essa configuração de desenvolvimento. Nunca use `*` nem remova CSRF. Causas sanitizadas `origin_not_allowed` e `origin_missing` distinguem esses bloqueios nos logs sem registrar o endereço de origem.
 - **Recursos disponíveis apenas em localhost:** `crypto.randomUUID` e `crypto.subtle` dependem de contexto seguro. Identificadores e hash da tentativa agora passam por adaptadores portáteis; não habilite flags de navegador para mascarar o problema. Push e Web Locks (gravações da demonstração local) continuam requerendo HTTPS/localhost. Essas limitações não impedem pedidos pela API.
 - **A resposta do pedido se perdeu:** preserve o carrinho/rascunho. Recarregar e recuperar a tentativa consulta o pedido já registrado; não apague armazenamento nem crie outra tentativa para resolver um timeout.

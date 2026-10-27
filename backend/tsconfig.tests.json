@@ -4,6 +4,6 @@
     "rootDir": ".",
     "outDir": ".test-build"
   },
-  "include": ["src", "test"],
+  "include": ["src", "test", "tools"],
   "exclude": ["node_modules", "dist", ".test-build"]
 }

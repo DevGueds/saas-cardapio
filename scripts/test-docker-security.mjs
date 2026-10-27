@@ -21,13 +21,31 @@ const docker = (...args) =>
     stdio: ["ignore", "pipe", "pipe"],
   }).trim()
 const service = JSON.parse(docker("inspect", "cardapio-local-api-1"))[0]
+const persistence = docker(
+  "exec",
+  "cardapio-local-api-1",
+  "node",
+  "--input-type=module",
+  "-e",
+  `
+  import assert from 'node:assert/strict';
+  import {createRequire} from 'node:module';
+  assert.equal(new URL(process.env.DATABASE_URL).protocol, 'postgresql:');
+  const require = createRequire(import.meta.url);
+  for (const name of ['mysql2','mariadb','@prisma/adapter-mariadb','prisma']) {
+    assert.throws(() => require.resolve(name), {code:'MODULE_NOT_FOUND'});
+  }
+  process.stdout.write('postgresql-only-runtime');
+`,
+)
+assert.equal(persistence, "postgresql-only-runtime")
 const name = `cardapio-security-${randomUUID().slice(0, 8)}`,
   origin = "http://127.0.0.1:8082",
   base = `${origin}/api/v1`
 const testDatabase = new URL(database),
   redis = new URL(env.REDIS_URL)
-testDatabase.hostname = "mysql"
-testDatabase.port = "3306"
+testDatabase.hostname = "postgres"
+testDatabase.port = "5432"
 redis.hostname = "redis"
 redis.port = "6379"
 const runtimeEnv = {

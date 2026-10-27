@@ -1,3 +1,4 @@
+import { configurePostgresEnvironment } from "./postgres-environment.mjs"
 import { randomBytes, createECDH } from "node:crypto"
 import { writeFile, access, readFile, appendFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
@@ -6,19 +7,11 @@ try {
   await access(file)
   console.log("backend/.env já existe e foi preservado.")
 } catch {
-  const appPassword = randomBytes(24).toString("hex"),
-    rootPassword = randomBytes(24).toString("hex")
   const value = [
     "NODE_ENV=development",
     "HOST=127.0.0.1",
     "PORT=3001",
     "DATABASE_TLS=false",
-    `DATABASE_URL=mysql://cardapio:${appPassword}@127.0.0.1:3307/cardapio`,
-    `MIGRATION_DATABASE_URL=mysql://root:${rootPassword}@127.0.0.1:3307/cardapio`,
-    `TEST_DATABASE_URL=mysql://cardapio:${appPassword}@127.0.0.1:3307/cardapio_test`,
-    `TEST_MIGRATION_DATABASE_URL=mysql://root:${rootPassword}@127.0.0.1:3307/cardapio_test`,
-    `MYSQL_PASSWORD=${appPassword}`,
-    `MYSQL_ROOT_PASSWORD=${rootPassword}`,
     `SESSION_SECRET=${randomBytes(32).toString("hex")}`,
     "SESSION_TTL_SECONDS=28800",
     "CORS_ORIGINS=http://localhost:8443,http://127.0.0.1:8443,http://localhost:4176,http://127.0.0.1:4176",
@@ -30,7 +23,24 @@ try {
   console.log("backend/.env criado com segredos locais aleatórios. Não o envie ao Git.")
 }
 
-const existing = await readFile(file, "utf8")
+const original = await readFile(file, "utf8")
+const configured = configurePostgresEnvironment(original, () =>
+  randomBytes(24).toString("hex"),
+)
+if (configured.upgraded) {
+  const backup = `${file}.mysql-backup`
+  try {
+    await writeFile(backup, original, { encoding: "utf8", flag: "wx", mode: 0o600 })
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error
+  }
+  console.log(
+    "Configuração PostgreSQL preparada. Backup MySQL e segredos existentes preservados; dados ainda exigem importação explícita.",
+  )
+}
+if (configured.contents !== original)
+  await writeFile(file, configured.contents, { encoding: "utf8", mode: 0o600 })
+const existing = configured.contents
 const redisPassword =
   existing.match(/^REDIS_PASSWORD=(.+)$/m)?.[1] ?? randomBytes(24).toString("hex")
 const additions = []

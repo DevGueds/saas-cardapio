@@ -1,6 +1,6 @@
 # Backend
 
-NestJS/Fastify, Prisma e MySQL. Consulte ../docs/backend.md.
+NestJS/Fastify, Prisma e PostgreSQL. Consulte ../docs/backend.md.
 
 - Domínio e aplicação não importam NestJS, Prisma, Fastify ou implementações de infraestrutura.
 - Injetar portas via composição. Controllers traduzem HTTP; casos de uso validam e autorizam também quando chamados diretamente.

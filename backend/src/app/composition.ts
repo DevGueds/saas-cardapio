@@ -40,7 +40,6 @@ import { PrismaOrders } from "../modules/orders/infrastructure/prisma-orders.js"
 export const RUNTIME = Symbol("application-runtime")
 export type Runtime = Awaited<ReturnType<typeof compose>>
 export async function compose(config: ApiConfig) {
-  const db = new Database(config)
   const redis = new RedisStore(
     config.redisUrl,
     config.environment + ":" + config.database.pathname.slice(1),
@@ -51,6 +50,9 @@ export async function compose(config: ApiConfig) {
     instance: config.logInstance,
   })
   const operation = new Operation(diagnostics, ids, clock)
+  const db = new Database(config, () => {
+    operation.error("database.pool", new Error("pool_unavailable"))
+  })
   try {
     await db.connect()
     await redis.connect()

@@ -22,7 +22,7 @@ export function assertPaymentBalance(
   )
 }
 
-/** Reporting totals may exceed a single MySQL INT; all arithmetic remains integral. */
+/** Reporting totals may exceed a single database INT; all arithmetic remains integral. */
 export function sumCents(values: readonly number[]): number {
   let total = 0
   for (const value of values) {

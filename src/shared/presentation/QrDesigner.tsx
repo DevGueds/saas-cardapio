@@ -57,7 +57,7 @@ export default function QrDesigner({
           type: "svg",
           data: url,
           // At least four modules of quiet zone, even for the smallest (21x21) code.
-          margin: 112,
+          margin: 116,
           qrOptions: { errorCorrectionLevel: "H" },
           image: embeddedLogo,
           imageOptions: {
@@ -73,6 +73,17 @@ export default function QrDesigner({
           cornersDotOptions: { type: "square" },
           backgroundOptions: { color: "#ffffff" },
         })
+        if (style === "dots")
+          qr.applyExtension((svg) => {
+            // Touching dots keep timing/alignment patterns readable across payload masks.
+            for (const circle of svg.querySelectorAll("circle")) {
+              const original =
+                circle.getAttribute("data-qr-radius") ?? circle.getAttribute("r")
+              if (!original) continue
+              circle.setAttribute("data-qr-radius", original)
+              circle.setAttribute("r", String(Number(original) * 1.2))
+            }
+          })
         let timer: ReturnType<typeof setTimeout> | undefined
         const blob = await Promise.race([
           qr.getRawData("svg"),

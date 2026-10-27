@@ -5,7 +5,7 @@
 - `Bulkhead`: limita trabalho ativo sem fila ilimitada. HTTP: 128 requisições ativas por réplica por padrão; Argon2: 4 operações por réplica; consulta externa: 4. Saturação devolve erro controlado, sem executar trabalho em outra fonte.
 - `RedisStore`: conexão autenticada, fila de comandos limitada a 512, sem fila offline, prazo de resposta de 2 segundos e reconexão com atraso limitado. Produção exige TLS. Redis indisponível bloqueia operações protegidas e readiness; não desativa o limitador.
 - `RedisLimiter`: incremento + expiração atômicos via Lua. Chaves HMAC evitam armazenar IP/e-mail em claro; as réplicas precisam usar o mesmo segredo. Limites específicos de login/cadastro/pedidos continuam mesmo quando o limite global é ajustado.
-- `CachedMenu`: somente leitura pública, cache Redis de 5 segundos, validação de schema/slug, single-flight de misses por processo e invalidação após edição. Snapshots maiores que 1 MB não são armazenados no cache. Uma leitura concorrente com edição pode publicar cache antigo por até o TTL; revisão e checkout autoritativo impedem confirmar preço antigo. Cotação, administração e checkout sempre consultam MySQL.
+- `CachedMenu`: somente leitura pública, cache Redis de 5 segundos, validação de schema/slug, single-flight de misses por processo e invalidação após edição. Snapshots maiores que 1 MB não são armazenados no cache. Uma leitura concorrente com edição pode publicar cache antigo por até o TTL; revisão e checkout autoritativo impedem confirmar preço antigo. Cotação, administração e checkout sempre consultam PostgreSQL.
 - `ResilientHttp`: GET externo com no máximo duas tentativas, timeout de 3 segundos por tentativa, jitter, corpo até 64 KiB, circuit breaker após três operações falhas por 30 segundos e uma sonda de recuperação. 404 não é repetido. URL de BrasilAPI é fixa, evitando SSRF.
 - Prisma usa pool de dez conexões por réplica, aquisição/consulta com falhas traduzidas, transações e CAS de revisão. Consumo de promoção e criação de pedido são atômicos. Banco não é acessado pelo cliente.
 
@@ -15,9 +15,9 @@ As portas ficam em `backend/src/shared/application`, adaptadores em `shared/infr
 
 `compose.yaml` executa duas APIs stateless e Caddy com `least_conn`. Healthcheck ativo consulta readiness a cada cinco segundos; falhas passivas retiram o upstream temporariamente. Caddy só repete GET/HEAD até duas vezes dentro da janela de três segundos (conexão limitada a 500 ms). Um handler separado atende POST/PUT/DELETE sem retries. O keep-alive do proxy é menor que o timeout do Fastify para evitar reutilizar conexões já encerradas. Idempotência de pedido é responsabilidade do caso de uso e da chave persistida pelo cliente.
 
-Sessão no MySQL e proteção/cache no Redis funcionam entre réplicas sem sticky sessions. APIs não têm portas externas. A confiança de proxy está restrita à rede interna declarada; Caddy determina o IP encaminhado. `HTTP_RATE_LIMIT=600` protege cada IP por minuto. Usuários atrás do mesmo NAT compartilham o limite; ajuste com métricas reais e proteção de borda, não removendo os limites de autenticação.
+Sessão no PostgreSQL e proteção/cache no Redis funcionam entre réplicas sem sticky sessions. APIs não têm portas externas. A confiança de proxy está restrita à rede interna declarada; Caddy determina o IP encaminhado. `HTTP_RATE_LIMIT=600` protege cada IP por minuto. Usuários atrás do mesmo NAT compartilham o limite; ajuste com métricas reais e proteção de borda, não removendo os limites de autenticação.
 
-Redis tem 128 MB e política `noeviction`: esgotamento provoca erro explícito, sem expulsar silenciosamente contadores de segurança. O volume tem AOF; a política padrão do Redis pode perder os últimos comandos em uma falha abrupta do host. Não substitui HA/replicação de produção. Duas APIs não eliminam pontos únicos de falha de MySQL, Redis, host e proxy deste Compose local.
+Redis tem 128 MB e política `noeviction`: esgotamento provoca erro explícito, sem expulsar silenciosamente contadores de segurança. O volume tem AOF; a política padrão do Redis pode perder os últimos comandos em uma falha abrupta do host. Não substitui HA/replicação de produção. Duas APIs não eliminam pontos únicos de falha de PostgreSQL, Redis, host e proxy deste Compose local.
 
 ## Ensaio reproduzível
 
@@ -47,7 +47,9 @@ Em ambiente local, parar uma réplica deve manter leituras pela outra; parar Red
 
 Referências: [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy), [Node Redis em produção](https://redis.io/docs/latest/develop/clients/nodejs/produsage/), [Node Redis command options](https://github.com/redis/node-redis/blob/master/docs/command-options.md).
 
-## Medição local de 17/10/2026
+## Medição histórica de 17/10/2026
+
+Esta medição foi realizada antes da migração para PostgreSQL e não mede a implementação atual. Reexecute o benchmark para avaliar esta versão.
 
 Windows + Docker Desktop/WSL, host com 12 CPUs lógicas e 16 GiB, VM Docker com aproximadamente 7,7 GiB; duas APIs limitadas a 512 MiB cada. Node 24.19, cardápio sintético de 6.541 bytes sem fotos, gzip, Redis compartilhado, 1.000 conexões e 15 segundos. Gerador e serviços no mesmo computador.
 
@@ -58,4 +60,4 @@ Windows + Docker Desktop/WSL, host com 12 CPUs lógicas e 16 GiB, VM Docker com 
 
 O segundo ensaio teve zero erros de transporte e zero respostas não 2xx. A cauda de latência continua alta: **não é um SLO nem comprovação de capacidade de produção**. O primeiro ensaio evidencia a rejeição controlada por saturação; respostas rejeitadas não são contabilizadas como demanda atendida. Limites normais continuam 128 requisições ativas por API e 600/minuto/IP. Não subir limites sem medir recursos, payload e padrão real de uso.
 
-`pnpm test:docker:resilience` automatiza a parada de uma réplica, vinte leituras pela sobrevivente, indisponibilidade do Redis com HTTP 503 e restauração dos serviços em `finally`. Também roda no CI após o smoke Docker. É exclusivo do Compose local.
+`pnpm test:docker:resilience` automatiza a parada de uma réplica, vinte leituras pela sobrevivente, indisponibilidade do Redis e do PostgreSQL com HTTP 503, verificação de leitura autoritativa sem fallback e restauração dos serviços em `finally`. Também roda no CI após o smoke Docker. É exclusivo do Compose local.

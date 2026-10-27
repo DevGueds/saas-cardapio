@@ -174,7 +174,7 @@ after(async () => {
   })
   await server.close()
 })
-test("real MySQL migrations, hashed credentials and empty closed stores", async () => {
+test("real PostgreSQL migrations, hashed credentials and empty closed stores", async () => {
   assert.equal((await request("GET", "/health/ready")).statusCode, 200)
   await current()
   assert.equal(menu.products.length, 0)
@@ -590,7 +590,7 @@ test("a database failure during a composite write rolls back the revision and ca
     false,
   )
 })
-test("unavailable MySQL cannot initialize an alternative repository", async () => {
+test("unavailable PostgreSQL cannot initialize an alternative repository", async () => {
   const target = new URL(database!)
   target.port = "1"
   const unavailable = new Database(

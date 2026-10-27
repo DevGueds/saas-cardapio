@@ -1,3 +1,4 @@
+import { lockOrder, lockRestaurant } from "../../../shared/infrastructure/row-locks.js"
 import {
   orderBalanceSchema,
   paymentSchema,
@@ -37,7 +38,7 @@ const activity = (range: ReportRange) => ({
   OR: [{ createdAt: period(range) }, { reversedAt: period(range) }],
 })
 async function lockStore(tx: Transaction, scope: TenantScope) {
-  await tx.$queryRaw`SELECT id FROM Restaurant WHERE id = ${scope.restaurantId} AND tenantId = ${scope.tenantId} FOR UPDATE`
+  await lockRestaurant(tx, scope)
 }
 
 export class PrismaPayments implements PaymentsRepository {
@@ -60,7 +61,7 @@ export class PrismaPayments implements PaymentsRepository {
       }
       if (draft.orderId) {
         // Serialize against order cancellation as well as concurrent receipts.
-        await tx.$queryRaw`SELECT id FROM \`Order\` WHERE id = ${draft.orderId} AND tenantId = ${scope.tenantId} AND restaurantId = ${scope.restaurantId} FOR UPDATE`
+        await lockOrder(tx, scope, draft.orderId)
         const order = await tx.order.findFirst({ where: { ...scope, id: draft.orderId } })
         if (!order) throw new Failure("NOT_FOUND", "Pedido não encontrado.")
         requireValid(
@@ -102,7 +103,7 @@ export class PrismaPayments implements PaymentsRepository {
     })
   }
   balance(scope: TenantScope, orderId: string) {
-    return this.db.transaction(async (tx) => {
+    return this.db.snapshot(async (tx) => {
       const order = await tx.order.findFirst({ where: { ...scope, id: orderId } })
       if (!order) throw new Failure("NOT_FOUND", "Pedido não encontrado.")
       const payments = (
@@ -129,7 +130,7 @@ export class PrismaPayments implements PaymentsRepository {
     })
   }
   list(scope: TenantScope, range: ReportRange, cursor?: string) {
-    return this.db.transaction(async (tx) => {
+    return this.db.snapshot(async (tx) => {
       const previous = cursor
         ? await tx.payment.findFirst({
             where: { ...scope, id: cursor, ...activity(range) },
@@ -164,7 +165,7 @@ export class PrismaPayments implements PaymentsRepository {
     })
   }
   report(scope: TenantScope, range: ReportRange) {
-    return this.db.transaction(async (tx) => {
+    return this.db.snapshot(async (tx) => {
       const orders = await tx.order.findMany({
         where: { ...scope, createdAt: period(range) },
         take: 5001,

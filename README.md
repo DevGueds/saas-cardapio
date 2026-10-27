@@ -1,6 +1,6 @@
 # SaaS Cardápio
 
-SaaS multitenant de cardápio digital, com frontend React 19/TypeScript/Vite/Tailwind e API NestJS/Fastify/TypeScript. Persistência MySQL 8.4 com Prisma 7 e Redis para cache e proteção compartilhada. Domínio e validações compartilhados, arquitetura DDD/hexagonal e falhas explícitas, sem fallback para dados fictícios.
+SaaS multitenant de cardápio digital, com frontend React 19/TypeScript/Vite/Tailwind e API NestJS/Fastify/TypeScript. Persistência PostgreSQL 18.6 com Prisma 7 e Redis para cache e proteção compartilhada. Domínio e validações compartilhados, arquitetura DDD/hexagonal e falhas explícitas, sem fallback para dados fictícios.
 
 ## Começar com Docker
 
@@ -14,9 +14,9 @@ pnpm docker:up
 
 Abra **http://localhost:8080**. Crie sua conta com senha de **no mínimo 8 caracteres**, escolha a loja, cadastre produtos e configure a entrega. A loja começa **fechada e vazia**. Abra-a quando estiver pronta. O link público será `/menu/<slug-escolhido>`.
 
-`setup:local` gera `backend/.env` com segredos aleatórios, sem sobrescrever arquivos existentes. Esse arquivo não vai para o Git. MySQL e Redis escutam apenas em `127.0.0.1:3307` e `127.0.0.1:6380`; os dados ficam em volume Docker. Frontend e API ficam na mesma origem: Caddy balanceia `/api/` entre duas instâncias internas da API, sem publicar a porta da API. `pnpm docker:down` para os serviços e preserva o volume. Não há senha padrão compartilhada entre instalações.
+`setup:local` gera `backend/.env` com segredos aleatórios e preserva os valores existentes. Se encontrar a instalação MySQL anterior, guarda um backup da configuração e prepara PostgreSQL com a API bloqueada até a importação ser verificada. Siga [migração de dados](docs/postgresql-migration.md) antes de iniciar a aplicação. Esse arquivo não vai para o Git. PostgreSQL e Redis escutam apenas em `127.0.0.1:5433` e `127.0.0.1:6380`; os dados ficam em volume Docker. Frontend e API ficam na mesma origem: Caddy balanceia `/api/` entre duas instâncias internas da API, sem publicar a porta da API. `pnpm docker:down` para os serviços e preserva o volume. Não há senha padrão compartilhada entre instalações.
 
-O comando `docker:up` aplica migrations explicitamente e aguarda os healthchecks de MySQL, Redis, duas APIs, frontend, Evolution API e PostgreSQL do provedor de WhatsApp. As imagens são fixadas por digest. API e frontend executam sem root, sem capabilities e com filesystem somente leitura. O Compose usa configuração **local de desenvolvimento**. O setup mantém o acesso restrito ao computador. Para testar no celular, configure explicitamente a rede local conforme abaixo; banco, Redis e administração do provedor continuam restritos ao computador.
+O comando `docker:up` aplica migrations explicitamente e aguarda os healthchecks de PostgreSQL, Redis, duas APIs, frontend, Evolution API e PostgreSQL do provedor de WhatsApp. As imagens são fixadas por digest. API e frontend executam sem root, sem capabilities e com filesystem somente leitura. O Compose usa configuração **local de desenvolvimento**. O setup mantém o acesso restrito ao computador. Para testar no celular, configure explicitamente a rede local conforme abaixo; banco, Redis e administração do provedor continuam restritos ao computador.
 
 ### Testar no celular pela rede local
 
@@ -35,6 +35,16 @@ Pedidos, combos, adicionais, pagamentos e rascunhos funcionam em HTTP local. Web
 
 Com o Docker instalado, use `pnpm db:up`, `pnpm db:migrate` e `pnpm dev:full`. Abra **http://localhost:8443**; a API escuta em `localhost:3001`. Para executar os processos em terminais separados: `pnpm api:dev` e `pnpm dev:api`. O navegador usa `/api/v1` na mesma origem; Vite encaminha para `127.0.0.1:3001`, mantendo cookies e validação de origem. Para testar pelo IP na porta 8443, execute `setup:lan` e reinicie `dev:full`. `API_PROXY_TARGET` permite alterar o destino interno do proxy de desenvolvimento; nunca é enviado ao bundle.
 
+## PostgreSQL e migração de dados
+
+A aplicação utiliza PostgreSQL 18.6, Prisma com adaptador `pg`, UUID nativo, JSONB e datas UTC com fuso horário. Há usuários separados para aplicação e migrations. Configurações de pool, índices, permissões, cópia transacional do MySQL anterior e recuperação estão em [PostgreSQL e migração](docs/postgresql-migration.md).
+
+### Desenvolvimento em computador com 4 GB de RAM
+
+Prefira PostgreSQL + Redis em Docker e API/frontend no host: `pnpm db:up`, `pnpm db:migrate` e `pnpm dev:full`. Se a aplicação completa já estiver ativa, pare primeiro `web api api-replica evolution evolution-db` com `docker compose --env-file backend/.env --profile app stop web api api-replica evolution evolution-db`. Preserve os volumes. O provedor de WhatsApp fica indisponível enquanto estiver parado.
+
+Execute verificações uma por vez. Para Vitest, use `pnpm exec vitest run --maxWorkers=1`; para Playwright, `--workers=1`. Evite benchmark de mil conexões e builds simultâneos nesse computador. As verificações completas podem rodar no GitHub Actions. A migração não exige simulação de carga.
+
 ## O que funciona
 
 Comprovantes de pedidos, preparo, entrega e recebimentos manuais em PDF selecionável, impressão pelo sistema e arquivo térmico ESC/POS. Perfis de 58/80 mm e A4, modelos de impressora, vias, logo e layout com Editor.js. Veja [configuração e limites de impressão](docs/printing.md).
@@ -45,7 +55,7 @@ Novidades: **adicionais reutilizáveis, três modelos de cardápio, QR Codes com
 - Catálogo com categorias criadas dentro do produto, preço em centavos, imagens, disponibilidade e destaque.
 - Configurações da loja, taxa, pedido mínimo, prazo e abertura/fechamento.
 - Cardápio público pelo slug, carrinho isolado por loja e atualização explícita de itens removidos/preços alterados.
-- **Enviar pedido para a loja** registra um pedido real no MySQL, com validação dos valores atuais e proteção contra repetição da tentativa.
+- **Enviar pedido para a loja** registra um pedido real no PostgreSQL, com validação dos valores atuais e proteção contra repetição da tentativa.
 - Painel de pedidos: novos → em preparo → prontos → em entrega → concluídos; cancelamento antes da saída, detalhes e paginação. Atualização a cada 15 segundos.
 - Combos com produtos fixos, grupos de escolha e adicionais; promoções automáticas/cupons com período, teto, mínimo e limite de usos.
 - Entrega por taxa única, cidade/bairro ou raio, retirada, atribuição de entregador e acompanhamento por link privado. Endereço com campos validados, autocomplete e busca assistida de CEP pela BrasilAPI com alternativa ViaCEP; Leaflet/OpenStreetMap auxilia a confirmação do ponto.
@@ -67,27 +77,27 @@ O modo API usa `.env.api` e nunca importa automaticamente os dados de demonstra�
 
 ## Comandos
 
-| Comando                               | Finalidade                                                                        |
-| ------------------------------------- | --------------------------------------------------------------------------------- |
-| `pnpm docker:up` / `pnpm docker:down` | Iniciar/parar frontend, duas APIs, Redis e MySQL em containers, preservando dados |
-| `pnpm docker:migrate`                 | Aplicar migrations pelo container de ferramentas                                  |
-| `pnpm dev:full`                       | Frontend em modo API + backend com recarga                                        |
-| `pnpm setup:lan --host <IP>`          | Configurar explicitamente acesso pela rede local, sem alterar segredos            |
-| `pnpm setup:local`                    | Gerar segredos locais, preservando configuração existente                         |
-| `pnpm db:up` / `pnpm db:down`         | Iniciar/parar MySQL e Redis locais, preservando dados                             |
-| `pnpm db:migrate`                     | Aplicar migrations explicitamente                                                 |
-| `pnpm api:build`                      | Gerar Prisma Client e compilar API                                                |
-| `pnpm build:api`                      | Compilar frontend conectado à API                                                 |
-| `pnpm build:demo`                     | Compilar demonstração local explícita                                             |
-| `pnpm dev:restricted` / `pnpm build`  | Executar/compilar com acesso bloqueado por falta de modo válido                   |
-| `pnpm check:all`                      | Tipagem, lint, fronteiras arquiteturais, UTF-8, testes unitários e builds         |
-| `pnpm api:test:db`                    | Migrations e testes de integração exclusivamente no banco `_test`                 |
-| `pnpm test:e2e`                       | Regressões da demonstração no Chromium                                            |
-| `pnpm test:e2e:api`                   | Fluxo completo React → API → MySQL em HTTP por IP, incluindo celular              |
-| `pnpm test:e2e:docker`                | Validar bundle, proxy, headers e bloqueios de acesso com os containers iniciados  |
-| `pnpm test:e2e:api:cleanup`           | Limpar somente as contas criadas na última execução de testes do navegador        |
-| `pnpm format:check`                   | Conferir formatação                                                               |
-| `pnpm audit --prod`                   | Auditar dependências de produção                                                  |
+| Comando                               | Finalidade                                                                             |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| `pnpm docker:up` / `pnpm docker:down` | Iniciar/parar frontend, duas APIs, Redis e PostgreSQL em containers, preservando dados |
+| `pnpm docker:migrate`                 | Aplicar migrations pelo container de ferramentas                                       |
+| `pnpm dev:full`                       | Frontend em modo API + backend com recarga                                             |
+| `pnpm setup:lan --host <IP>`          | Configurar explicitamente acesso pela rede local, sem alterar segredos                 |
+| `pnpm setup:local`                    | Gerar segredos locais, preservando configuração existente                              |
+| `pnpm db:up` / `pnpm db:down`         | Iniciar/parar PostgreSQL e Redis locais, preservando dados                             |
+| `pnpm db:migrate`                     | Aplicar migrations explicitamente                                                      |
+| `pnpm api:build`                      | Gerar Prisma Client e compilar API                                                     |
+| `pnpm build:api`                      | Compilar frontend conectado à API                                                      |
+| `pnpm build:demo`                     | Compilar demonstração local explícita                                                  |
+| `pnpm dev:restricted` / `pnpm build`  | Executar/compilar com acesso bloqueado por falta de modo válido                        |
+| `pnpm check:all`                      | Tipagem, lint, fronteiras arquiteturais, UTF-8, testes unitários e builds              |
+| `pnpm api:test:db`                    | Migrations e testes de integração exclusivamente no banco `_test`                      |
+| `pnpm test:e2e`                       | Regressões da demonstração no Chromium                                                 |
+| `pnpm test:e2e:api`                   | Fluxo completo React → API → PostgreSQL em HTTP por IP, incluindo celular              |
+| `pnpm test:e2e:docker`                | Validar bundle, proxy, headers e bloqueios de acesso com os containers iniciados       |
+| `pnpm test:e2e:api:cleanup`           | Limpar somente as contas criadas na última execução de testes do navegador             |
+| `pnpm format:check`                   | Conferir formatação                                                                    |
+| `pnpm audit --prod`                   | Auditar dependências de produção                                                       |
 
 Instale o navegador antes dos testes: `pnpm exec playwright install chromium`. Os testes da API usam portas 3002/4176 e o banco `cardapio_test`. Selecionam um IPv4 local para exercitar uma origem HTTP sem contexto seguro; `E2E_LAN_HOST` permite escolher a interface. Os testes da demonstração usam 4173/4174. Para verificar o bundle Docker pelo IP configurado, defina `DOCKER_E2E_ORIGIN=http://<IP>:8080` ao executar `pnpm test:e2e:docker`; o padrão é localhost. Screenshots e traces ficam em diretórios ignorados pelo Git.
 

@@ -1,10 +1,11 @@
 import "dotenv/config"
 import { defineConfig } from "prisma/config"
+import { migrationConnection } from "./prisma/connection.js"
+
+const url = migrationConnection(process.env)
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: { path: "prisma/migrations" },
-  ...(process.env.MIGRATION_DATABASE_URL
-    ? { datasource: { url: process.env.MIGRATION_DATABASE_URL } }
-    : {}),
+  ...(url ? { datasource: { url } } : {}),
 })

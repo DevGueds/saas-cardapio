@@ -1,3 +1,4 @@
+import { lockUser } from "../../../shared/infrastructure/row-locks.js"
 import { Failure } from "@cardapio/domain/failure"
 import type { Database, Transaction } from "../../../shared/infrastructure/database.js"
 import type { Actor } from "../domain/identity.js"
@@ -65,7 +66,7 @@ export class PrismaIdentity implements IdentityRepository {
   }
   createSession(session: SessionInput, expectedPasswordHash: string) {
     return this.db.transaction(async (client) => {
-      await client.$queryRaw`SELECT id FROM User WHERE id = ${session.userId} FOR UPDATE`
+      await lockUser(client, session.userId)
       const user = await client.user.findFirst({
         where: { id: session.userId, passwordHash: expectedPasswordHash, active: true },
         select: { id: true },

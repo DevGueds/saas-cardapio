@@ -1,6 +1,6 @@
 # Evolução do cardápio — entregas verificáveis
 
-As três etapas estão implementadas. A operação local inclui frontend, duas APIs, MySQL, Redis, Evolution API e PostgreSQL do provedor. O número do estabelecimento precisa ser pareado pelo responsável; Web Push em celulares externos depende de HTTPS.
+As três etapas estão implementadas. A operação local inclui frontend, duas APIs, PostgreSQL, Redis, Evolution API e PostgreSQL do provedor. O número do estabelecimento precisa ser pareado pelo responsável; Web Push em celulares externos depende de HTTPS.
 
 ## Etapa 1: caixa, relatórios e resiliência
 

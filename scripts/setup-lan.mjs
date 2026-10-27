@@ -27,7 +27,7 @@ if (args.length !== 2 || args[0] !== "--host") {
       `Rede configurada: http://${args[1]}:8080. Execute pnpm docker:up para aplicar.`,
     )
     console.log(
-      "Segredos preservados; MySQL, Redis e APIs continuam sem exposição à rede local.",
+      "Segredos preservados; PostgreSQL, Redis e APIs continuam sem exposição à rede local.",
     )
   } catch (error) {
     console.error(

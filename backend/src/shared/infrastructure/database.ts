@@ -1,38 +1,21 @@
-import { readFileSync } from "node:fs"
-import { PrismaMariaDb } from "@prisma/adapter-mariadb"
+import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient, Prisma } from "../../generated/prisma/client.js"
 import { Failure } from "@cardapio/domain/failure"
-export interface DatabaseConfig {
-  database: URL
-  databaseTls: boolean
-  databaseCaFile?: string
-}
+import { postgresPoolConfig, type DatabaseConfig } from "./postgres-config.js"
+export type { DatabaseConfig } from "./postgres-config.js"
 
 export type Transaction = Prisma.TransactionClient
 export class Database {
   readonly client: PrismaClient
-  constructor(config: DatabaseConfig) {
-    const url = config.database
-    const adapter = new PrismaMariaDb({
-      host: url.hostname,
-      port: Number(url.port || 3306),
-      user: decodeURIComponent(url.username),
-      password: decodeURIComponent(url.password),
-      database: url.pathname.slice(1),
-      connectionLimit: 10,
-      connectTimeout: 5000,
-      acquireTimeout: 10000,
-      allowPublicKeyRetrieval: !config.databaseTls,
-      ...(config.databaseTls
-        ? {
-            ssl: {
-              rejectUnauthorized: true,
-              ...(config.databaseCaFile
-                ? { ca: readFileSync(config.databaseCaFile, "utf8") }
-                : {}),
-            },
-          }
-        : {}),
+  constructor(config: DatabaseConfig, onPoolFailure: () => void = () => {}) {
+    const adapter = new PrismaPg(postgresPoolConfig(config), {
+      onPoolError: () => {
+        try {
+          onPoolFailure()
+        } catch {
+          /* Diagnostic sinks cannot crash the pool. */
+        }
+      },
     })
     this.client = new PrismaClient({ adapter, log: [], errorFormat: "minimal" })
   }
@@ -42,7 +25,7 @@ export class Database {
     } catch (error) {
       if (error instanceof Failure) throw error
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (["P2002", "P2034"].includes(error.code))
+        if (error.code === "P2002" || retryableTransaction(error))
           throw new Failure(
             "CONFLICT",
             "Outra alteração entrou em conflito. Atualize os dados e tente novamente.",
@@ -70,13 +53,37 @@ export class Database {
       )
     }
   }
+  /** Database-only callbacks: retry only transactions PostgreSQL has certainly rolled back. */
   transaction<T>(action: (tx: Transaction) => Promise<T>): Promise<T> {
+    return this.run(async (client) => {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await client.$transaction(action, {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            maxWait: 5000,
+            timeout: 15000,
+          })
+        } catch (error) {
+          if (!retryableTransaction(error) || attempt >= 2) throw error
+          await new Promise((resolve) => setTimeout(resolve, 25 * (attempt + 1)))
+        }
+      }
+    })
+  }
+  /** Coherent, read-only snapshots without serializable predicate conflicts. */
+  snapshot<T>(action: (tx: Transaction) => Promise<T>): Promise<T> {
     return this.run((client) =>
-      client.$transaction(action, {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-        maxWait: 5000,
-        timeout: 15000,
-      }),
+      client.$transaction(
+        async (tx) => {
+          await tx.$executeRaw`SET TRANSACTION READ ONLY`
+          return action(tx)
+        },
+        {
+          isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+          maxWait: 5000,
+          timeout: 15000,
+        },
+      ),
     )
   }
   async connect() {
@@ -88,4 +95,12 @@ export class Database {
   async close() {
     await this.client.$disconnect()
   }
+}
+
+export function retryableTransaction(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    (error.code === "P2034" ||
+      (error.code === "P2010" && ["40001", "40P01"].includes(String(error.meta?.code))))
+  )
 }

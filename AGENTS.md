@@ -1,6 +1,6 @@
 # SaaS Cardápio
 
-React 19, TypeScript, Vite 8 e Tailwind CSS v4. Frontend demo/API e backend NestJS/Fastify/MySQL organizados em DDD e arquitetura hexagonal. Leia `README.md` e `docs/architecture.md` para o mapa de responsabilidades e contratos.
+React 19, TypeScript, Vite 8 e Tailwind CSS v4. Frontend demo/API e backend NestJS/Fastify/PostgreSQL organizados em DDD e arquitetura hexagonal. Leia `README.md` e `docs/architecture.md` para o mapa de responsabilidades e contratos.
 
 ## Entradas
 
@@ -19,7 +19,7 @@ React 19, TypeScript, Vite 8 e Tailwind CSS v4. Frontend demo/API e backend Nest
 - `pnpm check` executa tipos, lint, limites arquiteturais, integridade UTF-8, testes e build demonstrativo.
 - `pnpm test:e2e` usa Chromium e servidores nas portas 4173 e 4174. Instale o navegador com `pnpm exec playwright install chromium` quando necessário.
 - `pnpm build` mantém operações bloqueadas sem modo válido. `pnpm build:demo` e `pnpm build:api` selecionam explicitamente os adaptadores.
-- `pnpm docker:up` inicia frontend, duas APIs, Redis e MySQL em http://localhost:8080 após `pnpm setup:local`; `pnpm docker:down` preserva o volume.
+- `pnpm docker:up` inicia frontend, duas APIs, Redis e PostgreSQL em http://localhost:8080 após `pnpm setup:local`; `pnpm docker:down` preserva o volume.
 - Formatação: Prettier com `.prettierrc.json`. O antigo oxfmt 0.2 removia separadores obrigatórios de tipos TypeScript e foi substituído.
 
 ## Regras de código
@@ -32,7 +32,7 @@ React 19, TypeScript, Vite 8 e Tailwind CSS v4. Frontend demo/API e backend Nest
 - Usar centavos inteiros para dinheiro e validar entradas e dados persistidos.
 - Tratar erros com `Result<T>` e códigos estáveis. Nunca informar sucesso antes da gravação nem substituir falhas por dados demonstrativos.
 - Manter dados pessoais, imagens e mensagens de pedido fora dos logs.
-- Backend autorizado nesta etapa: NestJS + Fastify + Prisma + MySQL em `backend/`. Nunca acessar o banco pelo navegador nem adicionar chamadas Supabase.
+- Backend autorizado nesta etapa: NestJS + Fastify + Prisma + PostgreSQL em `backend/`. Nunca acessar o banco pelo navegador nem adicionar chamadas Supabase.
 - Domínio portátil compartilhado em `packages/domain`; contratos de entrada/saída em `packages/contracts`. Evitar duplicação entre cliente e servidor.
 - Acesso real exige sessão e autorização por tenant no servidor. A demonstração permanece explicitamente isolada.
 - Consulte `backend/AGENTS.md` e `docs/backend.md` ao trabalhar na API.

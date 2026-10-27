@@ -20,7 +20,7 @@ const base = "http://127.0.0.1:8080/api/v1"
 const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 async function status(path) {
   try {
-    return (await fetch(base + path, { signal: AbortSignal.timeout(5000) })).status
+    return (await fetch(base + path, { signal: AbortSignal.timeout(8000) })).status
   } catch {
     return 0
   }
@@ -43,10 +43,20 @@ try {
   await expectEventually("/configuration", 503)
   await expectEventually("/health/ready", 503)
   console.log("Redis unavailable: application and readiness fail closed (503)")
+  docker("up", "-d", "--no-deps", "--wait", "redis")
+  await expectEventually("/health/ready", 200)
+  docker("stop", "postgres")
+  await expectEventually("/health/ready", 503)
+  await expectEventually("/public/restaurants/postgres-resilience-check/menu", 503)
+  console.log(
+    "PostgreSQL unavailable: authoritative menu and readiness fail closed (503)",
+  )
 } finally {
+  docker("up", "-d", "--no-deps", "--wait", "postgres")
   docker("up", "-d", "--no-deps", "--wait", "redis")
   docker("up", "-d", "--no-deps", "--wait", "api", "api-replica")
   await expectEventually("/health/ready", 200)
 }
 await expectEventually("/configuration", 200)
+await expectEventually("/public/restaurants/postgres-resilience-check/menu", 404)
 console.log("Dependencies restored; both APIs are available")
