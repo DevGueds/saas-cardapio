@@ -58,6 +58,6 @@ A chave UUID de uma tentativa e seu hash sobrevivem ao reload. Antes de repetir 
 
 ## Validação
 
-Testes de domínio cobrem composição, seleção inválida, produto esgotado, cupom, frete, mínimo e troco. Testes Redux cobrem reload, Unicode, listas vazias, expiração, separação, quota, corrupção e conflitos. Integração MySQL verifica consumo concorrente de promoção, snapshots, idempotência, isolamento, papéis e atribuição. Playwright percorre formulários após reload, compra de combo/cupom/bairro, mapa indisponível, resposta perdida, acompanhamento e acesso de cozinha, além dos fluxos anteriores.
+Testes de domínio cobrem composição, seleção inválida, produto esgotado, cupom, frete, mínimo e troco. Testes Redux cobrem reload, Unicode, listas vazias, expiração, separação, quota, corrupção e conflitos. Integração PostgreSQL verifica consumo concorrente de promoção, snapshots, idempotência, isolamento, papéis e atribuição. Playwright percorre formulários após reload, compra de combo/cupom/bairro, mapa indisponível, resposta perdida, acompanhamento e acesso de cozinha, além dos fluxos anteriores.
 
 Referências de comportamento: [Anota AI](https://anota.ai/ajuda/promocoes-e-cardapio-digital/), [WhatsMenu](https://blog.whatsmenu.com.br/primeiros-passos/). Referências técnicas: [política de tiles OSM](https://operations.osmfoundation.org/policies/tiles/), [BrasilAPI](https://brasilapi.com.br/docs), [Redux](https://redux.js.org/usage/writing-tests).

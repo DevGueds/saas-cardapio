@@ -39,7 +39,7 @@ Percentuais são aplicados uma vez ao subtotal elegível de produtos/adicionais 
 
 ## Integridade e integração futura
 
-Valores individuais usam `Int` MySQL em centavos; strings de entrada são validadas e convertidas sem arredondamento de valores inválidos. Totais de relatório aceitam inteiros seguros maiores que um único `Int`. Transações serializáveis, bloqueio do restaurante/pedido e revisão do saldo evitam sobrepagamento entre operadores. A chave de tentativa é única por tenant/loja; o hash do payload impede reutilização com valores diferentes.
+Valores individuais usam `Int` PostgreSQL em centavos; strings de entrada são validadas e convertidas sem arredondamento de valores inválidos. Totais de relatório aceitam inteiros seguros maiores que um único `Int`. Transações serializáveis, bloqueio do restaurante/pedido e revisão do saldo evitam sobrepagamento entre operadores. A chave de tentativa é única por tenant/loja; o hash do payload impede reutilização com valores diferentes.
 
 O formulário persiste sua chave e seus valores antes do envio no armazenamento de rascunhos, isolado por usuário/loja. Após resposta incerta, **Verificar recebimento** repete a mesma tentativa. Os campos ficam bloqueados para não alterar uma tentativa potencialmente confirmada. O rascunho dura 24 horas e não substitui o histórico permanente no servidor: após expiração, exclusão dos dados do navegador ou troca de dispositivo, confira o histórico antes de registrar novamente um avulso.
 

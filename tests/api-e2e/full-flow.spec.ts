@@ -154,7 +154,7 @@ test.afterAll(async () => {
   await mkdir(".cache", { recursive: true })
   await writeFile(".cache/api-browser-users.json", JSON.stringify(users), "utf8")
 })
-test("cadastro, catálogo, configurações, pedido real e troca de loja funcionam com MySQL", async ({
+test("cadastro, catálogo, configurações, pedido real e troca de loja funcionam com PostgreSQL", async ({
   page,
   browser,
   baseURL,

@@ -2,6 +2,8 @@ import fs from "node:fs"
 import path from "node:path"
 import ts from "typescript"
 const failures = []
+if (!/provider\s*=\s*"postgresql"/.test(fs.readFileSync("prisma/schema.prisma", "utf8")))
+  failures.push("O provider ativo deve ser PostgreSQL")
 function files(dir) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
@@ -32,6 +34,11 @@ for (const file of [...files("src"), ...files("../packages/domain/src")]) {
       ts.isStringLiteral(node.moduleSpecifier)
     ) {
       const name = node.moduleSpecifier.text
+      if (
+        normalized.startsWith("src/") &&
+        /^(?:mysql2?|mariadb|@prisma\/adapter-mariadb)(?:\/|$)/.test(name)
+      )
+        failures.push(`${file}: MySQL só pode existir na ferramenta de importação legada`)
       if (normalized.startsWith("src/shared/") && /modules|app\//.test(name))
         failures.push(
           `${file}: shared não pode depender de módulos ou composição (${name})`,

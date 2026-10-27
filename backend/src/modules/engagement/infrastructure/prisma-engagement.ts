@@ -1,3 +1,4 @@
+import { lockOrder, lockRestaurant } from "../../../shared/infrastructure/row-locks.js"
 import { randomUUID, createHash } from "node:crypto"
 import { boardSnapshotSchema, deliveriesSchema, type Role } from "@cardapio/contracts"
 import { Failure, requireValid } from "@cardapio/domain/failure"
@@ -29,7 +30,7 @@ export class PrismaEngagement implements EngagementRepository {
   }
   update(scope: TenantScope, revision: number, next: Omit<ChannelRecord, "revision">) {
     return this.db.transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM Restaurant WHERE id = ${scope.restaurantId} AND tenantId = ${scope.tenantId} FOR UPDATE`
+      await lockRestaurant(tx, scope)
       const old = await tx.storeChannel.findFirst({ where: scope })
       if ((old?.revision ?? 0) !== revision)
         throw new Failure(
@@ -87,7 +88,7 @@ export class PrismaEngagement implements EngagementRepository {
     // Repeating the same preference must not invalidate events already authorized.
     // A new consent after revocation starts a fresh eligibility window.
     await this.db.transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM \`Order\` WHERE id = ${id} AND tenantId = ${scope.tenantId} AND restaurantId = ${scope.restaurantId} FOR UPDATE`
+      await lockOrder(tx, scope, id)
       const previous = await tx.order.findFirst({ where: { ...scope, id } })
       if (!previous) throw new Failure("NOT_FOUND", "Pedido indisponível.")
       const changed = await tx.order.updateMany({
@@ -131,7 +132,7 @@ export class PrismaEngagement implements EngagementRepository {
       .update(endpoint)
       .digest("hex")
     await this.db.transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM Restaurant WHERE id = ${scope.restaurantId} AND tenantId = ${scope.tenantId} FOR UPDATE`
+      await lockRestaurant(tx, scope)
       if (!input) {
         await tx.pushSubscription.deleteMany({
           where: { ...scope, ...identity, endpointHash },
@@ -167,7 +168,7 @@ export class PrismaEngagement implements EngagementRepository {
     })
   }
   inbox(scope: TenantScope, userId: string, role: Role) {
-    return this.db.transaction(async (tx) => {
+    return this.db.snapshot(async (tx) => {
       const readAt =
         (
           await tx.inboxRead.findUnique({

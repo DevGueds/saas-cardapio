@@ -2,6 +2,7 @@ packages:
   - "."
   - "backend"
   - "packages/*"
+  - "backend/tools/mysql-import"
 allowBuilds:
   "@nestjs/core": true
   "@prisma/engines": true
@@ -17,6 +18,8 @@ minimumReleaseAgeExclude:
 # Security fixes within the supported Fastify 5 / Prisma 7 stack. See docs/backend.md.
 overrides:
   fastify: 5.12.7
-  mariadb: 3.5.4
   mysql2: 3.24.6
   deepmerge-ts: 8.0.2
+
+  "fast-uri@^3": 3.1.9
+  "fast-uri@^4": 4.2.3

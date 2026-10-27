@@ -13,7 +13,7 @@ flowchart LR
   DEMO --> CORE
   USE --> PORTS[Portas de repositório e autorização]
   PRISMA[Adaptadores Prisma] -. implementam .-> PORTS
-  PRISMA --> MYSQL[(MySQL)]
+  PRISMA --> POSTGRES[(PostgreSQL)]
 ```
 
 ## Mapa de responsabilidades
@@ -92,4 +92,4 @@ O módulo `printing` mantém configuração privada por loja e constrói snapsho
 
 `CachedMenu` decora o repositório para leitura pública com TTL curto e single-flight por processo. Acesso administrativo, cotação e checkout continuam lendo o banco. `CacheStore`, `RequestLimiter` e `AddressLookup` são portas; Redis e BrasilAPI são adaptadores. `Bulkhead` limita concorrência sem filas ilimitadas. `ResilientHttp` concentra timeout, limite de resposta, retry finito e circuit breaker de consultas externas.
 
-Caddy faz o balanceamento entre processos independentes. Sessão fica no MySQL e limites/cache no Redis; não existe estado de autorização em memória que dependa de sticky session. Veja [resilience.md](resilience.md) para limites, operação, ensaio reproduzível e restrições de capacidade.
+Caddy faz o balanceamento entre processos independentes. Sessão fica no PostgreSQL e limites/cache no Redis; não existe estado de autorização em memória que dependa de sticky session. Veja [resilience.md](resilience.md) para limites, operação, ensaio reproduzível e restrições de capacidade.

@@ -13,7 +13,7 @@ import { ArgonPasswords, NodeSecrets } from "../../src/shared/infrastructure/run
 const env = {
   NODE_ENV: "test",
   REDIS_URL: "redis://:test@localhost:6380/0",
-  DATABASE_URL: "mysql://test:local@127.0.0.1/cardapio_test",
+  DATABASE_URL: "postgresql://test:local@127.0.0.1/cardapio_test",
   DATABASE_TLS: "false",
   SESSION_SECRET: randomBytes(32).toString("hex"),
   CORS_ORIGINS: "http://localhost:8443",
@@ -38,6 +38,20 @@ test("configuration has no implicit environment or insecure production defaults"
   assert.throws(() => loadConfig({ ...env, NODE_ENV: "production" }), Failure)
   assert.throws(() => loadConfig({ ...env, CORS_ORIGINS: "*" }), Failure)
   assert.throws(() => loadConfig({ ...env, SESSION_SECRET: "" }), Failure)
+  assert.throws(
+    () => loadConfig({ ...env, DATABASE_URL: "mysql://test:local@localhost/cardapio" }),
+    Failure,
+  )
+  assert.throws(
+    () =>
+      loadConfig({
+        ...env,
+        DATABASE_URL: "postgresql://test:local@localhost/cardapio",
+        DATABASE_MIGRATION_PENDING: "true",
+      }),
+    Failure,
+  )
+  assert.throws(() => loadConfig({ ...env, DATABASE_POOL_MAX: "0" }), Failure)
   assert.equal(loadConfig(env).signupEnabled, false)
   assert.equal(
     loadConfig({

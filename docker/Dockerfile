@@ -3,9 +3,15 @@ FROM node:24-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bd
 WORKDIR /workspace
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN npm install --global pnpm@11.23.0
+# Cache dependency installation independently of source/docs; run approved builds after copying sources.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .pnpmfile.cjs ./
+COPY backend/package.json ./backend/package.json
+COPY backend/tools/mysql-import/package.json ./backend/tools/mysql-import/package.json
+COPY packages/domain/package.json ./packages/domain/package.json
+COPY packages/contracts/package.json ./packages/contracts/package.json
+RUN --mount=type=cache,id=cardapio-pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
-RUN --mount=type=cache,id=cardapio-pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
-RUN pnpm api:build
+RUN pnpm -r rebuild && pnpm run postinstall && pnpm api:build
 
 FROM build AS api-package
 RUN --mount=type=cache,id=cardapio-pnpm,target=/root/.local/share/pnpm/store pnpm --filter @cardapio/api deploy --prod --legacy /opt/api

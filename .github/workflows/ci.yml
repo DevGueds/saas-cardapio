@@ -33,6 +33,7 @@ jobs:
       - run: pnpm setup:local
       - run: pnpm db:up
       - run: pnpm db:migrate
+      - run: pnpm --filter @cardapio/api db:check-schema
       - run: pnpm check:all
       - run: pnpm format:check
       - run: pnpm api:test:db

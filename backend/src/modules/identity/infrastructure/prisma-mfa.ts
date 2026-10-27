@@ -1,3 +1,4 @@
+import { lockUser } from "../../../shared/infrastructure/row-locks.js"
 import { Failure } from "@cardapio/domain/failure"
 import { randomUUID } from "node:crypto"
 import { z } from "zod"
@@ -24,7 +25,7 @@ export class PrismaMfa implements MfaRepository {
     })
   }
   private async lock(tx: Transaction, actor: Actor, now: Date, passwordHash?: string) {
-    await tx.$queryRaw`SELECT id FROM User WHERE id = ${actor.userId} FOR UPDATE`
+    await lockUser(tx, actor.userId)
     const session = await tx.session.findFirst({
       where: {
         id: actor.sessionId,

@@ -12,6 +12,6 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "dist"
   },
-  "include": ["src", "test", "prisma.config.ts"],
+  "include": ["src", "test", "prisma.config.ts", "tools"],
   "exclude": ["node_modules", "dist", ".test-build"]
 }

@@ -28,7 +28,7 @@
     "dev:api": "vite --mode api",
     "setup:local": "node scripts/setup-local.mjs",
     "setup:lan": "node scripts/setup-lan.mjs",
-    "db:up": "docker compose --env-file backend/.env -f compose.yaml up -d --wait mysql redis",
+    "db:up": "docker compose --env-file backend/.env -f compose.yaml up -d --wait postgres redis",
     "db:down": "docker compose --env-file backend/.env -f compose.yaml down",
     "db:migrate": "pnpm --filter @cardapio/api db:migrate",
     "dev:full": "node scripts/dev-full.mjs",
@@ -46,7 +46,9 @@
     "benchmark:up": "docker compose --env-file backend/.env -f compose.yaml -f compose.benchmark.yaml --profile app up -d --wait",
     "benchmark": "node scripts/benchmark.mjs",
     "benchmark:restore": "docker compose --env-file backend/.env -f compose.yaml --profile app up -d --wait",
-    "test:docker:resilience": "node scripts/test-docker-resilience.mjs"
+    "test:docker:resilience": "node scripts/test-docker-resilience.mjs",
+    "db:backup:mysql": "node scripts/backup-legacy-mysql.mjs",
+    "db:import:mysql": "pnpm --filter @cardapio/api db:import:mysql"
   },
   "dependencies": {
     "@cardapio/contracts": "workspace:*",

@@ -1,3 +1,4 @@
+import { lockRestaurant } from "../../../shared/infrastructure/row-locks.js"
 import { Failure, requireValid } from "@cardapio/domain/failure"
 import { parseCommerce } from "@cardapio/domain/commerce"
 import { orderSchema, type OrderView, type OrderStatus } from "@cardapio/contracts"
@@ -71,7 +72,7 @@ export class PrismaOrders implements OrdersRepository {
     prepare: (menu: MenuDocument) => OrderDraft,
   ) {
     return this.db.transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM Restaurant WHERE id = ${scope.restaurantId} AND tenantId = ${scope.tenantId} FOR UPDATE`
+      await lockRestaurant(tx, scope)
       const previous = await tx.order.findUnique({
         where: {
           tenantId_restaurantId_idempotencyHash: {
@@ -135,7 +136,7 @@ export class PrismaOrders implements OrdersRepository {
     })
   }
   list(scope: TenantScope, cursor?: string, operator?: OrderOperator) {
-    return this.db.transaction(async (tx) => {
+    return this.db.snapshot(async (tx) => {
       const restriction = { ...scope, ...courierFilter(operator) }
       const previous = cursor
         ? await tx.order.findFirst({ where: { ...restriction, id: cursor } })

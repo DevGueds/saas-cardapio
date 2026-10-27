@@ -19,7 +19,15 @@ const schema = z.object({
   MAP_TILE_URL: z.string().default("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
   DATABASE_URL: z.string().min(1),
   DATABASE_TLS: z.enum(["true", "false"]),
-  DATABASE_CA_FILE: z.string().optional(),
+  DATABASE_MIGRATION_PENDING: z.enum(["true", "false"]).default("false"),
+  DATABASE_CA_FILE: z.string().min(1).optional(),
+  DATABASE_POOL_MAX: z.coerce.number().int().min(2).max(50).default(10),
+  DATABASE_CONNECTION_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(30000)
+    .default(5000),
   SESSION_SECRET: z.string().regex(/^[a-f0-9]{64,128}$/),
   SESSION_TTL_SECONDS: z.coerce.number().int().min(300).max(86400).default(28800),
   CORS_ORIGINS: z.string().min(1),
@@ -102,12 +110,15 @@ export function loadConfig(input: Record<string, unknown>) {
     )
       throw new Error()
     database = new URL(env.DATABASE_URL)
+    if (env.DATABASE_MIGRATION_PENDING === "true" && !database.pathname.endsWith("_test"))
+      throw new Error()
     if (
-      database.protocol !== "mysql:" ||
+      !["postgresql:", "postgres:"].includes(database.protocol) ||
       !database.username ||
       !database.password ||
       !/^\/[a-zA-Z0-9_]+$/.test(database.pathname) ||
-      database.search
+      database.search ||
+      database.hash
     )
       throw new Error()
     origins = env.CORS_ORIGINS.split(",").map((value) => {
@@ -157,6 +168,8 @@ export function loadConfig(input: Record<string, unknown>) {
     mapTileUrl: env.MAP_TILE_URL,
     databaseTls: env.DATABASE_TLS === "true",
     databaseCaFile: env.DATABASE_CA_FILE,
+    databasePoolMax: env.DATABASE_POOL_MAX,
+    databaseConnectionTimeoutMs: env.DATABASE_CONNECTION_TIMEOUT_MS,
     secret: env.SESSION_SECRET,
     sessionTtl: env.SESSION_TTL_SECONDS,
     origins,

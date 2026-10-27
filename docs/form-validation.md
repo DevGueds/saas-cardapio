@@ -24,3 +24,5 @@ Para um novo campo, utilize os componentes acima, defina limites e `required`, e
 Testes: `tests/field-validation.test.ts`, `tests/form-validation.test.tsx`, `tests/e2e/validation.spec.ts` e `backend/test/unit/security.test.ts`, além dos fluxos existentes. Documentação técnica: [schemas do Zod](https://zod.dev/api) e [mensagens de erro](https://zod.dev/error-customization).
 
 A verificação arquitetural impede novos formulários/controles nativos fora da camada de validação e do seletor de arquivos. Referência para DDD e numeração: [Anatel](https://www.gov.br/anatel/pt-br/regulado/numeracao/perguntas-frequentes).
+
+A entrada do navegador carrega `app/validation-config.ts` antes da aplicação e configura Zod sem JIT (`jitless`). Schemas carregados depois também funcionam com CSP sem `unsafe-eval`; a API mantém sua própria configuração. A regressão de impressão com CSP continua coberta no navegador.

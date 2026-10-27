@@ -3,12 +3,12 @@ services:
   api:
     environment:
       NODE_ENV: test
-      DATABASE_URL: mysql://cardapio:${MYSQL_PASSWORD:?Execute pnpm setup:local}@mysql:3306/cardapio_test
+      DATABASE_URL: postgresql://cardapio:${POSTGRES_APP_PASSWORD:?Execute pnpm setup:local}@postgres:5432/cardapio_test
       HTTP_RATE_LIMIT: "100000"
       MAX_IN_FLIGHT: "512"
   api-replica:
     environment:
       NODE_ENV: test
-      DATABASE_URL: mysql://cardapio:${MYSQL_PASSWORD:?Execute pnpm setup:local}@mysql:3306/cardapio_test
+      DATABASE_URL: postgresql://cardapio:${POSTGRES_APP_PASSWORD:?Execute pnpm setup:local}@postgres:5432/cardapio_test
       HTTP_RATE_LIMIT: "100000"
       MAX_IN_FLIGHT: "512"

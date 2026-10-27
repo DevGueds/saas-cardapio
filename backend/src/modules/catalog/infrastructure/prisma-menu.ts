@@ -54,7 +54,7 @@ export class PrismaMenu implements MenuRepository {
     })
   }
   load(scope: TenantScope) {
-    return this.db.transaction((tx) => readMenu(tx, scope))
+    return this.db.snapshot((tx) => readMenu(tx, scope))
   }
   commit(scope: TenantScope, expectedRevision: number, input: MenuDocument) {
     const next = parseMenuDocument(input, scope.restaurantId)
