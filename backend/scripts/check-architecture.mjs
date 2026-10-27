@@ -38,7 +38,7 @@ for (const file of [...files("src"), ...files("../packages/domain/src")]) {
         normalized.startsWith("src/") &&
         /^(?:mysql2?|mariadb|@prisma\/adapter-mariadb)(?:\/|$)/.test(name)
       )
-        failures.push(`${file}: MySQL só pode existir na ferramenta de importação legada`)
+        failures.push(`${file}: MySQL não é permitido`)
       if (normalized.startsWith("src/shared/") && /modules|app\//.test(name))
         failures.push(
           `${file}: shared não pode depender de módulos ou composição (${name})`,

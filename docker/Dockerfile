@@ -6,7 +6,6 @@ RUN npm install --global pnpm@11.23.0
 # Cache dependency installation independently of source/docs; run approved builds after copying sources.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .pnpmfile.cjs ./
 COPY backend/package.json ./backend/package.json
-COPY backend/tools/mysql-import/package.json ./backend/tools/mysql-import/package.json
 COPY packages/domain/package.json ./packages/domain/package.json
 COPY packages/contracts/package.json ./packages/contracts/package.json
 RUN --mount=type=cache,id=cardapio-pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile --ignore-scripts

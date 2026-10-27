@@ -46,9 +46,7 @@
     "benchmark:up": "docker compose --env-file backend/.env -f compose.yaml -f compose.benchmark.yaml --profile app up -d --wait",
     "benchmark": "node scripts/benchmark.mjs",
     "benchmark:restore": "docker compose --env-file backend/.env -f compose.yaml --profile app up -d --wait",
-    "test:docker:resilience": "node scripts/test-docker-resilience.mjs",
-    "db:backup:mysql": "node scripts/backup-legacy-mysql.mjs",
-    "db:import:mysql": "pnpm --filter @cardapio/api db:import:mysql"
+    "test:docker:resilience": "node scripts/test-docker-resilience.mjs"
   },
   "dependencies": {
     "@cardapio/contracts": "workspace:*",
