@@ -49,9 +49,8 @@ export default function ReceiptDialog({
   }, [resource.data, profileId])
   return (
     <Dialog title={receiptLabels[kind]} onClose={onClose} className="receipt-dialog">
-      <p className="field-help">
-        Documento não fiscal com os dados registrados no momento da consulta. Gerar ou
-        imprimir não confirma pagamento nem entrega.
+      <p className="printing-status">
+        Documento não fiscal · situação registrada na consulta
       </p>
       {resource.loading && <p role="status">Conferindo dados e preparando documento…</p>}
       {resource.error && (
