@@ -1,0 +1,62 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+	log default {
+		format filter {
+			wrap json
+			fields {
+				request delete
+				resp_headers delete
+			}
+		}
+	}
+}
+
+# Railway termina o TLS na borda e injeta PORT. Este serviço é o único com domínio
+# público; a API só é alcançada pela rede privada (API_HOST = api.railway.internal).
+:{$PORT:8080} {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+		-Server
+	}
+
+	# Healthcheck do Railway: independe da API para que o deploy da web não fique refém dela.
+	handle /healthz {
+		header Cache-Control "no-store"
+		respond "ok" 200
+	}
+
+	handle /api/* {
+		reverse_proxy {$API_HOST}:{$API_PORT} {
+			flush_interval -1
+			# Somente a borda do Railway define X-Real-IP com o IP do cliente. O Caddy
+			# substitui qualquer X-Forwarded-For enviado pelo navegador, e a API
+			# (TRUSTED_PROXY_HOPS=1) confia apenas neste salto.
+			header_up X-Forwarded-For {http.request.header.X-Real-IP}
+			# Durante o redeploy da API, tenta novamente apenas falhas de conexão.
+			lb_try_duration 3s
+			lb_try_interval 250ms
+			transport http {
+				dial_timeout 2s
+				response_header_timeout 20s
+				# Menor que o keepAliveTimeout de 5s da API para evitar conexões já fechadas.
+				keepalive 4s
+			}
+		}
+	}
+
+	handle {
+		@worker path /notifications-sw.js /manifest.webmanifest
+		header @worker Cache-Control "no-cache"
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

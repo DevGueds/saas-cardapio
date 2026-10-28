@@ -16,6 +16,9 @@ const schema = z.object({
   HTTP_RATE_LIMIT: z.coerce.number().int().min(60).max(100000).default(600),
   MAX_IN_FLIGHT: z.coerce.number().int().min(16).max(1024).default(128),
   TRUSTED_PROXY_CIDRS: z.string().default(""),
+  // Trust exactly N proxies directly in front of the API (e.g. 1 = the web proxy).
+  // Only valid when the API is unreachable except through that proxy.
+  TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(2).default(0),
   MAP_TILE_URL: z.string().default("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
   DATABASE_URL: z.string().min(1),
   DATABASE_TLS: z.enum(["true", "false"]),
@@ -86,6 +89,7 @@ export function loadConfig(input: Record<string, unknown>) {
       (env.NODE_ENV === "production" && redis.protocol !== "rediss:")
     )
       throw new Error()
+    if (env.TRUSTED_PROXY_HOPS > 0 && env.TRUSTED_PROXY_CIDRS) throw new Error()
     trustedProxies = env.TRUSTED_PROXY_CIDRS
       ? env.TRUSTED_PROXY_CIDRS.split(",").map((v) => {
           const [ip, prefix] = v.trim().split("/")
@@ -165,6 +169,7 @@ export function loadConfig(input: Record<string, unknown>) {
     httpRateLimit: env.HTTP_RATE_LIMIT,
     maxInFlight: env.MAX_IN_FLIGHT,
     trustedProxies,
+    trustedProxyHops: env.TRUSTED_PROXY_HOPS,
     mapTileUrl: env.MAP_TILE_URL,
     databaseTls: env.DATABASE_TLS === "true",
     databaseCaFile: env.DATABASE_CA_FILE,

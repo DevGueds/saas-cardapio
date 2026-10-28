@@ -59,7 +59,11 @@ export async function createApplication(config: ApiConfig) {
   const adapter = new FastifyAdapter({
     logger: false,
     allowErrorHandlerOverride: false,
-    trustProxy: config.trustedProxies.length ? config.trustedProxies : false,
+    trustProxy: config.trustedProxyHops
+      ? (_addr: string, hop: number) => hop < config.trustedProxyHops
+      : config.trustedProxies.length
+        ? config.trustedProxies
+        : false,
     bodyLimit: 15 * 1024 * 1024,
     requestTimeout: 15000,
     connectionTimeout: 10000,

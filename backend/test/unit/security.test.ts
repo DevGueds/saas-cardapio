@@ -82,6 +82,25 @@ test("HTTP LAN is allowed only in development/test; production still requires HT
     Failure,
   )
 })
+test("proxy trust is off by default, bounded, and never combines hops with CIDRs", () => {
+  assert.equal(loadConfig(env).trustedProxyHops, 0)
+  assert.equal(loadConfig({ ...env, TRUSTED_PROXY_HOPS: "1" }).trustedProxyHops, 1)
+  for (const hops of ["-1", "3", "1.5", "abc"])
+    assert.throws(() => loadConfig({ ...env, TRUSTED_PROXY_HOPS: hops }), Failure)
+  assert.throws(
+    () =>
+      loadConfig({
+        ...env,
+        TRUSTED_PROXY_HOPS: "1",
+        TRUSTED_PROXY_CIDRS: "10.0.0.0/8",
+      }),
+    Failure,
+  )
+  assert.deepEqual(
+    loadConfig({ ...env, TRUSTED_PROXY_CIDRS: "10.0.0.0/8" }).trustedProxies,
+    ["10.0.0.0/8"],
+  )
+})
 
 test("schemas reject mass assignment and bad prices", () => {
   assert.equal(
