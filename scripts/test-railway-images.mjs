@@ -181,6 +181,15 @@ try {
     "web",
   ])
   await waitHealthy(["api", "api-replica", "web"], 300_000)
+  run([
+    "exec",
+    "-T",
+    "api",
+    "node",
+    "--input-type=module",
+    "-e",
+    `const r=await fetch(process.env.EVOLUTION_URL+'/instance/fetchInstances');if(![401,403].includes(r.status))throw new Error('provider_api_key_protection_failed');console.log(JSON.stringify({event:'provider_authentication_verified'}))`,
+  ])
   const port = run(["port", "web", "8080"], true)
     .trim()
     .match(/127\.0\.0\.1:(\d+)/)?.[1]

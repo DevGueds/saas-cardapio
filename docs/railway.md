@@ -110,6 +110,8 @@ A opção `PRIVATE_NETWORK_TRANSPORT=railway` permite PostgreSQL/Redis sem TLS a
 
 O serviço PostgreSQL incorpora o script de criação de papéis; o Redis incorpora seu startup; o Evolution incorpora `provider-log-gate.cjs`. Assim, nenhum depende de bind mount de arquivos do computador. PostgreSQL 18 usa volume no diretório pai `/var/lib/postgresql`; o provedor PostgreSQL 15 mantém seu caminho próprio.
 
+Evolution permanece privado, com documentação/gerenciador próprios desativados e autenticação por API key. Seu CORS interno aceita `*`, sem credenciais de navegador: a versão fixada devolve erro em probes sem `Origin` quando recebe uma origem fixa. Isso permite o healthcheck nativo Railway, que não envia esse cabeçalho. O teste de imagens verifica também que consultas protegidas sem API key são recusadas. O CORS da API do aplicativo continua restrito à origem HTTPS de web.
+
 `migrate` é a única instância com credencial DDL. As APIs aguardam, por tempo limitado, os registros de migrations correspondentes aos arquivos/checksums da própria imagem antes de iniciar. Isso também protege a primeira instalação e o autodeploy de pushes, que não garante ordem entre serviços. A referência `MIGRATION_RELEASE` estabelece dependência em deploys em lote. O processo de migration falha com código e evento seguros, sem imprimir DSN ou SQL de clientes.
 
 As mudanças no schema devem permitir que a versão anterior continue funcionando durante a atualização. Falha de migration bloqueia o novo runtime; o healthcheck não é uma estratégia de rollback de dados. Um volume já inicializado não executa scripts de init novamente. Alterar senha no arquivo local, sozinho, não altera o usuário no banco: rotação exige operação coordenada, não remoção do volume.

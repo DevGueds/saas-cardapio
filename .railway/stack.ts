@@ -104,6 +104,8 @@ export function createStack(input: StackParameters) {
       PORT: "8080",
       SERVER_PORT: "8080",
       SERVER_URL: "http://${{RAILWAY_PRIVATE_DOMAIN}}:8080",
+      SERVER_DISABLE_DOCS: "true",
+      SERVER_DISABLE_MANAGER: "true",
       AUTHENTICATION_API_KEY: p.secrets.evolutionApi,
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false",
       DATABASE_PROVIDER: "postgresql",
@@ -130,7 +132,9 @@ export function createStack(input: StackParameters) {
       CONFIG_SESSION_PHONE_CLIENT: "Cardapio",
       CONFIG_SESSION_PHONE_NAME: "Chrome",
       QRCODE_LIMIT: "10",
-      CORS_ORIGIN: "http://cardapio-internal",
+      // This private, API-key protected provider rejects headerless healthchecks
+      // with a fixed origin. It accepts no browser credentials and has no domain.
+      CORS_ORIGIN: "*",
       CORS_CREDENTIALS: "false",
     },
   })
