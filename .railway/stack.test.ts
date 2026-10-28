@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import {
   validateGraph,
   type ResourceNode,
@@ -63,11 +63,20 @@ test("stack covers Compose services and persistent volumes without generated dom
           key,
         })
     }
-    if (service.build?.dockerfilePath)
+    if (service.build?.dockerfilePath) {
       assert.equal(
         existsSync(new URL(`../${service.build.dockerfilePath}`, import.meta.url)),
         true,
       )
+      assert.doesNotMatch(
+        readFileSync(
+          new URL(`../${service.build.dockerfilePath}`, import.meta.url),
+          "utf8",
+        ),
+        /--mount=type=cache/,
+        "Railway cache mounts require literal service IDs, unsuitable for a clean reusable stack",
+      )
+    }
     assert.equal(service.configFile, undefined)
     assert.equal(service.networking?.tcpProxies, undefined)
     assert.equal(service.networking?.serviceDomains, undefined)
@@ -84,6 +93,10 @@ test("stack covers Compose services and persistent volumes without generated dom
   )
   assert.deepEqual(get("postgres").build?.watchPatterns, ["/railway/postgres/**"])
   assert.deepEqual(get("redis").build?.watchPatterns, ["/railway/redis/**"])
+  assert.match(
+    get("evolution-db").deploy?.startCommand ?? "",
+    /^\/usr\/local\/bin\/docker-entrypoint\.sh postgres /,
+  )
 })
 test("replicas receive only runtime credentials and wait for the separate migration service", () => {
   for (const name of ["api", "api-replica"]) {

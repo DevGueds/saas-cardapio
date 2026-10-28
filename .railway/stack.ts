@@ -79,7 +79,7 @@ export function createStack(input: StackParameters) {
   })
   const providerDb = service("evolution-db", {
     start:
-      "postgres -c timezone=UTC -c log_statement=none -c log_min_error_statement=panic -c log_min_messages=fatal -c log_error_verbosity=terse",
+      "/usr/local/bin/docker-entrypoint.sh postgres -c timezone=UTC -c log_statement=none -c log_min_error_statement=panic -c log_min_messages=fatal -c log_error_verbosity=terse",
     source: image(
       "postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
     ),

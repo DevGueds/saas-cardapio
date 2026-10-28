@@ -9,7 +9,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .pnpmfile.cjs ./
 COPY backend/package.json ./backend/package.json
 COPY packages/domain/package.json ./packages/domain/package.json
 COPY packages/contracts/package.json ./packages/contracts/package.json
-RUN --mount=type=cache,id=cardapio-pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
+# Railway requires service-specific literal IDs for cache mounts. A reusable
+# template cannot embed those IDs; use ordinary Docker layer caching instead.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 # Only backend/workspace sources enter this stage; editing deploy scripts or docs
 # must not rebuild Prisma, native modules and the production dependency bundle.
 COPY backend ./backend
@@ -17,7 +19,7 @@ COPY packages ./packages
 RUN pnpm -r rebuild && pnpm run postinstall && pnpm api:build
 
 FROM build AS api-package
-RUN --mount=type=cache,id=cardapio-pnpm,target=/root/.local/share/pnpm/store pnpm --filter @cardapio/api deploy --prod --legacy /opt/api
+RUN pnpm --filter @cardapio/api deploy --prod --legacy /opt/api
 
 FROM node:24-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS api
 ENV NODE_ENV=production

@@ -71,7 +71,12 @@ for (const node of nodes) {
     networks: { default: { aliases: [node.name + ".railway.internal"] } },
   }
   if (node.build) service.build = { context: root, dockerfile: node.build.dockerfilePath }
-  if (node.deploy?.startCommand) service.command = node.deploy.startCommand.split(" ")
+  // Railway overrides ENTRYPOINT in exec form; Compose command alone would keep
+  // the upstream entrypoint and hide initialization/privilege bugs in this test.
+  if (node.deploy?.startCommand) {
+    service.entrypoint = node.deploy.startCommand.split(" ")
+    service.command = []
+  }
   if (node.volumeAttachments)
     service.volumes = Object.entries(node.volumeAttachments).map(([name, value]) => {
       compose.volumes[name] = {}
