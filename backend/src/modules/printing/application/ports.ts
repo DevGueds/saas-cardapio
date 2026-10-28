@@ -25,3 +25,6 @@ export interface PrintingRepository {
     operator: { userId: string; role: Role },
   ): Promise<PrintingSource>
 }
+export interface PrintingLogoValidator {
+  validate(logo: string): Promise<boolean>
+}

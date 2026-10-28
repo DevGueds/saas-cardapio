@@ -16,6 +16,9 @@ const schema = z.object({
   REDIS_URL: z.string().min(1),
   HTTP_RATE_LIMIT: z.coerce.number().int().min(60).max(100000).default(600),
   MAX_IN_FLIGHT: z.coerce.number().int().min(16).max(1024).default(128),
+  CPU_WORKERS: z.coerce.number().int().min(1).max(4).default(2),
+  REPORT_PARALLEL_THRESHOLD: z.coerce.number().int().min(100).max(10000).default(2000),
+  CPU_JOB_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(7000),
   TRUSTED_PROXY_CIDRS: z.string().default(""),
   // Trust exactly N proxies directly in front of the API (e.g. 1 = the web proxy).
   // Only valid when the API is unreachable except through that proxy.
@@ -186,6 +189,9 @@ export function loadConfig(input: Record<string, unknown>) {
     redisUrl: redis.href,
     httpRateLimit: env.HTTP_RATE_LIMIT,
     maxInFlight: env.MAX_IN_FLIGHT,
+    cpuWorkers: env.CPU_WORKERS,
+    reportParallelThreshold: env.REPORT_PARALLEL_THRESHOLD,
+    cpuJobTimeoutMs: env.CPU_JOB_TIMEOUT_MS,
     trustedProxies,
     trustedProxyHops: env.TRUSTED_PROXY_HOPS,
     mapTileUrl: env.MAP_TILE_URL,

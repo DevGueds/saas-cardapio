@@ -47,6 +47,7 @@ export async function createApplication(config: ApiConfig) {
         useValue: {
           onApplicationShutdown: async () => {
             await runtime.notificationWorker.close()
+            await runtime.cpuTasks.close()
             runtime.redis.close()
             await runtime.db.close()
             await runtime.diagnostics.close()

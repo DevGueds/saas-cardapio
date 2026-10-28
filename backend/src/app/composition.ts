@@ -1,3 +1,4 @@
+import { ParallelPrintingLogos } from "../modules/printing/infrastructure/parallel-logo.js"
 import { PostalAddresses } from "../modules/delivery/application/postal-address.js"
 import { Engagement } from "../modules/engagement/application/engagement.js"
 import { PrismaEngagement } from "../modules/engagement/infrastructure/prisma-engagement.js"
@@ -6,6 +7,8 @@ import { EvolutionWhatsapp } from "../modules/engagement/infrastructure/evolutio
 import { WebPushSender } from "../modules/engagement/infrastructure/web-push.js"
 import { NotificationWorker } from "../modules/engagement/infrastructure/notification-worker.js"
 import { Payments } from "../modules/payments/application/payments.js"
+import { ParallelFinancialReports } from "../modules/payments/infrastructure/parallel-reports.js"
+import { ParallelTaskRunner } from "../shared/infrastructure/parallel-task.js"
 import { Printing } from "../modules/printing/application/printing.js"
 import { PrismaPrinting } from "../modules/printing/infrastructure/prisma-printing.js"
 import { createDiagnostics } from "../shared/infrastructure/logging.js"
@@ -53,6 +56,7 @@ export async function compose(config: ApiConfig) {
   const db = new Database(config, () => {
     operation.error("database.pool", new Error("pool_unavailable"))
   })
+  const cpuTasks = new ParallelTaskRunner(config.cpuWorkers, config.cpuJobTimeoutMs)
   try {
     await db.connect()
     await redis.connect()
@@ -92,6 +96,7 @@ export async function compose(config: ApiConfig) {
         config.sessionTtl,
       ),
       notificationWorker,
+      cpuTasks,
       engagement: new Engagement(
         new PrismaEngagement(db, cipher),
         menus,
@@ -106,7 +111,13 @@ export async function compose(config: ApiConfig) {
       ),
       config,
       diagnostics,
-      printing: new Printing(new PrismaPrinting(db), access, operation, clock),
+      printing: new Printing(
+        new PrismaPrinting(db),
+        access,
+        operation,
+        clock,
+        new ParallelPrintingLogos(cpuTasks),
+      ),
       payments: new Payments(
         new PrismaPayments(db),
         access,
@@ -114,6 +125,7 @@ export async function compose(config: ApiConfig) {
         ids,
         clock,
         secrets,
+        new ParallelFinancialReports(cpuTasks, config.reportParallelThreshold),
       ),
       db,
       redis,
@@ -165,6 +177,7 @@ export async function compose(config: ApiConfig) {
       ),
     }
   } catch (error) {
+    await cpuTasks.close()
     redis.close()
     await db.close()
     await diagnostics.close()

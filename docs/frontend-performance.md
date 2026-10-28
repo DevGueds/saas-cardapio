@@ -14,6 +14,7 @@ Atalhos Hoje, Últimos 7 dias e Este mês aplicam o período. Datas personalizad
 - O mapa Leaflet mantém sua instância, atualiza o marcador e libera recursos ao desmontar. Testes verificam dez mudanças de coordenadas com uma única criação do mapa.
 - O diálogo nativo abre no `useLayoutEffect`, antes da pintura, e conserva foco, Escape e retorno ao acionador. O backdrop usa uma sobreposição sem blur de tela inteira. O registro de validação dos campos só é refeito quando sua regra muda.
 - A prévia da imagem do produto é memorizada e recebe callback estável durante a edição textual.
+- A configuração de impressão separa impressoras e comprovantes em abas. O diálogo de impressora mantém seu rascunho local; digitar nele não atualiza o formulário inteiro. O Editor.js só é carregado ao personalizar, permanece montado ao recolher/trocar abas e usa callbacks estáveis. A prévia/PDF é gerada ao testar, sem exportar a cada tecla.
 
 Testes de apresentação verificam isolamento de uma tabela com 100 recebimentos durante 20 atualizações externas, atualização de valores modificados, pesquisa além da antiga prévia de 100 pedidos, paginação e exclusão dos cancelados do saldo a cobrar. Testes de navegador continuam cobrindo teclado, foco, validação, celular e operações financeiras reais.
 

@@ -31,6 +31,12 @@ Preserve **SESSION_SECRET** junto ao backup seguro do banco: ele protege também
 
 Falhas de imagem permitem tentar novamente ou retirar o logo, sem reaproveitar erros de outra geração. Os modelos mantêm correção H, contraste e área de silêncio. Testes de navegador decodificam os três PNGs com logo retangular/transparente e verificam a incorporação no SVG.
 
+## Revisão de impressão e tarefas de CPU
+
+Na revisão de impressão, um PNG com cabeçalho/dimensões corretos e CRC corrompido ainda podia ser salvo pela API e falhar na exportação. A gravação agora exige decodificação por `pngjs`, CRC válido e tamanho exato de scanlines, com inflação limitada antes do decoder e sem aceitar entrelaçamento pelo endpoint. O upload da interface normaliza o arquivo para o formato aceito. A validação roda em processo de CPU separado e limitado; falhas preservam o rascunho e a revisão persistida. Testes cobrem arquivo corrompido e dados comprimidos maiores que o cabeçalho declara.
+
+O processamento Parallel.js aceita somente funções internas, dados JSON limitados e módulos definidos no código. Filhos não herdam variáveis de ambiente da aplicação, argumentos de depuração ou saída livre para logs. Essa separação não é uma sandbox para código não confiável; nenhum endpoint permite enviar código. Há limite de concorrência, prazo, tratamento de saída inesperada e encerramento de processos. Consulte [resiliência](resilience.md).
+
 ## Verificação reproduzível
 
 ```sh

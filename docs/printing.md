@@ -4,11 +4,11 @@ No modo API, a gestão acessa **Impressão e comprovantes** no painel. Os docume
 
 ## Configuração rápida
 
-1. Adicione um perfil baseado no modelo ou escolha térmica/Bluetooth genérica de 58 ou 80 mm. A4 atende laser e jato de tinta. O limite é de oito perfis por loja.
-2. Ajuste papel, largura útil, margem mínima, tamanho da letra e quantidade de vias. O perfil configura o documento, não altera fisicamente a impressora.
-3. Escolha um perfil padrão por tipo de comprovante. A equipe pode escolher outro perfil na emissão.
-4. Abra **Editar layout e logo**. O Editor.js permite texto simples, logo, linha divisória e seções preenchidas automaticamente. Há botões para subir/descer/remover blocos, sem exigir arraste. Seções obrigatórias, indicação não fiscal, identidade e situação do registro permanecem protegidas.
-5. Use **Testar layout no perfil em edição** antes de salvar. O teste usa dados explicitamente fictícios, não cria pedidos nem pagamentos. Confirme o salvamento para aplicar os padrões a toda a equipe.
+1. Na aba **Impressoras**, use **Adicionar impressora** e escolha o modelo e papel. Os ajustes são preenchidos pelo modelo; nome, vias e tamanho da letra ficam visíveis. Largura útil, margens, resolução e corte ficam em **Ajustes avançados**. Há perfis térmicos/Bluetooth de 58/80 mm e A4, até oito por loja.
+2. **Ajustar** abre uma edição local: cancelar não altera o rascunho da página. Remover uma impressora usada pede sua substituta e atualiza os padrões juntos.
+3. Na aba **Comprovantes**, escolha Pedido, Cozinha, Entrega ou Recebimento e sua impressora padrão. A equipe pode escolher outra na emissão.
+4. Expanda **Personalizar layout e logo** quando necessário. O Editor.js permite texto simples, logo, linha divisória e seções preenchidas automaticamente. Há botões para subir/descer/remover blocos, sem exigir arraste. Seções obrigatórias, indicação não fiscal, identidade e situação do registro permanecem protegidas. Alternar abas ou recolher o editor preserva a edição, inclusive quando inválida.
+5. **Testar** abre a prévia com dados explicitamente fictícios, sem criar pedidos nem pagamentos. A barra de salvar/descartar aparece quando há alterações. Confirme o salvamento para aplicar os padrões a toda a equipe. A ajuda de conexão fica no botão **Ajuda**.
 
 O logo aceita PNG/JPEG/WebP local até 5 MB, é normalizado para PNG e reduzido antes do envio. Nenhuma URL remota é consultada para imprimir. Textos rejeitam HTML e caracteres de controle. Layouts têm até 32 blocos; uma edição inválida impede salvar e permanece disponível para correção, inclusive ao alternar o tipo de documento. Configurações concorrentes retornam conflito em vez de sobrescrever silenciosamente.
 
@@ -43,7 +43,7 @@ Autorização e isolamento de loja ocorrem no servidor, independentemente de bot
 
 ## Segurança e manutenção
 
-Rotas privadas GET/PUT `restaurants/:id/printing/settings`, GET `restaurants/:id/orders/:orderId/documents/:kind` e GET `restaurants/:id/payments/:paymentId/document`. Gravação exige CSRF, papel de gestão e revisão. O corpo da configuração tem limite de 512 KB; PNG é inline, com assinatura, estrutura e dimensões verificadas. Não se aceitam HTML, JavaScript, URLs de imagem, CSS, comandos ESC/POS arbitrários ou destino de rede fornecidos pelo usuário.
+Rotas privadas GET/PUT `restaurants/:id/printing/settings`, GET `restaurants/:id/orders/:orderId/documents/:kind` e GET `restaurants/:id/payments/:paymentId/document`. Gravação exige CSRF, papel de gestão e revisão. O corpo da configuração tem limite de 512 KB; PNG é inline, com assinatura, estrutura, dimensões, CRC e pixels verificados antes da gravação. A decodificação ocorre fora do processo HTTP, com tamanho de inflação limitado. A API aceita o PNG não entrelaçado produzido pelo normalizador do navegador. Não se aceitam HTML, JavaScript, URLs de imagem, CSS, comandos ESC/POS arbitrários ou destino de rede fornecidos pelo usuário.
 
 HTML de prévia tem sandbox sem scripts, CSP restrita e escape de textos. A CSP do frontend permite `data:` somente para imagens e fontes necessárias ao documento autocontido; scripts continuam restritos à própria origem. Geração é carregada sob demanda, com erros locais e recuperação; não usa comprovantes fictícios se uma consulta falhar. Fonte local tem timeout e retry explícito. PDF limita-se a 100 páginas incluindo vias; ESC/POS a 8 MB, com limites de canvas. Logs contêm apenas códigos e referências técnicas, nunca conteúdo do comprovante.
 

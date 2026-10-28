@@ -11,6 +11,18 @@
 
 As portas ficam em `backend/src/shared/application`, adaptadores em `shared/infrastructure`, e composição em `app/composition.ts`. Para outro cache/provedor, implemente a porta e preserve comportamento de erro, limites e testes. Não replique políticas por controller.
 
+## Trabalho de CPU com Parallel.js
+
+`ParallelTaskRunner` usa Parallel.js 1.1.0 para cálculos independentes, com adaptador de processos Node que controla saída prematura, cancelamento e encerramento. Não recebe código do usuário. Não paraleliza gravações, pagamentos ou consultas dentro da mesma transação. Relatórios continuam lendo um snapshot coerente; apenas a agregação de centavos sai do processo HTTP. Os workers recebem datas, métodos e valores, sem nomes, descrições, IDs, cookies ou credenciais. A validação de pixels do logo usa a mesma capacidade limitada e devolve apenas um booleano, sem registrar a imagem.
+
+Configuração por réplica: `CPU_WORKERS=2` (1–4), `CPU_JOB_TIMEOUT_MS=7000` (1–30 segundos), `REPORT_PARALLEL_THRESHOLD=2000` (100–10.000 registros de pedidos + pagamentos). Relatórios menores usam o cálculo local. Cada filho tem heap antigo de 64 MiB e geração jovem limitada; buffers nativos têm limites próprios de entrada/saída/pixels, portanto isso não equivale a um limite de RSS por processo. O limite de memória do container continua necessário. A capacidade é compartilhada entre relatórios e logos. Saturação ou prazo devolvem 503 controlado, sem fila ilimitada, sem execução síncrona alternativa e sem alterar dados; encerrar a API cancela os filhos.
+
+O isolamento protege a resposta da API, mas iniciar processos e serializar dados tem custo: não significa que cada relatório termina mais rápido. Ajuste o limiar com medições do ambiente; aumentar workers exige orçamento de memória/CPU. A CSP do navegador permanece restrita: não se habilitou `unsafe-eval`/workers de código dinâmico no frontend.
+
+`pnpm api:build && pnpm benchmark:cpu` compara 12 relatórios sintéticos de 5.000 pedidos + 5.000 pagamentos, com no máximo dois filhos simultâneos. Verifica igualdade dos totais e mede duração e atraso do event loop, em `.cache/benchmark-cpu.json`. É um microbenchmark de isolamento, sem banco/HTTP, não uma medida de capacidade de produção. `BENCHMARK_CPU_JOBS=2..50` controla a duração. Testes reais de banco também exercitam cinco consultas simultâneas com 2.000 movimentos, saúde da API e recusa de perfil sem permissão.
+
+Referência: [Parallel.js](https://github.com/parallel-js/parallel.js).
+
 ## Balanceamento em Docker
 
 `compose.yaml` executa duas APIs stateless e Caddy com `least_conn`. Healthcheck ativo consulta readiness a cada cinco segundos; falhas passivas retiram o upstream temporariamente. Caddy só repete GET/HEAD até duas vezes dentro da janela de três segundos (conexão limitada a 500 ms). Um handler separado atende POST/PUT/DELETE sem retries. O keep-alive do proxy é menor que o timeout do Fastify para evitar reutilizar conexões já encerradas. Idempotência de pedido é responsabilidade do caso de uso e da chave persistida pelo cliente.

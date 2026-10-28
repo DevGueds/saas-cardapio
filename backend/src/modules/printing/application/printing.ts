@@ -10,7 +10,7 @@ import type { AccessPolicy } from "../../identity/application/ports.js"
 import type { Operation } from "../../../shared/application/operation.js"
 import type { Clock } from "../../../shared/application/ports.js"
 import { validate } from "../../../shared/application/validate.js"
-import type { PrintingRepository } from "./ports.js"
+import type { PrintingLogoValidator, PrintingRepository } from "./ports.js"
 import { buildReceipt } from "./snapshot.js"
 
 export class Printing {
@@ -19,6 +19,7 @@ export class Printing {
     private readonly access: AccessPolicy,
     private readonly operation: Operation,
     private readonly clock: Clock,
+    private readonly logos: PrintingLogoValidator,
   ) {}
   settings(actor: Actor, restaurantId: string) {
     return this.operation.run("printing.settings", async () => {
@@ -35,7 +36,16 @@ export class Printing {
         restaurantId,
         "printing:configure",
       )
-      return this.repository.update(scope, validate(updatePrintingSettingsSchema, input))
+      const configuration = validate(updatePrintingSettingsSchema, input)
+      if (!(await this.logos.validate(configuration.logo)))
+        throw new Failure(
+          "VALIDATION",
+          "Selecione novamente uma imagem válida para o logo.",
+          {
+            logo: "O arquivo não é uma imagem PNG válida. Selecione novamente o logo.",
+          },
+        )
+      return this.repository.update(scope, configuration)
     })
   }
   order(actor: Actor, restaurantId: string, orderId: string, inputKind: unknown) {
