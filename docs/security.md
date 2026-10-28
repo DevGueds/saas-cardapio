@@ -37,6 +37,8 @@ Na revisão de impressão, um PNG com cabeçalho/dimensões corretos e CRC corro
 
 O processamento Parallel.js aceita somente funções internas, dados JSON limitados e módulos definidos no código. Filhos não herdam variáveis de ambiente da aplicação, argumentos de depuração ou saída livre para logs. Essa separação não é uma sandbox para código não confiável; nenhum endpoint permite enviar código. Há limite de concorrência, prazo, tratamento de saída inesperada e encerramento de processos. Consulte [resiliência](resilience.md).
 
+Rotas que aceitam imagens de até 15 MiB têm limite separado de dois corpos grandes em processamento por réplica, antes do parse JSON/autenticação. O teste abre conexões HTTP incompletas (com tamanho declarado e por chunks), verifica recusa controlada do terceiro upload, disponibilidade de saúde/requisições pequenas e liberação de capacidade após desconexão. Isso complementa tamanho máximo, prazo de leitura e limitação por IP.
+
 ## Verificação reproduzível
 
 ```sh

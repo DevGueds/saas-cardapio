@@ -141,10 +141,18 @@ test("impressão configura Bluetooth, editor, logo e gera PDF/ESC-POS com recebi
   expect(bytes.subarray(0, 2)).toEqual(Buffer.from([0x1b, 0x40]))
   await preview.getByRole("button", { name: "Fechar", exact: true }).click()
   await save.click()
+  const saved = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      response.url().endsWith(`/restaurants/${store.id}/printing/settings`),
+  )
   await page
     .getByRole("dialog", { name: "Salvar configuração da loja?" })
     .getByRole("button", { name: "Confirmar", exact: true })
     .click()
+  const savedResponse = await saved
+  const savedResult = await savedResponse.json()
+  expect(savedResponse.status(), savedResult.error?.code).toBe(200)
   await expect(
     page.getByText("Configurações de impressão salvas para a loja."),
   ).toBeVisible()

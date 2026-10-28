@@ -107,6 +107,9 @@ export async function createApplication(config: ApiConfig) {
             : 32 * 1024
     })
     const capacity = new Bulkhead(config.maxInFlight)
+    // Large image bodies are parsed before the session guard. Bound their memory
+    // separately so concurrent unauthenticated uploads cannot occupy every HTTP slot.
+    const imageCapacity = new Bulkhead(2)
     const releases = new WeakMap<object, () => void>()
     adapter.getInstance().addHook("onResponse", async (request, reply) => {
       releases.get(request)?.()
@@ -127,13 +130,27 @@ export async function createApplication(config: ApiConfig) {
     adapter.getInstance().addHook("onRequest", async (request, reply) => {
       reply.header("Cache-Control", "no-store")
       try {
+        const unsafe = !["GET", "HEAD", "OPTIONS"].includes(request.method)
         if (
           !request.url.startsWith("/api/v1/health/") &&
           !request.routeOptions.url?.endsWith("/board/stream")
-        )
-          releases.set(request, capacity.enter())
+        ) {
+          const release = capacity.enter()
+          releases.set(request, release)
+          const length = Number(request.headers["content-length"] ?? NaN)
+          if (
+            unsafe &&
+            request.routeOptions.bodyLimit > 512 * 1024 &&
+            (!Number.isFinite(length) || length > 256 * 1024)
+          ) {
+            const releaseImage = imageCapacity.enter()
+            releases.set(request, () => {
+              releaseImage()
+              release()
+            })
+          }
+        }
         const origin = request.headers.origin
-        const unsafe = !["GET", "HEAD", "OPTIONS"].includes(request.method)
         if (
           (origin !== undefined && !config.origins.includes(origin)) ||
           (unsafe && !origin)
