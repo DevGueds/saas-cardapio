@@ -1,0 +1,24 @@
+{
+  "postgres": {
+    "POSTGRES_PASSWORD": "${{secret(64, \"abcdef0123456789\")}}",
+    "POSTGRES_APP_PASSWORD": "${{secret(64, \"abcdef0123456789\")}}",
+    "POSTGRES_MIGRATION_PASSWORD": "${{secret(64, \"abcdef0123456789\")}}"
+  },
+  "redis": { "REDIS_PASSWORD": "${{secret(64, \"abcdef0123456789\")}}" },
+  "evolution-db": { "POSTGRES_PASSWORD": "${{secret(64, \"abcdef0123456789\")}}" },
+  "evolution": { "AUTHENTICATION_API_KEY": "${{secret(64, \"abcdef0123456789\")}}" },
+  "api": {
+    "SESSION_SECRET": "${{secret(64, \"abcdef0123456789\")}}",
+    "CORS_ORIGINS": "https://${{web.RAILWAY_PUBLIC_DOMAIN}}",
+    "SESSION_COOKIE_SECURE": "auto",
+    "VAPID_PUBLIC_KEY": "",
+    "VAPID_PRIVATE_KEY": ""
+  },
+  "api-replica": {
+    "SESSION_SECRET": "${{api.SESSION_SECRET}}",
+    "CORS_ORIGINS": "https://${{web.RAILWAY_PUBLIC_DOMAIN}}",
+    "SESSION_COOKIE_SECURE": "auto",
+    "VAPID_PUBLIC_KEY": "${{api.VAPID_PUBLIC_KEY}}",
+    "VAPID_PRIVATE_KEY": "${{api.VAPID_PRIVATE_KEY}}"
+  }
+}

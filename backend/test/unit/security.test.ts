@@ -82,6 +82,32 @@ test("HTTP LAN is allowed only in development/test; production still requires HT
     Failure,
   )
 })
+
+test("Railway private mesh is explicit and never permits public plaintext services", () => {
+  const privateEnv = {
+    ...env,
+    NODE_ENV: "production",
+    CORS_ORIGINS: "https://menu.example",
+    PRIVATE_NETWORK_TRANSPORT: "railway",
+    RAILWAY_PROJECT_ID: "test-project",
+    RAILWAY_ENVIRONMENT_ID: "test-environment",
+    DATABASE_TLS: "false",
+    DATABASE_URL: "postgresql://app:test@postgres.railway.internal/cardapio",
+    REDIS_URL: "redis://:test@redis.railway.internal:6379/0",
+  }
+  assert.equal(loadConfig(privateEnv).secureCookies, true)
+  for (const override of [
+    { PRIVATE_NETWORK_TRANSPORT: "tls" },
+    { RAILWAY_PROJECT_ID: "" },
+    { RAILWAY_ENVIRONMENT_ID: "" },
+    { DATABASE_URL: "postgresql://app:test@postgres.example/cardapio" },
+    { REDIS_URL: "redis://:test@redis.example:6379/0" },
+    { REDIS_URL: "redis://:test@redis.railway.internal.attacker.example/0" },
+    { CORS_ORIGINS: "http://menu.example" },
+    { DOCS_ENABLED: "true" },
+  ])
+    assert.throws(() => loadConfig({ ...privateEnv, ...override }), Failure)
+})
 test("proxy trust is off by default, bounded, and never combines hops with CIDRs", () => {
   assert.equal(loadConfig(env).trustedProxyHops, 0)
   assert.equal(loadConfig({ ...env, TRUSTED_PROXY_HOPS: "1" }).trustedProxyHops, 1)
@@ -100,6 +126,36 @@ test("proxy trust is off by default, bounded, and never combines hops with CIDRs
     loadConfig({ ...env, TRUSTED_PROXY_CIDRS: "10.0.0.0/8" }).trustedProxies,
     ["10.0.0.0/8"],
   )
+})
+
+test("cookie mode supports local HTTP and keeps free Railway HTTPS domains secure", () => {
+  assert.equal(
+    loadConfig({ ...env, SESSION_COOKIE_SECURE: "false" }).secureCookies,
+    false,
+  )
+  const prod = {
+    ...env,
+    NODE_ENV: "production",
+    DATABASE_TLS: "true",
+    REDIS_URL: "rediss://:test@localhost/0",
+    CORS_ORIGINS: "https://loja-test.up.railway.app",
+  }
+  for (const mode of ["auto", "true"]) {
+    const config = loadConfig({ ...prod, SESSION_COOKIE_SECURE: mode })
+    assert.equal(config.secureCookies, true)
+    assert.equal(config.cookieName, "__Host-cardapio_session")
+  }
+  assert.throws(() => loadConfig({ ...prod, SESSION_COOKIE_SECURE: "false" }), Failure)
+  assert.throws(
+    () =>
+      loadConfig({
+        ...env,
+        CORS_ORIGINS: "https://localhost",
+        SESSION_COOKIE_SECURE: "false",
+      }),
+    Failure,
+  )
+  assert.throws(() => loadConfig({ ...env, SESSION_COOKIE_SECURE: "invalid" }), Failure)
 })
 
 test("schemas reject mass assignment and bad prices", () => {
