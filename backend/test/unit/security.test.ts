@@ -108,6 +108,46 @@ test("Railway private mesh is explicit and never permits public plaintext servic
   ])
     assert.throws(() => loadConfig({ ...privateEnv, ...override }), Failure)
 })
+test("Render private transport requires provider context, exact internal hosts and secure cookies", () => {
+  const privateEnv = {
+    ...env,
+    NODE_ENV: "production",
+    RENDER: "true",
+    RENDER_SERVICE_ID: "srv-abcdefghijklmnopqrst",
+    RENDER_SERVICE_TYPE: "pserv",
+    PRIVATE_NETWORK_TRANSPORT: "render",
+    RENDER_DATABASE_HOST: "cardapio-postgres-abcd",
+    RENDER_REDIS_HOST: "cardapio-redis-abcd",
+    DATABASE_URL: "postgresql://cardapio:test@cardapio-postgres-abcd:5432/cardapio",
+    REDIS_URL: "redis://:test@cardapio-redis-abcd:6379/0",
+    CORS_ORIGINS: "https://cardapio-web.onrender.com",
+  }
+  assert.equal(loadConfig(privateEnv).secureCookies, true)
+  for (const override of [
+    { RENDER: "false" },
+    { RENDER_SERVICE_ID: "" },
+    { RENDER_SERVICE_TYPE: "web" },
+    { PRIVATE_NETWORK_TRANSPORT: "tls" },
+    { RENDER_DATABASE_HOST: "" },
+    {
+      RENDER_DATABASE_HOST: "127.0.0.1",
+      DATABASE_URL: "postgresql://u:p@127.0.0.1/cardapio",
+    },
+    {
+      RENDER_DATABASE_HOST: "db.example.com",
+      DATABASE_URL: "postgresql://u:p@db.example.com/cardapio",
+    },
+    { DATABASE_URL: "postgresql://u:p@cardapio-postgres-abcd.attacker.test/cardapio" },
+    { DATABASE_URL: "postgresql://u:p@different-private-service/cardapio" },
+    { DATABASE_URL: "postgresql://u:p@cardapio-postgres-abcd:5433/cardapio" },
+    { REDIS_URL: "redis://:p@cardapio-redis-abcd:6380/0" },
+    { REDIS_URL: "redis://:p@redis.example.com:6379/0" },
+    { SESSION_COOKIE_SECURE: "false" },
+    { CORS_ORIGINS: "http://cardapio-web.onrender.com" },
+  ])
+    assert.throws(() => loadConfig({ ...privateEnv, ...override }), Failure)
+})
+
 test("proxy trust is off by default, bounded, and never combines hops with CIDRs", () => {
   assert.equal(loadConfig(env).trustedProxyHops, 0)
   assert.equal(loadConfig({ ...env, TRUSTED_PROXY_HOPS: "1" }).trustedProxyHops, 1)

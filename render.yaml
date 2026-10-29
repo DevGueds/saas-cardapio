@@ -1,0 +1,431 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+# Full stack with free HTTPS hostname. Compute and persistent disks are paid.
+# Import with New > Blueprint; see docs/render.md before creating resources.
+services:
+  - type: pserv
+    name: cardapio-postgres
+    runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
+    dockerContext: .
+    dockerfilePath: railway/postgres/Dockerfile
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - railway/postgres/**
+        - .dockerignore
+    disk:
+      name: cardapio-postgres-data
+      mountPath: /var/lib/postgresql
+      sizeGB: 4
+    envVars:
+      - key: PORT
+        value: "5432"
+      - key: POSTGRES_USER
+        value: postgres
+      - key: POSTGRES_DB
+        value: postgres
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+      - key: POSTGRES_APP_PASSWORD
+        generateValue: true
+      - key: POSTGRES_MIGRATION_PASSWORD
+        generateValue: true
+  - type: pserv
+    name: cardapio-redis
+    runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
+    dockerContext: .
+    dockerfilePath: railway/redis/Dockerfile
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - railway/redis/**
+        - .dockerignore
+    disk:
+      name: cardapio-redis-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "6379"
+      - key: REDIS_PASSWORD
+        generateValue: true
+  - type: pserv
+    name: cardapio-evolution-db
+    runtime: image
+    region: virginia
+    plan: 0.5c-512mb
+    image:
+      url: postgres:15-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81
+    disk:
+      name: cardapio-evolution-db-data
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 2
+    envVars:
+      - key: PORT
+        value: "5432"
+      - key: POSTGRES_DB
+        value: evolution
+      - key: POSTGRES_USER
+        value: evolution
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+  - type: pserv
+    name: cardapio-evolution
+    runtime: docker
+    region: virginia
+    plan: 1c-2g
+    dockerContext: .
+    dockerfilePath: render/evolution/Dockerfile
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - render/evolution/**
+        - render/environment.mjs
+        - docker/provider-log-gate.cjs
+        - .dockerignore
+    disk:
+      name: cardapio-evolution-sessions
+      mountPath: /evolution/instances
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: SERVER_PORT
+        value: "8080"
+      - key: SERVER_URL
+        value: http://localhost:8080
+      - key: AUTHENTICATION_TYPE
+        value: apikey
+      - key: AUTHENTICATION_API_KEY
+        generateValue: true
+      - key: AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES
+        value: "false"
+      - key: DATABASE_PROVIDER
+        value: postgresql
+      - key: EVOLUTION_DATABASE_HOST
+        fromService:
+          name: cardapio-evolution-db
+          type: pserv
+          property: host
+      - key: EVOLUTION_DATABASE_PASSWORD
+        fromService:
+          name: cardapio-evolution-db
+          type: pserv
+          envVarKey: POSTGRES_PASSWORD
+      - key: DATABASE_CONNECTION_CLIENT_NAME
+        value: cardapio_evolution
+      - key: DATABASE_SAVE_DATA_INSTANCE
+        value: "true"
+      - key: DATABASE_SAVE_DATA_NEW_MESSAGE
+        value: "false"
+      - key: DATABASE_SAVE_MESSAGE_UPDATE
+        value: "false"
+      - key: DATABASE_SAVE_DATA_CONTACTS
+        value: "false"
+      - key: DATABASE_SAVE_DATA_CHATS
+        value: "false"
+      - key: DATABASE_SAVE_DATA_HISTORIC
+        value: "false"
+      - key: CACHE_REDIS_ENABLED
+        value: "true"
+      - key: RENDER_REDIS_HOST
+        fromService:
+          name: cardapio-redis
+          type: pserv
+          property: host
+      - key: REDIS_PASSWORD
+        fromService:
+          name: cardapio-redis
+          type: pserv
+          envVarKey: REDIS_PASSWORD
+      - key: CACHE_REDIS_PREFIX_KEY
+        value: cardapio_evolution
+      - key: CACHE_REDIS_SAVE_INSTANCES
+        value: "true"
+      - key: CACHE_LOCAL_ENABLED
+        value: "false"
+      - key: TELEMETRY_ENABLED
+        value: "false"
+      - key: LOG_LEVEL
+        value: ERROR
+      - key: LOG_BAILEYS
+        value: fatal
+      - key: LOG_COLOR
+        value: "false"
+      - key: WEBHOOK_GLOBAL_ENABLED
+        value: "false"
+      - key: DEL_INSTANCE
+        value: "false"
+      - key: CONFIG_SESSION_PHONE_CLIENT
+        value: Cardapio
+      - key: CONFIG_SESSION_PHONE_NAME
+        value: Chrome
+      - key: QRCODE_LIMIT
+        value: "10"
+      - key: CORS_ORIGIN
+        value: http://localhost
+      - key: CORS_CREDENTIALS
+        value: "false"
+      - key: TZ
+        value: UTC
+  - type: pserv
+    name: cardapio-migrations
+    runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
+    dockerContext: .
+    dockerfilePath: render/api/Dockerfile
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 30
+    buildFilter:
+      paths:
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - .pnpmfile.cjs
+        - backend/**
+        - packages/**
+        - render/api/**
+        - render/environment.mjs
+        - railway/api/readiness.mjs
+        - .dockerignore
+    preDeployCommand: node /app/render/migrate.mjs
+    dockerCommand: node /app/render/coordinator.mjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_TLS
+        value: "false"
+      - key: PRIVATE_NETWORK_TRANSPORT
+        value: render
+      - key: RENDER_DATABASE_HOST
+        fromService:
+          name: cardapio-postgres
+          type: pserv
+          property: host
+      - key: DATABASE_PASSWORD
+        fromService:
+          name: cardapio-postgres
+          type: pserv
+          envVarKey: POSTGRES_MIGRATION_PASSWORD
+  - type: pserv
+    name: cardapio-api
+    runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
+    dockerContext: .
+    dockerfilePath: render/api/Dockerfile
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 30
+    buildFilter:
+      paths:
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - .pnpmfile.cjs
+        - backend/**
+        - packages/**
+        - render/api/**
+        - render/environment.mjs
+        - railway/api/readiness.mjs
+        - .dockerignore
+    numInstances: 1
+    envVars:
+      - fromGroup: cardapio-api-settings
+      - fromGroup: cardapio-api-keys
+      - key: LOG_INSTANCE
+        value: api
+      - key: RENDER_DATABASE_HOST
+        fromService:
+          name: cardapio-postgres
+          type: pserv
+          property: host
+      - key: DATABASE_PASSWORD
+        fromService:
+          name: cardapio-postgres
+          type: pserv
+          envVarKey: POSTGRES_APP_PASSWORD
+      - key: RENDER_REDIS_HOST
+        fromService:
+          name: cardapio-redis
+          type: pserv
+          property: host
+      - key: REDIS_PASSWORD
+        fromService:
+          name: cardapio-redis
+          type: pserv
+          envVarKey: REDIS_PASSWORD
+      - key: RENDER_EVOLUTION_HOST
+        fromService:
+          name: cardapio-evolution
+          type: pserv
+          property: host
+      - key: EVOLUTION_API_KEY
+        fromService:
+          name: cardapio-evolution
+          type: pserv
+          envVarKey: AUTHENTICATION_API_KEY
+      - key: RENDER_APP_URL
+        fromService:
+          name: cardapio-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+  - type: pserv
+    name: cardapio-api-replica
+    runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
+    dockerContext: .
+    dockerfilePath: render/api/Dockerfile
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 30
+    buildFilter:
+      paths:
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - .pnpmfile.cjs
+        - backend/**
+        - packages/**
+        - render/api/**
+        - render/environment.mjs
+        - railway/api/readiness.mjs
+        - .dockerignore
+    numInstances: 1
+    envVars:
+      - fromGroup: cardapio-api-settings
+      - fromGroup: cardapio-api-keys
+      - key: LOG_INSTANCE
+        value: api-replica
+      - key: RENDER_DATABASE_HOST
+        fromService:
+          name: cardapio-postgres
+          type: pserv
+          property: host
+      - key: DATABASE_PASSWORD
+        fromService:
+          name: cardapio-postgres
+          type: pserv
+          envVarKey: POSTGRES_APP_PASSWORD
+      - key: RENDER_REDIS_HOST
+        fromService:
+          name: cardapio-redis
+          type: pserv
+          property: host
+      - key: REDIS_PASSWORD
+        fromService:
+          name: cardapio-redis
+          type: pserv
+          envVarKey: REDIS_PASSWORD
+      - key: RENDER_EVOLUTION_HOST
+        fromService:
+          name: cardapio-evolution
+          type: pserv
+          property: host
+      - key: EVOLUTION_API_KEY
+        fromService:
+          name: cardapio-evolution
+          type: pserv
+          envVarKey: AUTHENTICATION_API_KEY
+      - key: RENDER_APP_URL
+        fromService:
+          name: cardapio-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+  - type: web
+    name: cardapio-web
+    runtime: docker
+    region: virginia
+    plan: 0.5c-512mb
+    dockerContext: .
+    dockerfilePath: render/web/Dockerfile
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 30
+    buildFilter:
+      paths:
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - .pnpmfile.cjs
+        - src/**
+        - public/**
+        - packages/**
+        - index.html
+        - vite.config.ts
+        - tsconfig*.json
+        - .env.api
+        - scripts/check-text.mjs
+        - render/web/**
+        - .dockerignore
+    healthCheckPath: /healthz
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: API_PORT
+        value: "3001"
+      - key: API_HOST
+        fromService:
+          name: cardapio-api
+          type: pserv
+          property: host
+      - key: API_REPLICA_HOST
+        fromService:
+          name: cardapio-api-replica
+          type: pserv
+          property: host
+envVarGroups:
+  - name: cardapio-api-keys
+    envVars:
+      - key: SESSION_SEED
+        generateValue: true
+      - key: VAPID_SEED
+        generateValue: true
+  - name: cardapio-api-settings
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: "3001"
+      - key: LOG_LEVEL
+        value: info
+      - key: LOG_DIRECTORY
+        value: ""
+      - key: DATABASE_TLS
+        value: "false"
+      - key: PRIVATE_NETWORK_TRANSPORT
+        value: render
+      - key: DATABASE_MIGRATION_PENDING
+        value: "false"
+      - key: DATABASE_POOL_MAX
+        value: "5"
+      - key: DATABASE_CONNECTION_TIMEOUT_MS
+        value: "5000"
+      - key: HTTP_RATE_LIMIT
+        value: "600"
+      - key: MAX_IN_FLIGHT
+        value: "128"
+      - key: CPU_WORKERS
+        value: "1"
+      - key: REPORT_PARALLEL_THRESHOLD
+        value: "2000"
+      - key: CPU_JOB_TIMEOUT_MS
+        value: "7000"
+      - key: TRUSTED_PROXY_HOPS
+        value: "1"
+      - key: TRUSTED_PROXY_CIDRS
+        value: ""
+      - key: SESSION_COOKIE_SECURE
+        value: auto
+      - key: SESSION_TTL_SECONDS
+        value: "28800"
+      - key: SIGNUP_ENABLED
+        value: "true"
+      - key: DOCS_ENABLED
+        value: "false"

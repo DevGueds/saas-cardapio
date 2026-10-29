@@ -1,7 +1,7 @@
 import { isIP } from "node:net"
 import { z } from "zod"
 import { Failure } from "@cardapio/domain/failure"
-import { railwayPrivateTransport } from "../shared/infrastructure/private-network.js"
+import { privateTransport } from "../shared/infrastructure/private-network.js"
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
@@ -26,7 +26,7 @@ const schema = z.object({
   MAP_TILE_URL: z.string().default("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
   DATABASE_URL: z.string().min(1),
   DATABASE_TLS: z.enum(["true", "false"]),
-  PRIVATE_NETWORK_TRANSPORT: z.enum(["tls", "railway"]).default("tls"),
+  PRIVATE_NETWORK_TRANSPORT: z.enum(["tls", "railway", "render"]).default("tls"),
   DATABASE_MIGRATION_PENDING: z.enum(["true", "false"]).default("false"),
   DATABASE_CA_FILE: z.string().min(1).optional(),
   DATABASE_POOL_MAX: z.coerce.number().int().min(2).max(50).default(10),
@@ -95,7 +95,7 @@ export function loadConfig(input: Record<string, unknown>) {
       !/^\/\d*$/.test(redis.pathname || "/") ||
       (env.NODE_ENV === "production" &&
         redis.protocol !== "rediss:" &&
-        !railwayPrivateTransport(redis, input))
+        !privateTransport(redis, input))
     )
       throw new Error()
     if (env.TRUSTED_PROXY_HOPS > 0 && env.TRUSTED_PROXY_CIDRS) throw new Error()
@@ -161,7 +161,7 @@ export function loadConfig(input: Record<string, unknown>) {
       throw new Error()
     if (
       env.NODE_ENV === "production" &&
-      ((env.DATABASE_TLS !== "true" && !railwayPrivateTransport(database, input)) ||
+      ((env.DATABASE_TLS !== "true" && !privateTransport(database, input)) ||
         env.DOCS_ENABLED === "true")
     )
       throw new Error()

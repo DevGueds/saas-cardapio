@@ -23,6 +23,8 @@
     "railway:check": "npm --prefix .railway run check",
     "railway:plan": "node scripts/railway-cli.mjs config plan",
     "test:railway:images": "node scripts/test-railway-images.mjs",
+    "render:check": "npm --prefix .render run check",
+    "test:render:images": "node .render/test-images.mjs",
     "test:docker:security": "node scripts/test-docker-security.mjs",
     "format:check": "prettier --check .",
     "postinstall": "pnpm --filter @cardapio/domain build && pnpm --filter @cardapio/contracts build && pnpm --filter @cardapio/api db:generate",
