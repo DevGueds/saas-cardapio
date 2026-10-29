@@ -1,4 +1,4 @@
-import type { Role, RestaurantAccess } from "@cardapio/contracts"
+import type { Role, RestaurantAccess, LegalAcceptance } from "@cardapio/contracts"
 import type { Actor, Permission, TenantScope } from "../domain/identity.js"
 
 export interface Account {
@@ -45,6 +45,7 @@ export interface IdentityRepository {
     account: Account,
     store: FirstStore | null,
     session: SessionInput,
+    acceptance: LegalAcceptance & { id: string; acceptedAt: Date },
   ): Promise<void>
   createSession(session: SessionInput, expectedPasswordHash: string): Promise<void>
   sessionByToken(tokenHash: string, now: Date): Promise<SessionRecord | null>

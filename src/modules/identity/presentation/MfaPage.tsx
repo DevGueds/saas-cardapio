@@ -197,8 +197,8 @@ export default function MfaPage() {
                 >
                   {!setup && (
                     <p>
-                      Abra seu aplicativo autenticador e digite o código da conta
-                      Cardápio. Se perdeu o celular, use um dos códigos de recuperação que
+                      Abra seu aplicativo autenticador e digite o código da conta Pede
+                      Aqui. Se perdeu o celular, use um dos códigos de recuperação que
                       guardou.
                     </p>
                   )}

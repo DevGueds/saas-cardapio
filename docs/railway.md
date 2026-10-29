@@ -1,12 +1,67 @@
 # Deploy completo na Railway
 
-Configuração revisada em 28/10/2026. O repositório atual usa PostgreSQL 18.6 para o aplicativo e PostgreSQL 15 para o Evolution, não MySQL. A definição [.railway/railway.ts](../.railway/railway.ts) cobre os serviços do `compose.yaml`, com imagens fixadas, dados persistentes e rede privada.
+Configuração revisada em 29/10/2026. O repositório atual usa PostgreSQL 18.6 para o aplicativo e PostgreSQL 15 para o Evolution, não MySQL. A definição [.railway/railway.ts](../.railway/railway.ts) cobre os serviços do `compose.yaml`, com imagens fixadas, dados persistentes e rede privada.
 
 ## Formato atual
 
 A Railway substituiu o Config as Code de serviço (`railway.json`/`railway.toml`) por Infrastructure as Code de projeto (`.railway/railway.ts`). Os arquivos antigos deixam de ser lidos em 01/12/2026 e novos serviços não podem optar por eles. Os dois arquivos legados deste repositório foram removidos. A definição é aplicada explicitamente pelo CLI: conectar o GitHub sozinho não aplica a infraestrutura.
 
 Fontes oficiais: [Config as Code](https://docs.railway.com/config-as-code), [IaC](https://docs.railway.com/infrastructure-as-code), [referência do SDK](https://docs.railway.com/infrastructure-as-code/reference).
+
+## Importei pelo GitHub e apareceram somente três serviços
+
+O fluxo **Deploy from GitHub repo** faz a detecção de aplicações do repositório, mas não executa `.railway/railway.ts`. O arquivo só é avaliado por `railway config plan` e aplicado por `railway config apply`, no computador ou em uma pipeline configurada para isso. Conectar o GitHub, fazer push ou executar `railway:prepare` não cria a infraestrutura completa.
+
+Se o painel mostra apenas PostgreSQL, Redis e o banco do Evolution, faltam `web`, `api`, `api-replica`, `migrate` e `evolution`. A definição deste repositório contém os oito serviços e quatro volumes. `Sleeping` indica o estado de um serviço já criado; não representa os serviços que estão faltando.
+
+Confira também os limites reais do workspace. Se a conta permite somente três serviços, o projeto já atingiu o teto e não poderá criar os cinco restantes. O stack completo exige um plano que comporte oito serviços e quatro volumes: os limites documentados de volumes são um no Free, três no Trial e dez no Hobby. Use Hobby ou superior para esta estrutura. O upgrade e a cobrança são administrados pelo titular da conta; a preparação local não muda o plano. Veja [planos](https://docs.railway.com/pricing/plans) e [limites de volumes](https://docs.railway.com/volumes/reference).
+
+O nome de um serviço não comprova o processo que ele executa. PostgreSQL e Redis precisam usar, respectivamente, `railway/postgres/Dockerfile` e `railway/redis/Dockerfile`, com contexto na raiz. Se o importador deixou ambos em Railpack, pode ter compilado o frontend Vite no lugar do banco/cache. O blueprint configura os builders corretos e desabilita o modo de hibernação.
+
+Para uma primeira instalação sem dados, siga **Primeiro deploy limpo** abaixo em um projeto novo. O fluxo cria `web` vazio para obter o domínio e depois aplica a definição inteira. Após essa configuração inicial, os serviços ficam conectados ao GitHub para os próximos deploys de código.
+
+Para aproveitar um projeto existente, primeiro autentique com `pnpm railway login`, vincule com `pnpm railway link` e confira `pnpm railway service list --json`. Os nomes do blueprint são os da tabela abaixo. Serviços com nomes como `cardapio-postgres` ou `cardapio-redis` precisam de uma revisão de nomes, variáveis e volumes antes da aplicação; nomes diferentes não são adotados automaticamente como `postgres` e `redis`. Um plano completo pode propor remover os recursos que não estão declarados. Preserve os dados e não aplique um plano com remoções inesperadas. Não use `config pull` sobre esta definição para tentar adicionar os serviços: esse comando importa o estado remoto e pode substituir o arquivo local pelos três serviços existentes.
+
+Para implantar todos os serviços pelo navegador, use um template Railway completo, criado a partir de um projeto validado conforme **Template para reuso**. A importação comum do repositório não substitui esse template.
+
+Para preservar nomes e volumes de uma importação já existente, a configuração privada aceita `deployment.servicePrefix`, `deployment.volumes` e `deployment.preserveSecrets`. O prefixo se aplica aos oito nomes de serviços e às referências entre eles. Cada volume mapeado informa seu nome remoto exato, `sizeMB` e a região atual em `region`; isso evita criar outro volume, aumentar o existente ou mudar sua região sem intenção. `preserveSecrets` usa `preserve()` do SDK, mantendo as credenciais na Railway em vez de substituí-las pelos segredos locais. Use somente chaves que já existam no serviço correspondente. Este exemplo é um trecho a acrescentar ao arquivo privado existente, após conferir o projeto:
+
+```json
+{
+  "deployment": {
+    "servicePrefix": "cardapio-",
+    "preserveSecrets": ["postgres", "app", "migrator", "redis", "evolutionDatabase"],
+    "volumes": {
+      "postgres-data": {
+        "name": "nome-exato-do-volume-postgres",
+        "sizeMB": 500,
+        "region": "ams"
+      },
+      "redis-data": {
+        "name": "nome-exato-do-volume-redis",
+        "sizeMB": 500,
+        "region": "ams"
+      },
+      "evolution-database": {
+        "name": "nome-exato-do-volume-evolution",
+        "sizeMB": 500,
+        "region": "ams"
+      },
+      "evolution-sessions": {
+        "name": "cardapio-evolution-sessions",
+        "sizeMB": 500,
+        "region": "ams"
+      }
+    }
+  }
+}
+```
+
+Com prefixo, o serviço de domínio público é `cardapio-web`; use esse nome no lugar de `web` nos comandos de criação/domínio. Revise um novo plano antes de aplicar: ele deve adotar os três serviços e seus volumes, acrescentar os cinco serviços e o volume de sessões, sem exclusões. Não remova esse mapeamento dos planos seguintes enquanto os recursos mantiverem esses nomes.
+
+Quando o importador criou outros nomes, `deployment.serviceNames` permite mapear cada responsabilidade individualmente, por exemplo `"serviceNames": { "migrate": "cardapio-migrations" }`. As referências das APIs acompanham esse nome. `deployment.preserveVariables` aceita listas de nomes de variáveis por responsabilidade para conservar configurações adicionais durante a adoção, sem copiar seus valores. As variáveis declaradas pelo blueprint têm prioridade sobre essa preservação. Confira também se o serviço de migrations herdou comandos `/app/render/...`: na Railway ele deve executar `node /app/railway/migrate.mjs`, sem o pre-deploy/coordenador da Render.
+
+Fontes: [importação de monorepos](https://docs.railway.com/deployments/monorepo), [aplicação de IaC e GitHub Actions](https://docs.railway.com/infrastructure-as-code).
 
 ## Serviços e persistência
 
@@ -35,7 +90,7 @@ pnpm railway:prepare --environment production
 pnpm railway:check
 ```
 
-`prepare` gera senhas independentes, segredo de sessão e par VAPID em `.railway/local/production.json`. O arquivo fica fora do Git e do contexto Docker. Repetir o comando preserva os valores; mantenha backup seguro. Para usar uma branch ainda não incorporada à main:
+`prepare` identifica o repositório GitHub pelo remote `origin` desta cópia, aceita HTTPS/SSH e gera senhas independentes, segredo de sessão e par VAPID em `.railway/local/production.json`. O arquivo fica fora do Git e do contexto Docker. Repetir o comando preserva o repositório e os segredos já salvos; mantenha backup seguro. Sem remote GitHub, informe `--repository dono/repositorio`. Para corrigir uma preparação anterior que apontava para outro fork, execute `pnpm railway:prepare --environment production --repository dono/repositorio`; as credenciais são preservadas. Para usar uma branch ainda não incorporada à main:
 
 ```sh
 pnpm railway:prepare --environment production --branch codex/railway-complete
@@ -108,7 +163,9 @@ Referências: [domínios Railway](https://docs.railway.com/networking/domains/ra
 
 A opção `PRIVATE_NETWORK_TRANSPORT=railway` permite PostgreSQL/Redis sem TLS adicional somente se o processo recebe os identificadores de projeto/ambiente Railway e o destino corresponde exatamente a `<serviço>.railway.internal`. O tráfego interno usa a malha WireGuard criptografada. Hosts públicos, sufixos parecidos ou ausência de contexto continuam exigindo TLS verificado em produção. A validação das migrations usa a mesma regra. Não há `rejectUnauthorized=false`, `NODE_TLS_REJECT_UNAUTHORIZED=0` ou `NODE_ENV=development` em produção.
 
-O serviço PostgreSQL incorpora o script de criação de papéis; o Redis incorpora seu startup; o Evolution incorpora `provider-log-gate.cjs`. Assim, nenhum depende de bind mount de arquivos do computador. PostgreSQL 18 usa volume no diretório pai `/var/lib/postgresql`; o provedor PostgreSQL 15 mantém seu caminho próprio.
+O serviço PostgreSQL incorpora o script de criação de papéis; o Redis incorpora seu startup; o Evolution incorpora `provider-log-gate.cjs`. Assim, nenhum depende de bind mount de arquivos do computador. PostgreSQL 18 usa volume no diretório pai `/var/lib/postgresql`. O banco PostgreSQL 15 do Evolution monta `/var/lib/postgresql/data`, mas usa `PGDATA=/var/lib/postgresql/data/pgdata`. Essa subpasta evita que o `lost+found` da raiz do volume bloqueie o `initdb`. Em um volume que já contém um cluster válido em outro caminho, confira `PG_VERSION` antes de mudar `PGDATA`; alterar o caminho não migra os dados.
+
+O entrypoint da imagem Redis fixada também ignora o ajuste automático de permissões quando encontra `lost+found` em `/data`. Por isso, o comando de início da Railway ajusta somente o proprietário desse diretório para `redis:redis` antes de chamar o startup, que reduz os privilégios do processo. Isso permite criar o AOF sem remover arquivos do volume ou executar o servidor como root. Se os logs mostrarem `Can't open or create append-only dir appendonlydir: Permission denied`, confira esse comando antes de recriar qualquer recurso.
 
 Evolution permanece privado, com documentação/gerenciador próprios desativados e autenticação por API key. Seu CORS interno aceita `*`, sem credenciais de navegador: a versão fixada devolve erro em probes sem `Origin` quando recebe uma origem fixa. Isso permite o healthcheck nativo Railway, que não envia esse cabeçalho. O teste de imagens verifica também que consultas protegidas sem API key são recusadas. O CORS da API do aplicativo continua restrito à origem HTTPS de web.
 
@@ -133,6 +190,8 @@ Fontes: [criar template](https://docs.railway.com/templates/create), [CLI de tem
 - `pnpm railway:check`: tipos do SDK, cobertura dos serviços, referências, volumes, separação de credenciais e plano determinístico; sem conta Railway.
 - `pnpm test:railway:images`: constrói as imagens e sobe um projeto Docker descartável com os oito serviços; verifica migrations, proxy, sessão compartilhada, cookies seguros, origem e privilégios. Usa segredos aleatórios próprios, sem importar `backend/.env`; remove somente os próprios volumes ao terminar.
 - `pnpm railway:plan`: validação e comparação remota; exige autenticação e vínculo com o ambiente. Não executa deploy.
+- Para um plano fixado, salve o artefato e os logs fora de `.railway/`, por exemplo em `.cache/railway/`. Escrever arquivos nessa árvore entre `config plan --out` e `config apply --plan` pode invalidar a assinatura da configuração. O artefato pode conter segredos e deve continuar fora do Git.
+- Com o ambiente publicado, `DOCKER_E2E_ORIGIN=https://<dominio-web> pnpm test:e2e:docker` reutiliza os testes de proxy, autenticação e carregamento do bundle em HTTPS. No PowerShell, configure `$env:DOCKER_E2E_ORIGIN` antes de executar o comando.
 - `pnpm api:check`: tipos, arquitetura, testes de cookies/transporte e build da API.
 - `node --test scripts/railway-readiness.test.mjs`: checksum, migrations incompletas, corrida de inicialização e prazo limite.
 

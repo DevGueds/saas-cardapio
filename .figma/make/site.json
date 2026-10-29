@@ -1,5 +1,5 @@
 {
-  "description": "Cardápio digital para restaurantes ? demonstração local.",
+  "description": "Pede Aqui. Menos cliques. Mais controle. Cardápio digital, pedidos e gestão da sua loja em um só lugar.",
   "robots": {
     "index": false
   },
@@ -7,6 +7,7 @@
     "addBypassLinks": false,
     "ignoreReducedMotion": false
   },
-  "title": "Cardápio digital",
-  "language": "pt-BR"
+  "title": "Pede Aqui · Menos cliques. Mais controle.",
+  "language": "pt-BR",
+  "openGraph": { "image": "/brand/og-pede-aqui.png" }
 }

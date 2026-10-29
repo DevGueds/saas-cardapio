@@ -15,6 +15,7 @@ import { Failure } from "@cardapio/domain/failure"
 import { compose, RUNTIME } from "./composition.js"
 import type { ApiConfig } from "./config.js"
 import { IdentityController } from "../modules/identity/presentation/identity.controller.js"
+import { PrivacyController } from "../modules/privacy/presentation/privacy.controller.js"
 import { MfaController } from "../modules/identity/presentation/mfa.controller.js"
 import { CatalogController } from "../modules/catalog/presentation/catalog.controller.js"
 import { OrdersController } from "../modules/orders/presentation/orders.controller.js"
@@ -30,6 +31,7 @@ export async function createApplication(config: ApiConfig) {
   @Module({
     controllers: [
       IdentityController,
+      PrivacyController,
       MfaController,
       CatalogController,
       OrdersController,

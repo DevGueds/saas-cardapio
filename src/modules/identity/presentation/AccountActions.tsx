@@ -34,6 +34,7 @@ export default function AccountActions() {
       <div className="account-actions">
         <Link to="/admin">Trocar de loja</Link>
         <Link to="/mfa">Proteção da minha conta</Link>
+        <Link to="/privacidade">Minha privacidade e meus dados</Link>
         <button onClick={() => setChanging(true)}>Alterar senha</button>
         <button disabled={mutation.pending} onClick={() => void logout()}>
           Sair da conta

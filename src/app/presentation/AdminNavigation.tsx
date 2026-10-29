@@ -12,9 +12,9 @@ import {
   LayoutDashboard,
   Settings,
   Store,
-  UtensilsCrossed,
 } from "lucide-react"
 import ImageWithFallback from "../../shared/presentation/ImageWithFallback"
+import Brand from "../../shared/presentation/Brand"
 import { useMenu } from "./MenuScope"
 
 export default function AdminNavigation({ onNavigate }: { onNavigate?: () => void }) {
@@ -27,13 +27,7 @@ export default function AdminNavigation({ onNavigate }: { onNavigate?: () => voi
   return (
     <div className="admin-navigation">
       <div className="admin-brand">
-        <span>
-          <UtensilsCrossed size={24} aria-hidden="true" />
-        </span>
-        <div>
-          <strong>Cardápio</strong>
-          <small>Seu restaurante, conectado.</small>
-        </div>
+        <Brand inverse tagline />
       </div>
       <div className="restaurant-switcher">
         <ImageWithFallback src={restaurant.logoUrl} alt="" />

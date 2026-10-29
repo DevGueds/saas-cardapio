@@ -27,6 +27,7 @@ import FulfillmentForm from "./FulfillmentForm"
 import LocationPicker from "../../../app/presentation/LocationPicker"
 import { useQuote } from "./use-quote"
 import { useReceipts, trackingPath } from "./RecentOrders"
+import { useLegal } from "../../../shared/presentation/legal/LegalProvider"
 export default function CheckoutDrawer({
   controller,
   onClose,
@@ -34,6 +35,7 @@ export default function CheckoutDrawer({
   controller: CartController
   onClose(): void
 }) {
+  const legal = useLegal()
   const { menu, loading, error: loadError, reload } = useMenu(),
     services = useServices(),
     mutation = useMutation(),
@@ -325,6 +327,13 @@ export default function CheckoutDrawer({
         <ValidatedForm className="checkout-form" onSubmit={(e) => void prepare(e)}>
           {loadError && <ErrorNotice error={loadError} onRetry={() => void reload()} />}
           <p className="checkout-intro">Confira seus itens e escolha como receber.</p>
+          <p className="checkout-privacy">
+            Seus dados serão usados pela loja para atender este pedido. Endereço é
+            necessário apenas para entrega.{" "}
+            <button type="button" onClick={() => legal.open("privacy")}>
+              Como protegemos seus dados
+            </button>
+          </p>
           <DraftNotice draft={draft} />
           {controller.draft.issue && <DraftNotice draft={controller.draft} />}
           <div className="checkout-title">

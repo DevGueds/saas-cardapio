@@ -1,5 +1,6 @@
 import { lockUser } from "../../../shared/infrastructure/row-locks.js"
 import { Failure } from "@cardapio/domain/failure"
+import type { LegalAcceptance } from "@cardapio/contracts"
 import type { Database, Transaction } from "../../../shared/infrastructure/database.js"
 import type { Actor } from "../domain/identity.js"
 import type {
@@ -50,10 +51,24 @@ export class PrismaIdentity implements IdentityRepository {
       client.user.findUnique({ where: { email }, include: identityRelations }),
     )
   }
-  createAccount(account: Account, store: FirstStore | null, session: SessionInput) {
+  createAccount(
+    account: Account,
+    store: FirstStore | null,
+    session: SessionInput,
+    acceptance: LegalAcceptance & { id: string; acceptedAt: Date },
+  ) {
     return this.db.transaction(async (tx) => {
       const { id, name, email, passwordHash, active } = account
       await tx.user.create({ data: { id, name, email, passwordHash, active } })
+      await tx.legalAcceptance.create({
+        data: {
+          id: acceptance.id,
+          userId: id,
+          termsVersion: acceptance.termsVersion,
+          privacyVersion: acceptance.privacyVersion,
+          acceptedAt: acceptance.acceptedAt,
+        },
+      })
       if (store)
         await createFirstStore(
           tx,

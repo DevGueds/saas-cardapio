@@ -6,7 +6,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "check": "tsc --noEmit && node --test stack.test.ts",
+    "check": "tsc --noEmit && node --test stack.test.ts prepare.test.mjs",
     "prepare:local": "node prepare.mjs"
   },
   "devDependencies": {

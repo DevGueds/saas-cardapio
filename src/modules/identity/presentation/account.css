@@ -9,7 +9,12 @@
   justify-content: space-between;
   gap: 4rem;
   padding: clamp(2rem, 6vw, 6rem);
-  background: var(--forest);
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 90% 0, #4e80594d, transparent 60%),
+    radial-gradient(ellipse at 0 100%, #80a65d24, transparent 60%),
+    linear-gradient(145deg, #16483a, #102d27);
   color: white;
 }
 .account-brand {
@@ -22,10 +27,17 @@
 }
 .account-story .eyebrow {
   color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 .account-story h1 {
   font-size: clamp(2rem, 3.8vw, 3.8rem);
   letter-spacing: -0.05em;
+  line-height: 1.15;
+}
+.account-story h1 > span {
+  color: #c7ef9a;
 }
 .account-story p:not(.eyebrow) {
   margin-top: 1.5rem;
@@ -40,10 +52,86 @@
   align-items: center;
   justify-content: center;
   padding: 3rem 1.5rem;
+  background: radial-gradient(ellipse at 100% 0, #e9f2e0, transparent 65%), var(--wash);
 }
 .account-card {
   width: 100%;
-  max-width: 28rem;
+  max-width: 32rem;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  border: 1px solid #e0e7dc;
+  border-radius: 1.5rem;
+  background: #ffffffed;
+  box-shadow: 0 12px 50px #123e3409;
+}
+.account-workflow {
+  margin-top: 2.5rem;
+  padding: 1.35rem;
+  border: 1px solid #ffffff26;
+  border-radius: 1rem;
+  background: linear-gradient(125deg, #ffffff0d, #ffffff05);
+  max-width: 30rem;
+}
+.account-workflow > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+}
+.account-workflow > div > span:last-child {
+  color: #c4d7c7;
+}
+.account-workflow__dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #c7ef9a;
+  box-shadow: 0 0 0 4px #c7ef9a12;
+  margin-right: 0.25rem;
+}
+.account-workflow ol {
+  display: flex;
+  gap: 0.6rem;
+  padding: 1.25rem 0;
+  margin: 0;
+  list-style: none;
+}
+.account-workflow li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #ffffff26;
+  border-radius: 0.6rem;
+  font-size: 0.72rem;
+}
+.account-workflow li:last-child {
+  color: #d8f0bd;
+  border-color: #c7ef9a50;
+  background: #c7ef9a0a;
+}
+.account-workflow li > span {
+  opacity: 0.6;
+  font-size: 0.65rem;
+}
+.account-workflow > small {
+  font-size: 0.72rem;
+}
+.account-trust {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+.account-legal {
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
+  margin-top: 1.5rem;
+}
+.account-legal > p {
+  color: var(--muted);
+  font-size: 0.72rem;
+  margin-top: 0.5rem;
 }
 .account-card h2 {
   font-size: 1.9rem;
@@ -129,5 +217,11 @@
   }
   .account-panel {
     padding-top: 2rem;
+  }
+  .account-workflow {
+    display: none;
+  }
+  .account-card {
+    padding: 1.5rem;
   }
 }

@@ -16,7 +16,7 @@ export class Totp implements MfaCryptography {
     const encrypted = [iv, cipher.getAuthTag(), ciphertext]
       .map((value) => value.toString("base64url"))
       .join(".")
-    const uri = generateURI({ issuer: "Cardápio", label, secret })
+    const uri = generateURI({ issuer: "Pede Aqui", label, secret })
     return {
       secret,
       encrypted,

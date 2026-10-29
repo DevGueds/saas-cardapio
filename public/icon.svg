@@ -1,1 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="40" fill="#172f27"/><path d="M55 39v42c0 14 20 14 20 0V39M65 39v114M122 39c-18 14-24 40-10 51h20V39h-10zm10 51v63" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs><linearGradient id="a" x1="6" y1="4" x2="60" y2="64" gradientUnits="userSpaceOnUse"><stop stop-color="#23785b"/><stop offset="1" stop-color="#123e34"/></linearGradient></defs>
+  <rect width="64" height="64" rx="20" fill="url(#a)"/>
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M18 17h15c10 0 16 5.3 16 13.7C49 39.3 42.7 45 33 45h-5l-10 8V17Zm10 9v10h5c4.6 0 7-1.8 7-5.2 0-3.2-2.4-4.8-7-4.8h-5Z" fill="#f8fcf3"/>
+  <circle cx="47" cy="17" r="6" fill="#c7ef9a"/>
+</svg>

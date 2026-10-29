@@ -1,3 +1,4 @@
+import { currentLegalAcceptance } from "@cardapio/contracts"
 import { expect, test } from "@playwright/test"
 import { randomUUID } from "node:crypto"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
@@ -16,6 +17,7 @@ test("impressão configura Bluetooth, editor, logo e gera PDF/ESC-POS com recebi
     await page.request.post("/api/v1/auth/register", {
       headers: { origin: baseURL! },
       data: {
+        legalAcceptance: currentLegalAcceptance,
         name: "Gestora Impressão",
         email: `${slug}@browser.example.test`,
         password: "test-passphrase-123",
@@ -239,6 +241,7 @@ test("impressão simplifica ajustes no celular, preserva cancelamento e substitu
     await page.request.post("/api/v1/auth/register", {
       headers: { origin: baseURL! },
       data: {
+        legalAcceptance: currentLegalAcceptance,
         name: "Gestora UX",
         email: `${slug}@browser.example.test`,
         password: "test-passphrase-123",

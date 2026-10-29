@@ -19,6 +19,7 @@
     "db:studio": "prisma studio",
     "db:migrate:test": "node scripts/migrate-test.mjs",
     "maintenance": "node dist/maintenance.js",
+    "privacy:requests": "node dist/privacy-requests.js",
     "db:check-schema": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code"
   },
   "dependencies": {

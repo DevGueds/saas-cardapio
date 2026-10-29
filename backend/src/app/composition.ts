@@ -1,4 +1,6 @@
 import { ParallelPrintingLogos } from "../modules/printing/infrastructure/parallel-logo.js"
+import { Privacy } from "../modules/privacy/application/privacy.js"
+import { PrismaPrivacy } from "../modules/privacy/infrastructure/prisma-privacy.js"
 import { PostalAddresses } from "../modules/delivery/application/postal-address.js"
 import { Engagement } from "../modules/engagement/application/engagement.js"
 import { PrismaEngagement } from "../modules/engagement/infrastructure/prisma-engagement.js"
@@ -82,6 +84,16 @@ export async function compose(config: ApiConfig) {
       operation,
     )
     return {
+      privacy: new Privacy(
+        new PrismaPrivacy(db),
+        access,
+        identity,
+        passwords,
+        ids,
+        clock,
+        limiter,
+        operation,
+      ),
       mfa: new Mfa(
         new PrismaMfa(db),
         identity,

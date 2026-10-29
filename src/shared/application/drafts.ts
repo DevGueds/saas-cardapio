@@ -17,6 +17,7 @@ export interface DraftManager {
   set(key: string, value: unknown, ttlMs?: number): boolean
   clear(key: string): void
   clearPrefix(prefix: string): void
+  clearCustomerDetails?(): boolean
   receive(key: string | null, newValue: string | null): void
 }
 export const DRAFT_PREFIX = "cardapio:draft:v1:"

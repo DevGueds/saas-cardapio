@@ -1,3 +1,9 @@
+import {
+  currentLegalAcceptance,
+  type PrivacyProfile,
+  type PrivacyExport,
+  type PrivacyRequest,
+} from "@cardapio/contracts"
 import { PrismaMenu } from "../../src/modules/catalog/infrastructure/prisma-menu.js"
 import { Database } from "../../src/shared/infrastructure/database.js"
 import { before, after, test } from "node:test"
@@ -63,6 +69,7 @@ function request(
 async function register(label: string): Promise<Login> {
   const email = `${label}-${suffix}@example.test`
   const response = await request("POST", "/auth/register", {
+    legalAcceptance: currentLegalAcceptance,
     name: label,
     email,
     password,
@@ -192,6 +199,105 @@ test("real PostgreSQL migrations, hashed credentials and empty closed stores", a
   assert.equal(sessions.length, 1)
   assert.match(sessions[0]!.tokenHash, /^[a-f0-9]{64}$/)
 })
+test("privacy isolates accounts, records consent versions, reauthenticates exports and persists rights requests", async () => {
+  assert.equal((await request("GET", "/me/privacy")).statusCode, 401)
+  const first = value<PrivacyProfile>(
+    (await request("GET", "/me/privacy", undefined, alice)).body,
+  )
+  assert.equal(first.account.id, alice.userId)
+  assert.equal(first.acceptance?.termsVersion, currentLegalAcceptance.termsVersion)
+  const acceptedAt = first.acceptance!.acceptedAt
+  assert.equal(
+    (await request("POST", "/me/privacy/acceptance", currentLegalAcceptance, alice))
+      .statusCode,
+    201,
+  )
+  assert.equal(
+    value<PrivacyProfile>((await request("GET", "/me/privacy", undefined, alice)).body)
+      .acceptance!.acceptedAt,
+    acceptedAt,
+  )
+  assert.equal(
+    (
+      await request(
+        "POST",
+        "/me/privacy/acceptance",
+        { ...currentLegalAcceptance, accepted: false },
+        alice,
+      )
+    ).statusCode,
+    422,
+  )
+  assert.equal(
+    (
+      await request("POST", "/me/privacy/export", { currentPassword: password }, alice, {
+        "x-csrf-token": "bad",
+      })
+    ).statusCode,
+    403,
+  )
+  assert.equal(
+    (
+      await request(
+        "POST",
+        "/me/privacy/export",
+        { currentPassword: password, userId: bob.userId },
+        alice,
+      )
+    ).statusCode,
+    422,
+  )
+  assert.equal(
+    (await request("POST", "/me/privacy/export", { currentPassword: "incorrect" }, alice))
+      .statusCode,
+    422,
+  )
+  const exported = await request(
+    "POST",
+    "/me/privacy/export",
+    { currentPassword: password },
+    alice,
+  )
+  assert.equal(exported.statusCode, 201)
+  assert.equal(value<PrivacyExport>(exported.body).account.id, alice.userId)
+  for (const secret of [
+    "passwordHash",
+    "tokenHash",
+    "csrfToken",
+    "totpSecret",
+    bob.email,
+  ])
+    assert.equal(exported.body.includes(secret), false)
+  const created = await request(
+    "POST",
+    "/me/privacy/requests",
+    { kind: "DELETION", message: "Quero encerrar minha conta" },
+    alice,
+  )
+  assert.equal(created.statusCode, 201)
+  const protocol = value<PrivacyRequest>(created.body)
+  assert.equal(protocol.status, "RECEIVED")
+  assert.equal(protocol.resolvedAt, null)
+  assert.equal(
+    value<PrivacyProfile>((await request("GET", "/me/privacy", undefined, alice)).body)
+      .requests[0]!.id,
+    protocol.id,
+  )
+  assert.equal(
+    value<PrivacyProfile>((await request("GET", "/me/privacy", undefined, bob)).body)
+      .requests.length,
+    0,
+  )
+  assert.equal(
+    (
+      await server.runtime.db.client.user.findUniqueOrThrow({
+        where: { id: alice.userId },
+      })
+    ).active,
+    true,
+  )
+})
+
 test("private routes, origins, CSRF and malformed JSON fail closed", async () => {
   assert.equal((await request("GET", "/me/restaurants")).statusCode, 401)
   assert.equal(
@@ -1114,6 +1220,7 @@ test("team signup creates no tenant and still requires an owner to grant access"
   remoteAddress = `10.${randomInt(1, 255)}.${randomInt(1, 255)}.${randomInt(1, 255)}`
   const email = `team-${suffix}@example.test`,
     response = await request("POST", "/auth/register-account", {
+      legalAcceptance: currentLegalAcceptance,
       name: "Equipe",
       email,
       password,

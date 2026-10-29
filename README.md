@@ -1,10 +1,14 @@
-# SaaS Cardápio
+# Pede Aqui
+
+**Menos cliques. Mais controle.** Identidade e recursos de privacidade em [marca](docs/brand.md) e [proteção de dados](docs/privacy.md).
 
 SaaS multitenant de cardápio digital, com frontend React 19/TypeScript/Vite/Tailwind e API NestJS/Fastify/TypeScript. Persistência PostgreSQL 18.6 com Prisma 7 e Redis para cache e proteção compartilhada. Domínio e validações compartilhados, arquitetura DDD/hexagonal e falhas explícitas, sem fallback para dados fictícios.
 
 ## Começar com Docker
 
 Para implantação completa em nuvem, veja [o guia Railway](docs/railway.md) e o blueprint [`.railway/railway.ts`](.railway/railway.ts). Usa o formato atual de infraestrutura como código, com domínio gratuito HTTPS e cookies seguros por padrão.
+
+Na Railway, importar o GitHub não aplica o blueprint completo. O primeiro deploy exige os comandos de preparação, plano e aplicação do guia, ou um template Railway completo, em plano que comporte oito serviços e quatro volumes (Hobby ou superior). Se apareceram somente três serviços, veja [o diagnóstico da importação](docs/railway.md#importei-pelo-github-e-apareceram-somente-três-serviços).
 
 Como segunda alternativa, [o guia Render](docs/render.md) e o [Blueprint `render.yaml`](render.yaml) preparam a mesma aplicação completa com domínio gratuito `onrender.com`. A configuração Railway continua disponível e independente. Na Render, os serviços privados e os discos persistentes usam planos pagos.
 

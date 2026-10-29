@@ -110,7 +110,15 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
   const title = config.title ?? "Figma Make App"
   const description = config.description ?? ""
   const favicon = config.icons?.icon ?? ""
-  const socialImage = config.openGraph?.image ?? ""
+  const publicSiteUrl = process.env.VITE_PUBLIC_SITE_URL || process.env.PUBLIC_SITE_URL ||
+    (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : process.env.FIGMA_PUBLIC_URL)
+  let socialImage = config.openGraph?.image ?? ""
+  if (publicSiteUrl && socialImage) {
+    const origin = new URL(publicSiteUrl)
+    if (origin.protocol !== "https:" || origin.username || origin.password || origin.search || origin.hash)
+      throw new Error("A origem pública de compartilhamento deve ser uma URL HTTPS válida.")
+    socialImage = new URL(socialImage, origin).href
+  }
   const language = sanitizeHtmlValue(config.language) || "en"
   const googleAnalyticsId = sanitizeHtmlValue(
     config.analytics?.googleAnalyticsId,
@@ -120,7 +128,9 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
   const bodyStart = config.customScripts?.bodyStart ?? ""
   const bodyEnd = config.customScripts?.bodyEnd ?? ""
   const robotsTxt =
-    config.robots?.index === false ? "User-agent: *\nDisallow: /\n" : ""
+    config.robots?.index === false
+      ? "User-agent: facebookexternalhit\nUser-agent: WhatsApp\nUser-agent: Twitterbot\nAllow: /$\nAllow: /login$\nAllow: /menu/\nAllow: /privacidade$\nAllow: /brand/\nDisallow: /\n\nUser-agent: *\nDisallow: /\n"
+      : ""
 
   return {
     name: "figma-site-configuration",
@@ -185,6 +195,7 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
             attrs: { property: "og:title", content: title },
             injectTo: "head",
           })
+          tags.push({ tag: "meta", attrs: { name: "twitter:title", content: title }, injectTo: "head" })
         }
         if (description) {
           tags.push({
@@ -192,6 +203,7 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
             attrs: { property: "og:description", content: description },
             injectTo: "head",
           })
+          tags.push({ tag: "meta", attrs: { name: "twitter:description", content: description }, injectTo: "head" })
         }
         if (socialImage) {
           tags.push(
@@ -200,6 +212,14 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
               attrs: { property: "og:image", content: socialImage },
               injectTo: "head",
             },
+            ...[
+              ["og:image:type", "image/png"],
+              ["og:image:width", "600"],
+              ["og:image:height", "600"],
+              ["og:image:alt", "Pede Aqui. Menos cliques. Mais controle. Cardápio, pedidos e gestão em um só lugar."],
+            ].map(([property, content]) => ({
+              tag: "meta", attrs: { property: property!, content: content! }, injectTo: "head" as const,
+            })),
             {
               tag: "meta",
               attrs: { name: "twitter:card", content: "summary_large_image" },
@@ -210,6 +230,7 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
               attrs: { name: "twitter:image", content: socialImage },
               injectTo: "head",
             },
+            { tag: "meta", attrs: { name: "twitter:image:alt", content: "Pede Aqui. Menos cliques. Mais controle." }, injectTo: "head" },
           )
         }
 

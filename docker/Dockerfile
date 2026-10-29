@@ -26,6 +26,8 @@ EXPOSE 3001
 CMD ["node", "dist/main.js"]
 
 FROM build AS web-build
+ARG PUBLIC_SITE_URL
+ENV VITE_PUBLIC_SITE_URL=${PUBLIC_SITE_URL}
 ENV VITE_APP_MODE=api
 ENV VITE_API_BASE_URL=/api/v1
 RUN pnpm build:api

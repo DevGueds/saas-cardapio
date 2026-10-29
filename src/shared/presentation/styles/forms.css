@@ -20,7 +20,7 @@
 }
 .primary-button,
 .whatsapp-button {
-  background: var(--brand);
+  background: var(--brand-gradient);
   color: #fff;
   box-shadow: 0 3px 0 #163e301a;
 }

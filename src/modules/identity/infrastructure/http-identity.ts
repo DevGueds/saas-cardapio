@@ -34,7 +34,12 @@ export class HttpIdentity implements IdentityService {
     return this.establish(
       accountOnly ? "/auth/register-account" : "/auth/register",
       accountOnly
-        ? { name: data.name, email: data.email, password: data.password }
+        ? {
+            name: data.name,
+            email: data.email,
+            password: data.password,
+            legalAcceptance: data.legalAcceptance,
+          }
         : data,
     )
   }

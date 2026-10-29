@@ -1,3 +1,4 @@
+import { currentLegalAcceptance } from "@cardapio/contracts"
 import { imageReference } from "@cardapio/domain/validation"
 import { test } from "node:test"
 import assert from "node:assert/strict"
@@ -201,6 +202,7 @@ test("cookie mode supports local HTTP and keeps free Railway HTTPS domains secur
 test("schemas reject mass assignment and bad prices", () => {
   assert.equal(
     registrationSchema.safeParse({
+      legalAcceptance: currentLegalAcceptance,
       name: "Maria",
       email: "a@example.test",
       password: "12345678",
@@ -267,6 +269,7 @@ test("Zod validation returns detailed safe errors for every invalid field", asyn
   const { validate } = await import("../../src/shared/application/validate.js")
   try {
     validate(registrationSchema, {
+      legalAcceptance: currentLegalAcceptance,
       name: "123",
       email: "invalid",
       password: "1234567",

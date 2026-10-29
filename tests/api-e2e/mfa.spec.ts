@@ -1,3 +1,4 @@
+import { currentLegalAcceptance } from "@cardapio/contracts"
 import { expect, test } from "@playwright/test"
 import { randomUUID } from "node:crypto"
 import { createRequire } from "node:module"
@@ -19,6 +20,7 @@ test("MFA guides enrollment, mobile recovery, login and per-person management ex
     await page.request.post("/api/v1/auth/register", {
       headers: { origin: baseURL! },
       data: {
+        legalAcceptance: currentLegalAcceptance,
         name: "Gestora Segurança",
         email,
         password,
@@ -36,7 +38,12 @@ test("MFA guides enrollment, mobile recovery, login and per-person management ex
   const staffAccount = await (
     await staff.request.post(`${baseURL}/api/v1/auth/register-account`, {
       headers: { origin: baseURL! },
-      data: { name: "Pessoa da Cozinha", email: staffEmail, password },
+      data: {
+        legalAcceptance: currentLegalAcceptance,
+        name: "Pessoa da Cozinha",
+        email: staffEmail,
+        password,
+      },
     })
   ).json()
   expect(staffAccount.ok, staffAccount.error?.code).toBe(true)

@@ -181,7 +181,7 @@ for (const width of [320, 390, 768]) {
     await page.goto("/admin/delivery")
     await page.getByRole("button", { name: "Abrir menu", exact: true }).click()
     const dialog = page.getByRole("dialog", { name: "Navegação da loja" })
-    await expect(dialog).toHaveCSS("background-color", "rgb(23, 47, 39)")
+    await expect(dialog).toHaveCSS("background-color", "rgb(18, 62, 52)")
     await expect(dialog).toHaveCSS("color", "rgb(244, 247, 239)")
     const bounds = await dialog.boundingBox()
     expect(bounds!.x).toBe(0)

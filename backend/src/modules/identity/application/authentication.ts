@@ -79,6 +79,7 @@ export class Authentication {
                 slug: data.slug,
               },
           session.record,
+          { ...data.legalAcceptance, id: this.ids.next(), acceptedAt: this.clock.now() },
         )
       } catch (error) {
         if (error instanceof Failure && error.code === "CONFLICT")

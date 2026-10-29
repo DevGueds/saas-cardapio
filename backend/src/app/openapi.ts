@@ -1,6 +1,9 @@
 import { z } from "zod"
 import * as contracts from "@cardapio/contracts"
 const requestSchemas = {
+  LegalAcceptance: contracts.legalAcceptanceSchema,
+  PrivacyRequest: contracts.privacyRequestInputSchema,
+  PrivacyExport: contracts.privacyExportInputSchema,
   Addon: contracts.saveAddonSchema,
   Appearance: contracts.saveAppearanceSchema,
   Channels: contracts.updateChannelsSchema,
@@ -37,6 +40,10 @@ const requestSchemas = {
   Open: contracts.openSchema,
 }
 const operations = [
+  ["/me/privacy", "get"],
+  ["/me/privacy/export", "post", "PrivacyExport"],
+  ["/me/privacy/acceptance", "post", "LegalAcceptance"],
+  ["/me/privacy/requests", "post", "PrivacyRequest"],
   ["/restaurants/{restaurantId}/printing/settings", "get"],
   ["/restaurants/{restaurantId}/printing/settings", "put", "PrintingSettings"],
   ["/restaurants/{restaurantId}/orders/{orderId}/documents/{kind}", "get"],

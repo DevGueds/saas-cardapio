@@ -11,6 +11,7 @@ import Dialog from "../../shared/presentation/Dialog"
 import { useMenu } from "./MenuScope"
 import { useServices } from "./ServicesProvider"
 import AdminNavigation from "./AdminNavigation"
+import LegalLinks from "../../shared/presentation/legal/LegalLinks"
 
 export default function AdminLayout() {
   const { menu, error: loadError, loading, reload } = useMenu()
@@ -50,7 +51,7 @@ export default function AdminLayout() {
                         : "Cardápio"
 
   useEffect(() => {
-    document.title = `${section} · ${restaurant.name}`
+    document.title = `${section} · ${restaurant.name} · Pede Aqui`
   }, [section, restaurant.name])
 
   async function toggleStore() {
@@ -142,7 +143,8 @@ export default function AdminLayout() {
           </FeatureBoundary>
         </main>
         <footer className="admin-footer">
-          <span>Feito para simplificar o dia a dia da sua loja.</span>
+          <span>Pede Aqui · Menos cliques. Mais controle.</span>
+          <LegalLinks />
           <span>
             {services.mode === "api" ? "Sua loja conectada" : "Demonstração local"}
           </span>

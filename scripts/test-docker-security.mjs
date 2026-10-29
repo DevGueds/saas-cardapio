@@ -1,3 +1,4 @@
+import { currentLegalAcceptance } from "@cardapio/contracts"
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
 import { readFile } from "node:fs/promises"
@@ -182,6 +183,7 @@ try {
   const email = `${name}@security.example.test`,
     password = `test-${randomUUID()}`
   const registered = await request("POST", "/auth/register", {
+    legalAcceptance: currentLegalAcceptance,
     email,
     password,
     name: "Security Probe",

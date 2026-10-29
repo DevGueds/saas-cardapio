@@ -14,6 +14,9 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 COPY . .
 ENV VITE_APP_MODE=api
 ENV VITE_API_BASE_URL=/api/v1
+ARG PUBLIC_SITE_URL
+ARG RAILWAY_PUBLIC_DOMAIN
+ENV VITE_PUBLIC_SITE_URL=${PUBLIC_SITE_URL}
 RUN pnpm -r rebuild && pnpm run postinstall && pnpm build:api
 
 FROM caddy:2-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f AS web

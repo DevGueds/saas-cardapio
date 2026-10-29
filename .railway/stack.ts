@@ -2,15 +2,44 @@ import {
   github,
   image,
   project,
-  service,
+  preserve,
+  service as defineService,
   volume,
   type ServiceConfigInput,
 } from "railway/iac"
-import { validateParameters, type StackParameters } from "./parameters.ts"
+import {
+  validateParameters,
+  type ServiceRole,
+  type StackParameters,
+} from "./parameters.ts"
 
 /** No remote mutation and no secret generation during plan/evaluation. */
 export function createStack(input: StackParameters) {
   const p = validateParameters(input)
+  const serviceName = (name: ServiceRole) =>
+    p.deployment?.serviceNames?.[name] ?? `${p.deployment?.servicePrefix ?? ""}${name}`
+  const service = (role: ServiceRole, config: ServiceConfigInput) =>
+    defineService(serviceName(role), {
+      ...config,
+      env: {
+        ...Object.fromEntries(
+          (p.deployment?.preserveVariables?.[role] ?? []).map((key) => [key, preserve()]),
+        ),
+        ...config.env,
+      },
+    })
+  const secret = (key: keyof StackParameters["secrets"]) =>
+    p.deployment?.preserveSecrets?.includes(key) ? preserve() : p.secrets[key]
+  const dataVolume = (
+    role: "postgres-data" | "redis-data" | "evolution-database" | "evolution-sessions",
+    defaultSizeMB: number,
+  ) => {
+    const existing = p.deployment?.volumes?.[role]
+    return volume(existing?.name ?? role, {
+      sizeMB: existing?.sizeMB ?? defaultSizeMB,
+      ...(existing?.region ? { region: existing.region } : {}),
+    })
+  }
   const source = github(p.repository, { branch: p.branch, rootDirectory: "/" })
   const build = (path: string): ServiceConfigInput["build"] => {
     const shared = [
@@ -43,21 +72,22 @@ export function createStack(input: StackParameters) {
     sleepApplication: false,
     drainingSeconds: 15,
   }
-  const postgresData = volume("postgres-data", { sizeMB: 4096 })
-  const redisData = volume("redis-data", { sizeMB: 1024 })
-  const evolutionData = volume("evolution-database", { sizeMB: 2048 })
-  const evolutionSessions = volume("evolution-sessions", { sizeMB: 1024 })
+  const postgresData = dataVolume("postgres-data", 4096)
+  const redisData = dataVolume("redis-data", 1024)
+  const evolutionData = dataVolume("evolution-database", 2048)
+  const evolutionSessions = dataVolume("evolution-sessions", 1024)
   const postgres = service("postgres", {
     source,
     build: build("railway/postgres/Dockerfile"),
     deploy: run,
     volumeMounts: { "/var/lib/postgresql": postgresData },
     env: {
+      PORT: "5432",
       POSTGRES_USER: "postgres",
       POSTGRES_DB: "postgres",
-      POSTGRES_PASSWORD: p.secrets.postgres,
-      POSTGRES_APP_PASSWORD: p.secrets.app,
-      POSTGRES_MIGRATION_PASSWORD: p.secrets.migrator,
+      POSTGRES_PASSWORD: secret("postgres"),
+      POSTGRES_APP_PASSWORD: secret("app"),
+      POSTGRES_MIGRATION_PASSWORD: secret("migrator"),
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --data-checksums",
       APP_URL:
         "postgresql://cardapio:${{POSTGRES_APP_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/cardapio",
@@ -68,10 +98,14 @@ export function createStack(input: StackParameters) {
   const redis = service("redis", {
     source,
     build: build("railway/redis/Dockerfile"),
+    // The upstream permission repair skips volumes containing lost+found.
+    // Repair only the mount root before its entrypoint drops privileges.
+    start: "/bin/sh -c 'chown redis:redis /data && exec /bin/sh /opt/cardapio-redis.sh'",
     deploy: run,
     volumeMounts: { "/data": redisData },
     env: {
-      REDIS_PASSWORD: p.secrets.redis,
+      PORT: "6379",
+      REDIS_PASSWORD: secret("redis"),
       REDIS_URL: "redis://:${{REDIS_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:6379/0",
       EVOLUTION_REDIS_URL:
         "redis://:${{REDIS_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:6379/6",
@@ -86,9 +120,11 @@ export function createStack(input: StackParameters) {
     deploy: run,
     volumeMounts: { "/var/lib/postgresql/data": evolutionData },
     env: {
+      PORT: "5432",
       POSTGRES_USER: "evolution",
       POSTGRES_DB: "evolution",
-      POSTGRES_PASSWORD: p.secrets.evolutionDatabase,
+      PGDATA: "/var/lib/postgresql/data/pgdata",
+      POSTGRES_PASSWORD: secret("evolutionDatabase"),
       DATABASE_URL:
         "postgresql://evolution:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/evolution?schema=public",
     },
@@ -106,7 +142,7 @@ export function createStack(input: StackParameters) {
       SERVER_URL: "http://${{RAILWAY_PRIVATE_DOMAIN}}:8080",
       SERVER_DISABLE_DOCS: "true",
       SERVER_DISABLE_MANAGER: "true",
-      AUTHENTICATION_API_KEY: p.secrets.evolutionApi,
+      AUTHENTICATION_API_KEY: secret("evolutionApi"),
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false",
       DATABASE_PROVIDER: "postgresql",
       DATABASE_CONNECTION_URI: providerDb.env.DATABASE_URL,
@@ -142,7 +178,7 @@ export function createStack(input: StackParameters) {
     source,
     build: build("railway/api/Dockerfile"),
     start: "node /app/railway/migrate.mjs",
-    deploy: { restartPolicyType: "NEVER", sleepApplication: false },
+    deploy: { restartPolicyType: "NEVER", sleepApplication: false, preDeployCommand: [] },
     env: {
       NODE_ENV: "production",
       DATABASE_TLS: "false",
@@ -171,12 +207,13 @@ export function createStack(input: StackParameters) {
     TRUSTED_PROXY_CIDRS: "",
     SESSION_TTL_SECONDS: "28800",
     SESSION_COOKIE_SECURE: "auto",
-    SESSION_SECRET: p.secrets.session,
-    CORS_ORIGINS: p.publicOrigin || "https://${{web.RAILWAY_PUBLIC_DOMAIN}}",
+    SESSION_SECRET: secret("session"),
+    CORS_ORIGINS:
+      p.publicOrigin || "https://${{" + serviceName("web") + ".RAILWAY_PUBLIC_DOMAIN}}",
     SIGNUP_ENABLED: String(p.signupEnabled),
     DOCS_ENABLED: "false",
-    VAPID_PUBLIC_KEY: p.secrets.vapidPublic,
-    VAPID_PRIVATE_KEY: p.secrets.vapidPrivate,
+    VAPID_PUBLIC_KEY: secret("vapidPublic"),
+    VAPID_PRIVATE_KEY: secret("vapidPrivate"),
     VAPID_SUBJECT: p.contact,
     EVOLUTION_URL: evolution.env.SERVER_URL,
     EVOLUTION_API_KEY: evolution.env.AUTHENTICATION_API_KEY,
@@ -220,6 +257,7 @@ export function createStack(input: StackParameters) {
       API_PORT: "3001",
       API_HOST: api.env.RAILWAY_PRIVATE_DOMAIN,
       API_REPLICA_HOST: replica.env.RAILWAY_PRIVATE_DOMAIN,
+      PUBLIC_SITE_URL: p.publicOrigin || "https://${{RAILWAY_PUBLIC_DOMAIN}}",
     },
   })
   return project("saas-cardapio", {

@@ -163,6 +163,26 @@ export function createReduxDrafts(
       }
       for (const key of keys) if (key.startsWith(prefix)) manager.clear(key)
     },
+    clearCustomerDetails() {
+      try {
+        const source = storage()
+        const keys = new Set([...Object.keys(store.getState()), ...observed.keys()])
+        for (let i = 0; i < source.length; i++) {
+          const full = source.key(i)
+          if (full?.startsWith(DRAFT_PREFIX)) keys.add(full.slice(DRAFT_PREFIX.length))
+        }
+        for (const key of keys) {
+          if (!/^(?:api|demo):customer:[a-zA-Z0-9_-]+:checkout$/.test(key)) continue
+          source.removeItem(DRAFT_PREFIX + key)
+          observed.set(key, null)
+          dirty.delete(key)
+          store.dispatch(slice.actions.remove(key))
+        }
+        return true
+      } catch {
+        return false
+      }
+    },
     receive(full, raw) {
       if (full === null) {
         for (const key of Object.keys(store.getState()))

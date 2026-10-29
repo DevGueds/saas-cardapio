@@ -1,4 +1,6 @@
 import type { IdGenerator } from "../../shared/application/ports"
+import type { PrivacyService } from "../../modules/privacy/application/ports"
+import type { FileDownloads } from "../../shared/application/file-downloads"
 import type { PrintingService } from "../../modules/printing/application/printing"
 import type { ReceiptOutputRenderer } from "../../modules/printing/application/receipt-output"
 import type { TeamService } from "../../modules/identity/application/team"
@@ -17,6 +19,8 @@ import type { Cart } from "@cardapio/domain/cart"
 import type { TrackingView, PreparedOrderView } from "@cardapio/contracts"
 import { browserDrafts } from "../drafts"
 import DraftsProvider from "../../shared/presentation/DraftsProvider"
+import LegalProvider from "../../shared/presentation/legal/LegalProvider"
+import { browserPrivacyNotice } from "../privacy"
 import type { DraftManager } from "../../shared/application/drafts"
 import { useState } from "react"
 import type { IdentityService } from "../../modules/identity/application/ports"
@@ -36,6 +40,8 @@ import type { Result } from "../../shared/application/result"
 import type { ImageReader } from "../../shared/application/image-reader"
 
 export interface ApplicationServices {
+  privacy?: PrivacyService
+  files?: FileDownloads
   ids: IdGenerator
   engagement?: EngagementService
   devicePush?: DevicePush
@@ -83,9 +89,14 @@ export default function ServicesProvider({
   children: ReactNode
 }) {
   const [drafts] = useState(() => services.drafts ?? browserDrafts())
+  const [notice] = useState(browserPrivacyNotice)
   return (
     <ServicesContext.Provider value={services}>
-      <DraftsProvider manager={drafts}>{children}</DraftsProvider>
+      <DraftsProvider manager={drafts}>
+        <LegalProvider notice={notice} drafts={drafts}>
+          {children}
+        </LegalProvider>
+      </DraftsProvider>
     </ServicesContext.Provider>
   )
 }

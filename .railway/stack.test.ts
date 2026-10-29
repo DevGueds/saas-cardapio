@@ -93,6 +93,14 @@ test("stack covers Compose services and persistent volumes without generated dom
   )
   assert.deepEqual(get("postgres").build?.watchPatterns, ["/railway/postgres/**"])
   assert.deepEqual(get("redis").build?.watchPatterns, ["/railway/redis/**"])
+  assert.equal(
+    get("redis").deploy?.startCommand,
+    "/bin/sh -c 'chown redis:redis /data && exec /bin/sh /opt/cardapio-redis.sh'",
+  )
+  assert.deepEqual(get("evolution-db").variables?.PGDATA, {
+    type: "literal",
+    value: "/var/lib/postgresql/data/pgdata",
+  })
   assert.match(
     get("evolution-db").deploy?.startCommand ?? "",
     /^\/usr\/local\/bin\/docker-entrypoint\.sh postgres /,
@@ -150,4 +158,128 @@ test("plans stay deterministic, support a later custom domain, and reject unsafe
       secrets: { ...parameters.secrets, session: "password" },
     }),
   )
+})
+
+test("an imported installation keeps service names, volume identities and remote credentials", () => {
+  const imported = createStack({
+    ...parameters,
+    deployment: {
+      servicePrefix: "cardapio-",
+      preserveSecrets: ["postgres", "app", "migrator", "redis", "evolutionDatabase"],
+      volumes: {
+        "postgres-data": { name: "existing-postgres-data", sizeMB: 500, region: "ams" },
+        "redis-data": { name: "existing-redis-data", sizeMB: 500, region: "ams" },
+        "evolution-database": {
+          name: "existing-evolution-data",
+          sizeMB: 500,
+          region: "ams",
+        },
+        "evolution-sessions": {
+          name: "new-evolution-sessions",
+          sizeMB: 500,
+          region: "ams",
+        },
+      },
+    },
+  })
+  const nodes = imported.resources!.flat() as ResourceNode[]
+  const adoptedServices = nodes.filter((n): n is ServiceNode => n.type === "service")
+  const find = (role: string) =>
+    adoptedServices.find((s) => s.name === `cardapio-${role}`)!
+  assert.equal(adoptedServices.length, 8)
+  assert.ok(adoptedServices.every((s) => s.name.startsWith("cardapio-")))
+  assert.equal(find("postgres").build?.dockerfilePath, "railway/postgres/Dockerfile")
+  assert.equal(find("redis").build?.dockerfilePath, "railway/redis/Dockerfile")
+  for (const [role, keys] of [
+    [
+      "postgres",
+      ["POSTGRES_PASSWORD", "POSTGRES_APP_PASSWORD", "POSTGRES_MIGRATION_PASSWORD"],
+    ],
+    ["redis", ["REDIS_PASSWORD"]],
+    ["evolution-db", ["POSTGRES_PASSWORD"]],
+  ] as const) {
+    for (const key of keys)
+      assert.deepEqual(find(role).variables?.[key], { type: "preserve" })
+    assert.equal(find(role).deploy?.sleepApplication, false)
+  }
+  assert.deepEqual(find("api").variables?.DATABASE_URL, {
+    type: "reference",
+    resource: "service.cardapio-postgres",
+    output: "APP_URL",
+  })
+  assert.deepEqual(find("api-replica").variables?.SESSION_SECRET, {
+    type: "reference",
+    resource: "service.cardapio-api",
+    output: "SESSION_SECRET",
+  })
+  assert.deepEqual(find("api").variables?.CORS_ORIGINS, {
+    type: "literal",
+    value: "https://${{cardapio-web.RAILWAY_PUBLIC_DOMAIN}}",
+  })
+  assert.equal(
+    find("postgres").volumeAttachments?.["existing-postgres-data"].mountPath,
+    "/var/lib/postgresql",
+  )
+  const volumes = nodes.filter((n) => n.type === "volume")
+  assert.equal(volumes.length, 4)
+  assert.ok(volumes.every((v) => v.type === "volume" && v.config?.sizeMB === 500))
+  assert.ok(volumes.every((v) => v.type === "volume" && v.config?.region === "ams"))
+  for (const key of [
+    "postgres",
+    "app",
+    "migrator",
+    "redis",
+    "evolutionDatabase",
+  ] as const)
+    assert.equal(JSON.stringify(imported).includes(parameters.secrets[key]), false)
+  assert.deepEqual(
+    validateGraph({
+      version: 1,
+      project: { name: imported.name },
+      environments: [],
+      resources: nodes,
+      edges: [],
+    }),
+    [],
+  )
+})
+
+test("adoption rejects invalid prefixes, colliding volumes and unknown preserved secrets", () => {
+  for (const deployment of [
+    { servicePrefix: "invalid.prefix" },
+    { volumes: { "redis-data": { name: "postgres-data", sizeMB: 500 } } },
+    { volumes: { "redis-data": { name: "redis-data", sizeMB: 0 } } },
+    { preserveSecrets: ["unknown"] },
+    { preserveSecrets: "postgres" },
+    { serviceNames: { migrate: "api" } },
+    { preserveVariables: { api: ["invalid-key"] } },
+    null,
+  ])
+    assert.throws(() => validateParameters({ ...parameters, deployment }))
+})
+
+test("an existing migration service is adopted with references and additional variables intact", () => {
+  const stack = createStack({
+    ...parameters,
+    deployment: {
+      servicePrefix: "cardapio-",
+      serviceNames: { migrate: "cardapio-migrations" },
+      preserveVariables: { api: ["RENDER_DATABASE_HOST", "NODE_ENV"] },
+    },
+  })
+  const services = stack
+    .resources!.flat()
+    .filter((r): r is ServiceNode => r.type === "service")
+  assert.equal(services.length, 8)
+  const migration = services.find((s) => s.name === "cardapio-migrations")!
+  assert.equal(migration.deploy?.startCommand, "node /app/railway/migrate.mjs")
+  assert.deepEqual(migration.deploy?.preDeployCommand, [])
+  const api = services.find((s) => s.name === "cardapio-api")!
+  assert.deepEqual(api.variables?.MIGRATION_RELEASE, {
+    type: "reference",
+    resource: "service.cardapio-migrations",
+    output: "MIGRATION_RELEASE",
+  })
+  assert.deepEqual(api.variables?.RENDER_DATABASE_HOST, { type: "preserve" })
+  assert.deepEqual(api.variables?.NODE_ENV, { type: "literal", value: "production" })
 })

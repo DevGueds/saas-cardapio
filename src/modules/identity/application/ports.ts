@@ -1,4 +1,9 @@
-import type { Result, SessionView, RestaurantAccess } from "@cardapio/contracts"
+import type {
+  Result,
+  SessionView,
+  RestaurantAccess,
+  LegalAcceptance,
+} from "@cardapio/contracts"
 export interface IdentityService {
   configuration(): Promise<Result<{ signupEnabled: boolean }>>
   session(): Promise<Result<SessionView>>
@@ -10,6 +15,7 @@ export interface IdentityService {
     password: string
     restaurantName: string
     slug: string
+    legalAcceptance: LegalAcceptance
   }): Promise<Result<SessionView>>
   logout(): Promise<Result<null>>
   changePassword(input: {

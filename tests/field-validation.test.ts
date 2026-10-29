@@ -1,3 +1,4 @@
+import { currentLegalAcceptance } from "@cardapio/contracts"
 import { sampleAddress } from "./address-fixture"
 import { describe, it, expect } from "vitest"
 import {
@@ -34,6 +35,7 @@ describe("shared Zod input contracts", () => {
       expect(emailField.safeParse(email).success).toBe(false)
     expect(
       registrationSchema.parse({
+        legalAcceptance: currentLegalAcceptance,
         name: "João",
         email: " JOAO@EXEMPLO.COM ",
         password: "12345678",

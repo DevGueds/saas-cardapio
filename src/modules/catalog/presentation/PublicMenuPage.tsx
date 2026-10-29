@@ -33,6 +33,8 @@ import { formatMoney } from "../../../shared/domain/money"
 import { normalizeName } from "../../../shared/domain/validation"
 
 import CheckoutDrawer from "../../checkout/presentation/CheckoutDrawer"
+import Brand from "../../../shared/presentation/Brand"
+import LegalLinks from "../../../shared/presentation/legal/LegalLinks"
 
 import { useCart } from "../../checkout/presentation/use-cart"
 
@@ -44,7 +46,7 @@ export default function PublicMenuPage() {
   const appearance = menu.commerce?.appearance ?? defaultAppearance()
 
   useEffect(() => {
-    document.title = `${store.name} · Cardápio digital`
+    document.title = `${store.name} · Pede Aqui`
   }, [store.name])
 
   const controller = useCart(menu)
@@ -354,6 +356,10 @@ export default function PublicMenuPage() {
         </FeatureBoundary>
       )}
       <footer className="public-footer">
+        <div className="public-powered">
+          <small>Seu pedido acontece com</small>
+          <Brand compact />
+        </div>
         <span>
           <UtensilsCrossed size={17} aria-hidden="true" />
           {store.name}
@@ -368,6 +374,9 @@ export default function PublicMenuPage() {
           Área da loja <ArrowUpRight size={16} aria-hidden="true" />
         </Link>
       </footer>
+      <div className="public-legal">
+        <LegalLinks />
+      </div>
     </div>
   )
 }

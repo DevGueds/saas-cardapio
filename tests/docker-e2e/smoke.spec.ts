@@ -24,10 +24,16 @@ test("proxy encaminha API, mantém headers e nega acessos sem autorização", as
 
 test("bundle Docker carrega, autentica pela API e preserva leitura no celular", async ({
   page,
+  baseURL,
 }) => {
   const runtimeErrors: string[] = []
   page.on("pageerror", (error) => runtimeErrors.push(error.name))
-  await page.route(/https:\/\//, (route) => route.abort())
+  const applicationOrigin = new URL(baseURL ?? "http://localhost:8080").origin
+  await page.route(/https:\/\//, (route) =>
+    new URL(route.request().url()).origin === applicationOrigin
+      ? route.continue()
+      : route.abort(),
+  )
   await page.goto("/admin/orders")
   await expect(page.getByRole("heading", { name: "Bom ter você por aqui" })).toBeVisible()
   await page

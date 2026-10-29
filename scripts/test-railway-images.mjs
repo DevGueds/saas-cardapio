@@ -74,7 +74,9 @@ for (const node of nodes) {
   // Railway overrides ENTRYPOINT in exec form; Compose command alone would keep
   // the upstream entrypoint and hide initialization/privilege bugs in this test.
   if (node.deploy?.startCommand) {
-    service.entrypoint = node.deploy.startCommand.split(" ")
+    // Preserve quoting in repository-controlled commands while replacing the
+    // image entrypoint, including the Redis volume ownership repair.
+    service.entrypoint = ["/bin/sh", "-c", `exec ${node.deploy.startCommand}`]
     service.command = []
   }
   if (node.volumeAttachments)

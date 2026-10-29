@@ -1,6 +1,36 @@
 import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises"
 import { randomBytes, createECDH } from "node:crypto"
+import { execFileSync } from "node:child_process"
 import { parseArgs } from "node:util"
+
+function detectRepository() {
+  try {
+    const remote = execFileSync("git", ["remote", "get-url", "origin"], {
+      cwd: new URL("../", import.meta.url),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 5000,
+      windowsHide: true,
+    }).trim()
+    const url = new URL(remote.replace(/^git@github\.com:/, "https://github.com/"))
+    const repository = url.pathname.replace(/^\//, "").replace(/(?:\.git)?\/?$/, "")
+    if (
+      url.hostname !== "github.com" ||
+      !["https:", "ssh:"].includes(url.protocol) ||
+      url.port ||
+      url.search ||
+      url.hash ||
+      !/^[\w.-]+\/[\w.-]+$/.test(repository)
+    )
+      throw new Error()
+    return repository
+  } catch {
+    throw new Error(
+      "Não foi possível identificar um repositório GitHub pelo remote origin. Informe --repository dono/repositorio.",
+    )
+  }
+}
+
 const { values } = parseArgs({
   options: {
     environment: { type: "string", default: "production" },
@@ -30,7 +60,7 @@ if (!current) {
   const ec = createECDH("prime256v1")
   ec.generateKeys()
   current = {
-    repository: "VitorsmX/saas-cardapio",
+    repository: values.repository ?? detectRepository(),
     branch: "main",
     publicOrigin: "",
     contact: "mailto:admin@localhost.invalid",
@@ -75,4 +105,7 @@ try {
 }
 console.log(
   `Configuração privada de ${values.environment} preparada em .railway/local/${values.environment}.json. Segredos existentes preservados. Guarde backup seguro desse arquivo.`,
+)
+console.log(
+  `Fonte GitHub: ${current.repository} (branch ${current.branch}). Esta preparação não cria serviços na Railway; o próximo passo é pnpm railway:plan.`,
 )

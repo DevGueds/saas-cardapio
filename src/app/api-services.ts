@@ -1,4 +1,6 @@
 import { sha256Fingerprint } from "../shared/infrastructure/sha256-fingerprint"
+import { HttpPrivacy } from "../modules/privacy/infrastructure/http-privacy"
+import { BrowserFileDownloads } from "../shared/infrastructure/browser-file-downloads"
 import { HttpPrinting } from "../modules/printing/infrastructure/http-printing"
 import { BrowserReceiptOutputRenderer } from "../modules/printing/infrastructure/browser-receipt-output"
 import { HttpTeam } from "../modules/identity/infrastructure/http-team"
@@ -31,6 +33,8 @@ export function apiServices(): ApplicationServices {
   const commerce = new HttpCommerce(client, refresh)
   return {
     mode: "api",
+    privacy: new HttpPrivacy(client),
+    files: new BrowserFileDownloads(executor),
     ids: browserIds,
     engagement: new HttpEngagement(client),
     devicePush: new BrowserPush(executor),

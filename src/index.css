@@ -1,7 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap");
+@import "./shared/presentation/styles/fonts.css";
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 @import "./shared/presentation/styles/base.css";
+@import "./shared/presentation/styles/brand.css";
+@import "./shared/presentation/styles/legal.css";
 @import "./modules/catalog/presentation/public-menu.css";
 @import "./app/presentation/admin-layout.css";
 @import "./shared/presentation/styles/forms.css";

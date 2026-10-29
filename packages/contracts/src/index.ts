@@ -11,6 +11,8 @@ export * from "./menu-options.js"
 export * from "./engagement.js"
 export * from "./security.js"
 export * from "./printing.js"
+export * from "./privacy.js"
+import { legalAcceptanceSchema } from "./privacy.js"
 import { addonSelectionsSchema } from "./menu-options.js"
 import {
   checkoutOptionsSchema,
@@ -42,11 +44,13 @@ export const registrationSchema = z.strictObject({
   password,
   restaurantName: name,
   slug,
+  legalAcceptance: legalAcceptanceSchema,
 })
 export const accountRegistrationSchema = registrationSchema.pick({
   name: true,
   email: true,
   password: true,
+  legalAcceptance: true,
 })
 export const tenantCreationSchema = z.strictObject({ name, restaurantName: name, slug })
 export const restaurantCreationSchema = z.strictObject({ name, slug })

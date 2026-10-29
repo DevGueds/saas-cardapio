@@ -22,6 +22,13 @@ export const router = createBrowserRouter(
       ),
 
       children: [
+        {
+          path: "/privacidade",
+          lazy: async () => ({
+            Component: (await import("../modules/privacy/presentation/PrivacyPage"))
+              .default,
+          }),
+        },
         { path: "/", Component: PublicRoute },
         {
           path: "/painel/:slug",

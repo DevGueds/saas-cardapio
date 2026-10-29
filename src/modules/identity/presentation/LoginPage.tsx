@@ -1,9 +1,15 @@
-import { passwordField, currentPasswordField } from "@cardapio/contracts"
+import {
+  passwordField,
+  currentPasswordField,
+  currentLegalAcceptance,
+} from "@cardapio/contracts"
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
 import { useEffect, useState, type FormEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router"
-import { ArrowRight, UtensilsCrossed } from "lucide-react"
+import { ArrowRight, Check, ShieldCheck, Sparkles } from "lucide-react"
+import Brand from "../../../shared/presentation/Brand"
+import LegalLinks from "../../../shared/presentation/legal/LegalLinks"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import { useMutation } from "../../../shared/presentation/use-mutation"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
@@ -47,6 +53,7 @@ export default function LoginPage() {
     const data = new FormData(event.currentTarget)
     const get = (key: string) => String(data.get(key) ?? "")
     const credentials = { email: get("email"), password: get("password") }
+    if (signup && get("legalAcceptance") !== "on") return
     const result = await mutation.run(() =>
       signup
         ? auth.register({
@@ -55,6 +62,7 @@ export default function LoginPage() {
             accountOnly,
             restaurantName: get("restaurantName"),
             slug: get("slug"),
+            legalAcceptance: currentLegalAcceptance,
           })
         : auth.login(credentials),
     )
@@ -74,24 +82,49 @@ export default function LoginPage() {
   }
   return (
     <main className="account-page">
-      <section className="account-story" aria-label="Cardápio para restaurantes">
+      <section className="account-story" aria-label="Pede Aqui para sua loja">
         <Link to="/" className="account-brand">
-          <UtensilsCrossed size={28} aria-hidden="true" />
-          Cardápio
+          <Brand inverse />
         </Link>
         <div>
-          <p className="eyebrow">Seu restaurante, conectado</p>
+          <p className="eyebrow">
+            <Sparkles size={15} aria-hidden="true" />
+            Sua gestão, mais simples
+          </p>
           <h1>
-            Menos complicação.
+            Menos cliques.
             <br />
-            Mais tempo para sua loja.
+            <span>Mais controle.</span>
           </h1>
           <p>
             Organize seu cardápio, compartilhe o link com os clientes e acompanhe os
             pedidos em um só lugar.
           </p>
+          <div className="account-workflow" aria-label="Organização do seu atendimento">
+            <div>
+              <span className="account-workflow__dot" />
+              <strong>Do pedido ao pronto.</strong>
+              <span>Sem complicar.</span>
+            </div>
+            <ol>
+              <li>
+                <span>01</span>Receber
+              </li>
+              <li>
+                <span>02</span>Preparar
+              </li>
+              <li>
+                <Check size={15} aria-hidden="true" />
+                Concluir
+              </li>
+            </ol>
+            <small>Cardápio, pedidos e caixa. Tudo no mesmo lugar.</small>
+          </div>
         </div>
-        <small>Uma conta. Suas lojas. Tudo organizado.</small>
+        <small className="account-trust">
+          <ShieldCheck size={17} aria-hidden="true" />
+          Mais tempo para o que faz sua loja acontecer.
+        </small>
       </section>
       <section className="account-panel" aria-labelledby="account-title">
         <div className="account-card">
@@ -168,6 +201,18 @@ export default function LoginPage() {
                 </label>
               )}
               {signup && !accountOnly && <StoreFields />}
+              {signup && (
+                <div className="legal-acceptance">
+                  <label className="check-field">
+                    <ValidatedInput type="checkbox" name="legalAcceptance" required />
+                    <span>
+                      Li e aceito os Termos de Uso e estou ciente da Política de
+                      Privacidade.
+                    </span>
+                  </label>
+                  <LegalLinks center={false} />
+                </div>
+              )}
             </fieldset>
             {mutation.error && <ErrorNotice error={mutation.error} />}
             <button className="primary-button" disabled={mutation.pending}>
@@ -195,6 +240,10 @@ export default function LoginPage() {
                 : "Primeiro acesso? Criar minha conta"}
             </button>
           )}
+          <footer className="account-legal">
+            <LegalLinks />
+            <p>Pede Aqui · Gestão simples, do seu jeito.</p>
+          </footer>
         </div>
       </section>
     </main>

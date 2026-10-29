@@ -1,3 +1,4 @@
+import { currentLegalAcceptance } from "@cardapio/contracts"
 import { before, after, test } from "node:test"
 import assert from "node:assert/strict"
 import { randomUUID, randomInt, createECDH, randomBytes } from "node:crypto"
@@ -131,6 +132,7 @@ before(async () => {
     }),
   )
   const response = await request("POST", "/auth/register", {
+    legalAcceptance: currentLegalAcceptance,
     name: "Gestor Teste",
     email: `engagement-${suffix}@example.test`,
     password: "test-123456",

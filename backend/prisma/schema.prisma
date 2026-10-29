@@ -38,6 +38,51 @@ model User {
   sessions       Session[]
   mfa            MfaCredential?
   securityEvents SecurityEvent[]
+  legalAcceptances LegalAcceptance[]
+  privacyRequests PrivacyRequest[]
+}
+
+model LegalAcceptance {
+  id             String   @id @db.Uuid
+  userId         String   @db.Uuid
+  termsVersion   String   @db.VarChar(40)
+  privacyVersion String   @db.VarChar(40)
+  acceptedAt     DateTime @default(now()) @db.Timestamptz(3)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, termsVersion, privacyVersion])
+  @@index([userId, acceptedAt])
+}
+
+enum PrivacyRequestKind {
+  ACCESS
+  CORRECTION
+  DELETION
+  INFORMATION
+  OBJECTION
+  CONSENT
+}
+
+enum PrivacyRequestStatus {
+  RECEIVED
+  IN_REVIEW
+  COMPLETED
+  DECLINED
+}
+
+model PrivacyRequest {
+  id         String               @id @db.Uuid
+  userId     String               @db.Uuid
+  kind       PrivacyRequestKind
+  message    String               @db.VarChar(1200)
+  status     PrivacyRequestStatus @default(RECEIVED)
+  createdAt  DateTime             @default(now()) @db.Timestamptz(3)
+  resolvedAt DateTime?            @db.Timestamptz(3)
+  response   String?              @db.VarChar(2000)
+  user       User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
 }
 
 model Tenant {

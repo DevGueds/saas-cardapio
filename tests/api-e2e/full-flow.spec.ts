@@ -1,3 +1,4 @@
+import { currentLegalAcceptance } from "@cardapio/contracts"
 import { fillDeliveryAddress } from "../browser-address"
 import { expect, test } from "@playwright/test"
 import { randomUUID } from "node:crypto"
@@ -15,6 +16,7 @@ test("frete por raio sincroniza ponto, endereço, faixas e total em HTTP local",
   const registration = await page.request.post("/api/v1/auth/register", {
     headers: { origin: baseURL! },
     data: {
+      legalAcceptance: currentLegalAcceptance,
       name: "Gestor Raio",
       email: `${slug}@browser.example.test`,
       password: "12345678",
@@ -174,6 +176,7 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
     (response) =>
       response.url().endsWith("/auth/register") && response.request().method() === "POST",
   )
+  await page.getByRole("checkbox", { name: /Li e aceito/ }).check()
   await page.getByRole("button", { name: "Criar conta e loja", exact: true }).click()
   const account = await (await registered).json()
   expect(account.ok).toBe(true)
@@ -457,6 +460,7 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
   const registered = await page.request.post(`${api}/auth/register`, {
     headers: { origin },
     data: {
+      legalAcceptance: currentLegalAcceptance,
       name: "Gestor Extras",
       email: `${slug}@browser.example.test`,
       password: "12345678",
@@ -715,6 +719,7 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   const registered = page.waitForResponse(
     (r) => r.url().endsWith("/auth/register") && r.request().method() === "POST",
   )
+  await page.getByRole("checkbox", { name: /Li e aceito/ }).check()
   await page.getByRole("button", { name: "Criar conta e loja", exact: true }).click()
   const account = await (await registered).json()
   expect(account.ok).toBe(true)
@@ -925,6 +930,7 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   const teamRegistered = staff.waitForResponse((r) =>
     r.url().endsWith("/auth/register-account"),
   )
+  await staff.getByRole("checkbox", { name: /Li e aceito/ }).check()
   await staff
     .getByRole("button", { name: "Criar minha conta de equipe", exact: true })
     .click()
@@ -978,6 +984,7 @@ test("cadastro valida todos os campos antes da API e preserva a senha exata", as
   await password.fill("1234567")
   await page.getByLabel("Nome da loja *", { exact: true }).fill(" ")
   await page.getByLabel("Endereço do cardápio *", { exact: true }).fill("a!")
+  await page.getByRole("checkbox", { name: /Li e aceito/ }).check()
   await page.getByRole("button", { name: "Criar conta e loja", exact: true }).click()
   await expect(page.locator('input[aria-invalid="true"]')).toHaveCount(5)
   await expect(page.getByLabel("Seu nome *", { exact: true })).toBeFocused()

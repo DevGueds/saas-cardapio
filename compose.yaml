@@ -161,6 +161,8 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       target: web
+      args:
+        PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-}
     restart: unless-stopped
     ports:
       - "${WEB_BIND_ADDRESS:-127.0.0.1}:8080:8080"
