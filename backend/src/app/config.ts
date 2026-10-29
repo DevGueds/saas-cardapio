@@ -1,6 +1,7 @@
 import { isIP } from "node:net"
 import { z } from "zod"
 import { Failure } from "@cardapio/domain/failure"
+import { railwayPrivateTransport } from "../shared/infrastructure/private-network.js"
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
@@ -22,6 +23,7 @@ const schema = z.object({
   MAP_TILE_URL: z.string().default("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
   DATABASE_URL: z.string().min(1),
   DATABASE_TLS: z.enum(["true", "false"]),
+  PRIVATE_NETWORK_TRANSPORT: z.enum(["tls", "railway"]).default("tls"),
   DATABASE_MIGRATION_PENDING: z.enum(["true", "false"]).default("false"),
   DATABASE_CA_FILE: z.string().min(1).optional(),
   DATABASE_POOL_MAX: z.coerce.number().int().min(2).max(50).default(10),
@@ -33,6 +35,7 @@ const schema = z.object({
     .default(5000),
   SESSION_SECRET: z.string().regex(/^[a-f0-9]{64,128}$/),
   SESSION_TTL_SECONDS: z.coerce.number().int().min(300).max(86400).default(28800),
+  SESSION_COOKIE_SECURE: z.enum(["auto", "true", "false"]).default("auto"),
   CORS_ORIGINS: z.string().min(1),
   SIGNUP_ENABLED: z.enum(["true", "false"]).default("false"),
   DOCS_ENABLED: z.enum(["true", "false"]).default("false"),
@@ -57,6 +60,7 @@ export function loadConfig(input: Record<string, unknown>) {
   let trustedProxies: string[]
   let database: URL
   let origins: string[]
+  let secureCookies: boolean
   try {
     if (
       !!env.VAPID_PUBLIC_KEY !== !!env.VAPID_PRIVATE_KEY ||
@@ -86,7 +90,9 @@ export function loadConfig(input: Record<string, unknown>) {
       redis.search ||
       redis.hash ||
       !/^\/\d*$/.test(redis.pathname || "/") ||
-      (env.NODE_ENV === "production" && redis.protocol !== "rediss:")
+      (env.NODE_ENV === "production" &&
+        redis.protocol !== "rediss:" &&
+        !railwayPrivateTransport(redis, input))
     )
       throw new Error()
     if (env.TRUSTED_PROXY_HOPS > 0 && env.TRUSTED_PROXY_CIDRS) throw new Error()
@@ -139,9 +145,21 @@ export function loadConfig(input: Record<string, unknown>) {
       if (env.NODE_ENV === "production" && url.protocol !== "https:") throw new Error()
       return url.origin
     })
+    secureCookies =
+      env.SESSION_COOKIE_SECURE === "auto"
+        ? env.NODE_ENV === "production" ||
+          origins.every((origin) => origin.startsWith("https:"))
+        : env.SESSION_COOKIE_SECURE === "true"
+    if (
+      !secureCookies &&
+      (env.NODE_ENV === "production" ||
+        origins.some((origin) => origin.startsWith("https:")))
+    )
+      throw new Error()
     if (
       env.NODE_ENV === "production" &&
-      (env.DATABASE_TLS !== "true" || env.DOCS_ENABLED === "true")
+      ((env.DATABASE_TLS !== "true" && !railwayPrivateTransport(database, input)) ||
+        env.DOCS_ENABLED === "true")
     )
       throw new Error()
   } catch {
@@ -180,8 +198,7 @@ export function loadConfig(input: Record<string, unknown>) {
     origins,
     signupEnabled: env.SIGNUP_ENABLED === "true",
     docsEnabled: env.DOCS_ENABLED === "true",
-    secureCookies: env.NODE_ENV === "production",
-    cookieName:
-      env.NODE_ENV === "production" ? "__Host-cardapio_session" : "cardapio_session",
+    secureCookies,
+    cookieName: secureCookies ? "__Host-cardapio_session" : "cardapio_session",
   }
 }

@@ -34,8 +34,13 @@
 	}
 
 	handle /api/* {
-		reverse_proxy {$API_HOST}:{$API_PORT} {
+		reverse_proxy {$API_HOST}:{$API_PORT} {$API_REPLICA_HOST}:{$API_PORT} {
 			flush_interval -1
+			lb_policy least_conn
+			health_uri /api/v1/health/ready
+			health_interval 5s
+			health_timeout 2s
+			fail_duration 10s
 			# Somente a borda do Railway define X-Real-IP com o IP do cliente. O Caddy
 			# substitui qualquer X-Forwarded-For enviado pelo navegador, e a API
 			# (TRUSTED_PROXY_HOPS=1) confia apenas neste salto.
