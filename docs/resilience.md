@@ -26,7 +26,9 @@ Referência: [Parallel.js](https://github.com/parallel-js/parallel.js).
 
 ## Balanceamento em Docker
 
-`compose.yaml` executa duas APIs stateless e Caddy com `least_conn`. Healthcheck ativo consulta readiness a cada cinco segundos; falhas passivas retiram o upstream temporariamente. Caddy só repete GET/HEAD até duas vezes dentro da janela de três segundos (conexão limitada a 500 ms). Um handler separado atende POST/PUT/DELETE sem retries. O keep-alive do proxy é menor que o timeout do Fastify para evitar reutilizar conexões já encerradas. Idempotência de pedido é responsabilidade do caso de uso e da chave persistida pelo cliente.
+`compose.yaml` executa duas APIs stateless e Caddy com `least_conn`. Healthcheck ativo consulta readiness a cada cinco segundos, com prazo de cinco segundos e duas falhas consecutivas para retirar um upstream. A proteção passiva exige três falhas em cinco segundos. Caddy só repete GET/HEAD até duas vezes dentro da janela de três segundos (conexão limitada a dois segundos). Um handler separado atende POST/PUT/DELETE sem retries. O keep-alive do proxy é menor que o timeout do Fastify para evitar reutilizar conexões já encerradas. Idempotência de pedido é responsabilidade do caso de uso e da chave persistida pelo cliente.
+
+O ensaio de carga detectou erros de DNS/conexão no proxy seguidos por milhares de `no upstreams available`, sem erros correspondentes nas APIs. O prazo anterior de 500 ms e retirada por uma única falha amplificavam a indisponibilidade. A política acima tolera falhas transitórias sem aumentar os limites de autenticação, requisições ou memória da aplicação.
 
 Sessão no PostgreSQL e proteção/cache no Redis funcionam entre réplicas sem sticky sessions. APIs não têm portas externas. A confiança de proxy está restrita à rede interna declarada; Caddy determina o IP encaminhado. `HTTP_RATE_LIMIT=600` protege cada IP por minuto. Usuários atrás do mesmo NAT compartilham o limite; ajuste com métricas reais e proteção de borda, não removendo os limites de autenticação.
 
@@ -74,3 +76,16 @@ Windows + Docker Desktop/WSL, host com 12 CPUs lógicas e 16 GiB, VM Docker com 
 O segundo ensaio teve zero erros de transporte e zero respostas não 2xx. A cauda de latência continua alta: **não é um SLO nem comprovação de capacidade de produção**. O primeiro ensaio evidencia a rejeição controlada por saturação; respostas rejeitadas não são contabilizadas como demanda atendida. Limites normais continuam 128 requisições ativas por API e 600/minuto/IP. Não subir limites sem medir recursos, payload e padrão real de uso.
 
 `pnpm test:docker:resilience` automatiza a parada de uma réplica, vinte leituras pela sobrevivente, indisponibilidade do Redis e do PostgreSQL com HTTP 503, verificação de leitura autoritativa sem fallback e restauração dos serviços em `finally`. Também roda no CI após o smoke Docker. É exclusivo do Compose local.
+
+## Medição local de 28/10/2026
+
+Windows/Node 24.18.1, host com 4 CPUs lógicas e 8 GiB; VM Docker com cerca de 3,8 GiB e APIs limitadas a 512 MiB cada. PostgreSQL, Redis e duas APIs, cardápio sintético de 6.541 bytes sem imagens, gzip e 15 segundos por cenário. Usou o override `_test`, não os limites normais de produção. Gerador e serviços compartilham a máquina.
+
+| Conexões | Política do proxy | Respostas 200 | Respostas não 2xx | Timeouts | p99 das respostas |
+| -------: | ----------------- | ------------: | ----------------: | -------: | ----------------: |
+|      200 | Anterior          |         4.602 |             2.375 |        0 |          2.544 ms |
+|      200 | Corrigida         |         5.617 |                 0 |        0 |          2.295 ms |
+|    1.000 | Anterior          |         1.774 |               159 |      801 |          8.616 ms |
+|    1.000 | Corrigida         |         2.545 |                 0 |      719 |          8.639 ms |
+
+Os logs do Caddy mostraram `dial tcp: lookup api: i/o timeout` e `no upstreams available`; o proxy ampliava falhas transitórias ao retirar réplicas após uma única falha. A correção eliminou respostas não 2xx nestas repetições, sem alterar limites da API. O cenário de 200 conexões passou; o de 1.000 **continua reprovado por timeouts**, e o p99 em 200 ainda é alto. Não é evidência de suporte a 1.000 clientes simultâneos nem de um SLO de produção. Redis/PG, conexões, rede/CPU do host e o gerador precisam ser medidos separadamente antes de dimensionar produção; não se deve aumentar filas ou memória às cegas. Relatórios financeiros, imagens e checkout não são medidos por esse cenário. A configuração normal do Compose foi restaurada após cada ensaio; relatórios completos ficam em `.cache/benchmark-printing-*.json`.
