@@ -97,6 +97,10 @@ services:
         value: "8080"
       - key: SERVER_URL
         value: http://localhost:8080
+      - key: SERVER_DISABLE_DOCS
+        value: "true"
+      - key: SERVER_DISABLE_MANAGER
+        value: "true"
       - key: AUTHENTICATION_TYPE
         value: apikey
       - key: AUTHENTICATION_API_KEY
@@ -127,6 +131,8 @@ services:
         value: "false"
       - key: DATABASE_SAVE_DATA_CHATS
         value: "false"
+      - key: DATABASE_SAVE_DATA_LABELS
+        value: "false"
       - key: DATABASE_SAVE_DATA_HISTORIC
         value: "false"
       - key: CACHE_REDIS_ENABLED
@@ -144,7 +150,7 @@ services:
       - key: CACHE_REDIS_PREFIX_KEY
         value: cardapio_evolution
       - key: CACHE_REDIS_SAVE_INSTANCES
-        value: "true"
+        value: "false"
       - key: CACHE_LOCAL_ENABLED
         value: "false"
       - key: TELEMETRY_ENABLED
@@ -166,7 +172,9 @@ services:
       - key: QRCODE_LIMIT
         value: "10"
       - key: CORS_ORIGIN
-        value: http://localhost
+        # Private, API-key protected, without browser credentials. A fixed origin
+        # rejects headerless healthchecks and server-to-server requests upstream.
+        value: "*"
       - key: CORS_CREDENTIALS
         value: "false"
       - key: TZ

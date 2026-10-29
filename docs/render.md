@@ -59,6 +59,8 @@ A web sobrescreve cabeçalhos de proxy enviados pelo navegador. O IP de origem v
 
 Na aplicação, ative e pareie o WhatsApp da loja pelo QR Code. **Fazer deploy não pareia o telefone.** O provedor não expõe seu painel, banco ou API na internet. A aplicação usa sua API privada autenticada. As instâncias e as sessões têm persistência; armazenamento de mensagens, contatos, chats e histórico fica desabilitado. O filtro de logs existente também protege saída nativa do provedor. Consentimento e regras de prioridade das mensagens permanecem obrigatórios.
 
+O manager e a documentação do provedor são desabilitados. Seu CORS permite chamadas sem `Origin`, necessárias para saúde e comunicação servidor a servidor, sem credenciais de navegador. Isso vale apenas para o provedor privado com chave de API; a aplicação pública mantém a origem HTTPS exata. Uma origem fixa no provedor faz essa versão responder 500 às verificações sem cabeçalho, mesmo com banco e Redis disponíveis; o teste de imagens cobre esse caso.
+
 Web Push pode funcionar no domínio HTTPS gratuito após autorização do navegador. Em iPhone/iPad, use o aplicativo pela Tela de Início conforme a orientação existente. O assunto VAPID usa a URL pública por padrão; é possível definir `VAPID_SUBJECT=mailto:<contato-real>` nas duas APIs.
 
 PDFs e impressão continuam no navegador/computador da loja. Não é necessário expor a impressora Bluetooth ou USB à internet.

@@ -128,6 +128,21 @@ async function ready(names, timeout = 300000) {
   }
   throw new Error("service_health_deadline_exceeded")
 }
+async function proxyReady(base) {
+  const deadline = Date.now() + 30000
+  do {
+    try {
+      const response = await fetch(base + "/api/v1/health/ready", {
+        signal: AbortSignal.timeout(5000),
+      })
+      if (response.ok && (await response.json()).ok) return
+    } catch {
+      /* The proxy can still be refreshing active health after a restart. */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+  } while (Date.now() < deadline)
+  throw new Error("proxy_readiness_failed")
+}
 try {
   if (!process.argv.includes("--skip-build")) {
     // Compose's Bake integration can parallelize stages despite --parallel=1.
@@ -207,8 +222,7 @@ try {
     600000,
   )
   const base = urlFor("cardapio-web")
-  const health = await fetch(base + "/api/v1/health/ready")
-  if (!health.ok || !(await health.json()).ok) throw new Error("proxy_readiness_failed")
+  await proxyReady(base)
   const html = await fetch(base + "/menu/test-menu")
   if (!html.ok || !(await html.text()).includes('<div id="root">'))
     throw new Error("spa_routing_failed")
@@ -316,6 +330,7 @@ try {
     600000,
   )
   await ready(["cardapio-api", "cardapio-api-replica"])
+  await proxyReady(base)
   const persisted = await fetch(base + "/api/v1/auth/session", {
     headers: { cookie: cookie.split(";")[0] },
   })
