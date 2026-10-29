@@ -28,9 +28,11 @@
 	}
 
 	# Missing/invalid edge metadata falls back to the peer, never browser XFF.
-	map {http.request.header.CF-Connecting-IP} {edge_client_ip} {
-		~^[0-9a-fA-F:.]+$ {http.request.header.CF-Connecting-IP}
-		default {http.request.remote.host}
+	# Map outputs use regex captures: nested placeholders remain literal in Caddy.
+	map "{http.request.header.CF-Connecting-IP}/{http.request.remote.host}" {edge_client_ip} {
+		~^([0-9a-fA-F:.]+)/[0-9a-fA-F:.]+$ "${1}"
+		~^.*/([0-9a-fA-F:.]+)$ "${1}"
+		default 127.0.0.1
 	}
 
 	handle /healthz {
