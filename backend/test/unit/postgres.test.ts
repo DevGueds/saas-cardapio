@@ -55,3 +55,23 @@ test("migration CLI cannot downgrade production TLS or accept URL overrides", ()
     }),
   )
 })
+
+test("migration CLI accepts only opted-in Railway internal transport without TLS", () => {
+  const env = {
+    NODE_ENV: "production",
+    DATABASE_TLS: "false",
+    PRIVATE_NETWORK_TRANSPORT: "railway",
+    RAILWAY_PROJECT_ID: "test-project",
+    RAILWAY_ENVIRONMENT_ID: "test-environment",
+    MIGRATION_DATABASE_URL:
+      "postgresql://migrator:test@postgres.railway.internal/cardapio",
+  }
+  assert.equal(new URL(migrationConnection(env)!).searchParams.get("sslmode"), "disable")
+  assert.throws(() => migrationConnection({ ...env, RAILWAY_PROJECT_ID: "" }))
+  assert.throws(() =>
+    migrationConnection({
+      ...env,
+      MIGRATION_DATABASE_URL: "postgresql://migrator:test@public.example/cardapio",
+    }),
+  )
+})

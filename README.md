@@ -4,6 +4,8 @@ SaaS multitenant de cardápio digital, com frontend React 19/TypeScript/Vite/Tai
 
 ## Começar com Docker
 
+Para implantação completa em nuvem, veja [o guia Railway](docs/railway.md) e o blueprint [`.railway/railway.ts`](.railway/railway.ts). Usa o formato atual de infraestrutura como código, com domínio gratuito HTTPS e cookies seguros por padrão.
+
 Requisitos: Node.js 24, pnpm 11.23.0 e Docker com Compose. Execute nesta pasta, onde está o `package.json`.
 
 ```sh

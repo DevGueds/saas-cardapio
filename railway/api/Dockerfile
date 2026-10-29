@@ -9,8 +9,13 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .pnpmfile.cjs ./
 COPY backend/package.json ./backend/package.json
 COPY packages/domain/package.json ./packages/domain/package.json
 COPY packages/contracts/package.json ./packages/contracts/package.json
+# Railway requires service-specific literal IDs for cache mounts. A reusable
+# template cannot embed those IDs; use ordinary Docker layer caching instead.
 RUN pnpm install --frozen-lockfile --ignore-scripts
-COPY . .
+# Only backend/workspace sources enter this stage; editing deploy scripts or docs
+# must not rebuild Prisma, native modules and the production dependency bundle.
+COPY backend ./backend
+COPY packages ./packages
 RUN pnpm -r rebuild && pnpm run postinstall && pnpm api:build
 
 FROM build AS api-package
@@ -23,11 +28,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 RUN npm install --global prisma@7.10.0
 COPY --from=api-package --chown=node:node /opt/api ./
 COPY --from=build --chown=node:node /workspace/backend/prisma ./prisma
-COPY --from=build --chown=node:node /workspace/backend/prisma.config.ts ./prisma.config.ts
 COPY --chown=node:node railway/api/certs ./certs
+COPY --chown=node:node railway/api/*.mjs ./railway/
 COPY --chown=node:node railway/api/entrypoint.sh ./entrypoint.sh
 RUN mkdir -p /app/logs && chown -R node:node /app/logs && chmod +x /app/entrypoint.sh
 USER node
 EXPOSE 3001
-ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["node", "dist/main.js"]
+CMD ["/app/entrypoint.sh"]

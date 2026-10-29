@@ -25,49 +25,20 @@ As senhas geradas são diferentes e persistem em `backend/.env`, ignorado pelo G
 - `backend/src/shared/infrastructure/postgres-config.ts`: pooling, TLS, prazos e UTC.
 - `backend/src/shared/infrastructure/database.ts`: tradução segura de falhas, comandos serializáveis e snapshots somente leitura em REPEATABLE READ.
 - `backend/src/shared/infrastructure/row-locks.ts`: bloqueios parametrizados, com tenant e casts UUID explícitos.
-- `backend/tools/mysql-import` (`@cardapio/mysql-import`): workspace operacional separado do runtime, com leitura, conversão, cópia e verificação independentes.
-- `backend/prisma/legacy-mysql`: schema e histórico MySQL preservados. Nunca são executados no PostgreSQL.
 
 O cliente da API não recebe mudanças de contrato. MFA, senhas Argon2id, configurações de impressão, pedidos, pagamentos e tokens continuam usando as mesmas regras de negócio. E-mails mantêm unicidade sem distinguir maiúsculas/minúsculas; categorias continuam usando a normalização do domínio.
 
-## Transferir uma instalação MySQL existente
+## Instalação local limpa após usar MySQL
 
-O setup local detecta URLs MySQL, preserva `backend/.env.mysql-backup`, mantém segredos de sessão/MFA e registra as URLs antigas como `LEGACY_*`. Prepara credenciais PostgreSQL novas e define `DATABASE_MIGRATION_PENDING=true`. A API do banco principal permanece bloqueada até a conferência e ativação explícitas.
+O runtime atual usa somente PostgreSQL. O setup detecta URLs MySQL antigas, preserva um backup local do arquivo de ambiente e prepara novas credenciais PostgreSQL. Quando encontra uma instalação anterior, define `DATABASE_MIGRATION_PENDING=true` para impedir a troca silenciosa de dados.
 
-Execute em manutenção, sem APIs ou outros processos gravando na origem. Não use `down -v` nem `--remove-orphans`: o volume antigo precisa ser preservado.
+Se os dados antigos forem descartáveis, pare os containers antigos de API, web e MySQL. Confira se `DATABASE_URL` e `MIGRATION_DATABASE_URL` em `backend/.env` apontam para o PostgreSQL local e altere `DATABASE_MIGRATION_PENDING=false`. Execute os comandos da instalação atual acima. `pnpm docker:up` aplica a baseline e reconstrói as imagens; apenas reiniciar containers antigos mantém a imagem e a URL MySQL antigas.
 
-```sh
-pnpm setup:local
-docker compose --env-file backend/.env --profile app stop web api api-replica
-docker compose --env-file backend/.env -f compose.mysql-legacy.yaml up -d --wait mysql
-pnpm db:backup:mysql
-pnpm --filter @cardapio/api db:legacy:migrate
-pnpm db:up
-pnpm db:migrate
-pnpm db:import:mysql --check
-pnpm db:import:mysql --apply --maintenance-confirmed --activate-local
-pnpm db:import:mysql --verify
-pnpm docker:up
-docker compose --env-file backend/.env -f compose.mysql-legacy.yaml stop mysql
-```
-
-O backup local em Docker só aceita origem loopback na porta 3307; para origem remota use o backup validado do provedor. O backup SQL é gravado como arquivo privado em `.cache/migrations`, sem passar pela codificação do PowerShell. O sufixo `.partial` só é removido após concluir a gravação e confirmar o processo de dump. Guarde uma cópia segura fora da máquina e valide a restauração antes de descartar a origem. `db:legacy:migrate` aplica somente as migrations aditivas conhecidas que ainda faltam na origem local; produção deve atualizar a origem pelo processo já validado desse ambiente.
-
-A ferramenta exige schema e checksums do histórico MySQL conhecidos. A leitura usa transação consistente, UTC e somente leitura. O destino precisa ter a baseline aplicada e todas as tabelas de negócio vazias; a ferramenta não apaga nem mescla dados. A cópia bloqueia essas tabelas, segue a ordem das dependências e insere lotes de cinco linhas para limitar memória com imagens inline. Preserva SQL NULL versus JSON null, Unicode, bigint, datas, IDs e conteúdo JSON.
-
-Contagens e SHA-256 de todas as linhas normalizadas são comparados dentro da transação de destino antes do commit. Erro de leitura, conversão, constraints, permissão ou divergência provoca rollback. Logs mostram somente fase/código, SQLSTATE sanitizado, referência e contagens; nunca mostram registros, hashes de senha, imagens ou credenciais. `_prisma_migrations` do MySQL não é copiado para o PostgreSQL.
-
-`--activate-local` somente altera a configuração de desenvolvimento correspondente ao destino conferido. A gravação do `.env` é atômica e detecta alterações concorrentes. Se a transferência terminou mas a ativação falhou, mantenha a manutenção e execute:
-
-```sh
-pnpm db:import:mysql --verify --maintenance-confirmed --activate-local
-```
-
-Repetir `--apply` em um destino ocupado falha; `--verify` confere a cópia sem escrever dados. Preserve os contadores e dados de segurança do Redis. O cache público tem TTL de cinco segundos; não use FLUSHALL para concluir a migração.
+O container antigo pode continuar aparecendo como órfão porque MySQL saiu do Compose. Ele não deve ser iniciado junto da nova aplicação. Nenhuma ferramenta de importação MySQL ou arquivo `compose.mysql-legacy.yaml` é distribuído na versão atual. Se os dados precisarem ser preservados em outra instalação, mantenha o backup e prepare uma transferência específica antes de liberar novas gravações; trocar a URL não transfere dados.
 
 ## Produção e recuperação
 
-O importador aceita origem e destino explicitamente configurados, exige TLS nos dois em produção e verifica certificados/CA. Use uma URL direta de migrations, sem pooler em modo transacional. A aplicação usa `DATABASE_TLS=true`, verificação de certificado e `DATABASE_CA_FILE` quando necessário; a CLI Prisma também exige TLS estrito, sem permitir downgrade por query parameters nas URLs fornecidas.
+Use uma URL direta de migrations, sem pooler em modo transacional. A aplicação usa `DATABASE_TLS=true`, verificação de certificado e `DATABASE_CA_FILE` quando necessário; a CLI Prisma também exige TLS estrito, sem permitir downgrade por query parameters nas URLs fornecidas.
 
 Antes de liberar tráfego, confira contagens, login/MFA, cardápio, um pedido de teste, caixa e impressão. Depois de novas gravações no PostgreSQL, a origem MySQL fica desatualizada. Retornar à versão anterior exige reconciliar essas gravações; não há sincronização ou reversão automática. Antes dessa liberação, é possível manter o serviço parado e recuperar a versão anterior em um checkout separado com a configuração/backup antigos.
 

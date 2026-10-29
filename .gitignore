@@ -19,6 +19,8 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
+/.railway/local/
+/railway-plan*.json
 
 !.env.demo
 !.env.example
