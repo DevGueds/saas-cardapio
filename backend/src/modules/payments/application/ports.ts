@@ -1,4 +1,5 @@
 import type {
+  FinancialReport,
   OrderBalance,
   PaymentInput,
   PaymentPage,
@@ -31,4 +32,12 @@ export interface PaymentsRepository {
     scope: TenantScope,
     range: ReportRange,
   ): Promise<{ orders: ReportOrder[]; payments: PaymentView[] }>
+}
+export interface FinancialReportCalculator {
+  calculate(
+    range: ReportRange,
+    orders: ReportOrder[],
+    payments: PaymentView[],
+    generatedAt: string,
+  ): Promise<FinancialReport>
 }

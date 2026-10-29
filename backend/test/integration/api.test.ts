@@ -3,6 +3,8 @@ import { Database } from "../../src/shared/infrastructure/database.js"
 import { before, after, test } from "node:test"
 import assert from "node:assert/strict"
 import { randomUUID, randomInt } from "node:crypto"
+import { request as httpRequest } from "node:http"
+import type { AddressInfo } from "node:net"
 type HTTPMethods = "GET" | "POST" | "PUT" | "DELETE"
 import type { RestaurantAccess, SessionView, Result } from "@cardapio/contracts"
 import type { MenuDocument } from "@cardapio/domain/menu-document"
@@ -1176,4 +1178,75 @@ test("password change revokes all sessions and logout cannot be replayed", async
   )
   assert.equal((await request("POST", "/auth/logout", {}, alice)).statusCode, 201)
   assert.equal((await request("GET", "/auth/session", undefined, alice)).statusCode, 401)
+})
+
+test("concurrent incomplete image uploads stay bounded without blocking health or small requests", async () => {
+  await server.app.listen(0, "127.0.0.1")
+  const bound = server.app.getHttpServer().address() as AddressInfo
+  const address = `http://127.0.0.1:${bound.port}`
+  const path = `/api/v1/restaurants/${randomUUID()}/products`
+  const held = Array.from({ length: 2 }, (_, index) => {
+    const pending = httpRequest(new URL(path, address), {
+      method: "POST",
+      headers: {
+        origin,
+        "content-type": "application/json",
+        ...(index === 0 ? { "content-length": "300000" } : {}),
+      },
+    })
+    pending.on("error", () => {
+      /* expected when the controlled probe is destroyed */
+    })
+    pending.write('{"imageUrl":"')
+    return pending
+  })
+  try {
+    // A zero-length valid body shares the image route but does not consume the
+    // upload budget; authentication still refuses it normally.
+    const small = await fetch(new URL(path, address), {
+      method: "POST",
+      headers: { origin, "content-type": "application/json" },
+      body: "{}",
+      signal: AbortSignal.timeout(5000),
+    })
+    assert.equal(small.status, 401)
+    let rejected = false
+    for (let attempt = 0; attempt < 20 && !rejected; attempt++) {
+      const response = await fetch(new URL(path, address), {
+        method: "POST",
+        headers: { origin, "content-type": "application/json" },
+        body: JSON.stringify({ imageUrl: "x".repeat(270000) }),
+        signal: AbortSignal.timeout(5000),
+      })
+      assert.ok([401, 503].includes(response.status))
+      rejected = response.status === 503
+      if (!rejected) await new Promise((resolve) => setTimeout(resolve, 25))
+    }
+    assert.equal(rejected, true)
+    assert.equal(
+      (
+        await fetch(new URL("/api/v1/health/ready", address), {
+          signal: AbortSignal.timeout(5000),
+        })
+      ).status,
+      200,
+    )
+  } finally {
+    held.forEach((pending) => pending.destroy())
+  }
+  // Aborts must release capacity for subsequent image uploads too.
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const response = await fetch(new URL(path, address), {
+      method: "POST",
+      headers: { origin, "content-type": "application/json" },
+      body: JSON.stringify({ imageUrl: "x".repeat(270000) }),
+      signal: AbortSignal.timeout(5000),
+    })
+    if (response.status !== 503) {
+      assert.equal(response.status, 401)
+      return
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+  assert.fail("Image upload capacity was not released after aborted requests")
 })

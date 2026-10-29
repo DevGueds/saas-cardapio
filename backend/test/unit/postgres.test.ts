@@ -75,3 +75,26 @@ test("migration CLI accepts only opted-in Railway internal transport without TLS
     }),
   )
 })
+
+test("migration CLI accepts Render only with exact private host and provider context", () => {
+  const env = {
+    NODE_ENV: "production",
+    DATABASE_TLS: "false",
+    PRIVATE_NETWORK_TRANSPORT: "render",
+    RENDER: "true",
+    RENDER_SERVICE_ID: "srv-abcdefghijklmnopqrst",
+    RENDER_SERVICE_TYPE: "pserv",
+    RENDER_DATABASE_HOST: "cardapio-postgres-abcd",
+    MIGRATION_DATABASE_URL:
+      "postgresql://cardapio_migrator:test@cardapio-postgres-abcd:5432/cardapio",
+  }
+  assert.equal(new URL(migrationConnection(env)!).searchParams.get("sslmode"), "disable")
+  for (const override of [
+    { RENDER: "" },
+    { RENDER_SERVICE_ID: "" },
+    { RENDER_DATABASE_HOST: "" },
+    { MIGRATION_DATABASE_URL: "postgresql://u:p@public.example/cardapio" },
+    { MIGRATION_DATABASE_URL: "postgresql://u:p@cardapio-postgres-abcd:5433/cardapio" },
+  ])
+    assert.throws(() => migrationConnection({ ...env, ...override }))
+})

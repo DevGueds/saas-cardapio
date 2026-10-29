@@ -14,7 +14,7 @@ import type {
 } from "../../../shared/application/ports.js"
 import type { Operation } from "../../../shared/application/operation.js"
 import { validate } from "../../../shared/application/validate.js"
-import type { PaymentsRepository } from "./ports.js"
+import type { FinancialReportCalculator, PaymentsRepository } from "./ports.js"
 import { buildReport } from "./report.js"
 
 export class Payments {
@@ -25,6 +25,9 @@ export class Payments {
     private readonly ids: IdGenerator,
     private readonly clock: Clock,
     private readonly secrets: SecretTokens,
+    private readonly reports: FinancialReportCalculator = {
+      calculate: async (...args) => buildReport(...args),
+    },
   ) {}
 
   record(actor: Actor, restaurantId: string, input: unknown) {
@@ -77,7 +80,7 @@ export class Payments {
       const scope = await this.access.restaurant(actor, restaurantId, "reports:read")
       const range = validate(reportRangeSchema, input)
       const snapshot = await this.repository.report(scope, range)
-      return buildReport(
+      return this.reports.calculate(
         range,
         snapshot.orders,
         snapshot.payments,

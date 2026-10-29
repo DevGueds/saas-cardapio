@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises"
 import { randomUUID } from "node:crypto"
 import { parseEnv } from "node:util"
 import { createRequire } from "node:module"
+import { PNG } from "pngjs"
 import { Database } from "../backend/dist/shared/infrastructure/database.js"
 import { loadConfig } from "../backend/dist/app/config.js"
 
@@ -189,6 +190,43 @@ try {
   })
   created.push(value(registered).user.id)
   const owner = session(registered)
+  const store = value(await request("GET", "/me/restaurants", undefined, owner))[0]
+  const printingRoute = `/restaurants/${store.id}/printing/settings`
+  const { revision, ...configuration } = value(
+    await request("GET", printingRoute, undefined, owner),
+  )
+  const image = PNG.sync.write(new PNG({ width: 1, height: 1 }))
+  const saved = await request(
+    "PUT",
+    printingRoute,
+    {
+      ...configuration,
+      expectedRevision: revision,
+      logo: `data:image/png;base64,${image.toString("base64")}`,
+    },
+    owner,
+  )
+  assert.equal(
+    saved.status,
+    200,
+    "Logo decoding must work inside the restricted Docker runtime",
+  )
+  image[image.length - 17] ^= 1
+  const rejected = await request(
+    "PUT",
+    printingRoute,
+    {
+      ...configuration,
+      expectedRevision: value(saved).revision,
+      logo: `data:image/png;base64,${image.toString("base64")}`,
+    },
+    owner,
+  )
+  assert.equal(rejected.status, 422)
+  assert.equal(
+    value(await request("GET", printingRoute, undefined, owner)).revision,
+    value(saved).revision,
+  )
   assert.equal(
     (
       await request("POST", "/auth/mfa/setup", { currentPassword: password }, owner, {
@@ -238,7 +276,7 @@ try {
     200,
   )
   console.log(
-    "Docker security: non-root, read-only, authentication, injection validation, CSRF, no-store, MFA bypass and replay probes passed in _test.",
+    "Docker security: non-root, read-only, isolated logo decoding, corrupt PNG rejection, authentication, injection validation, CSRF, no-store, MFA bypass and replay probes passed in _test.",
   )
 } finally {
   try {

@@ -5,6 +5,29 @@ on:
 permissions:
   contents: read
 jobs:
+  render-configuration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --prefix .render --ignore-scripts --no-audit --no-fund
+      - run: npm --prefix .render run check
+      - run: npm --prefix .render audit
+  render-images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --prefix .render --ignore-scripts --no-audit --no-fund
+      - run: node .render/test-images.mjs
   railway-configuration:
     runs-on: ubuntu-24.04
     timeout-minutes: 10

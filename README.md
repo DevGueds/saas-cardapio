@@ -6,6 +6,8 @@ SaaS multitenant de cardápio digital, com frontend React 19/TypeScript/Vite/Tai
 
 Para implantação completa em nuvem, veja [o guia Railway](docs/railway.md) e o blueprint [`.railway/railway.ts`](.railway/railway.ts). Usa o formato atual de infraestrutura como código, com domínio gratuito HTTPS e cookies seguros por padrão.
 
+Como segunda alternativa, [o guia Render](docs/render.md) e o [Blueprint `render.yaml`](render.yaml) preparam a mesma aplicação completa com domínio gratuito `onrender.com`. A configuração Railway continua disponível e independente. Na Render, os serviços privados e os discos persistentes usam planos pagos.
+
 Requisitos: Node.js 24, pnpm 11.23.0 e Docker com Compose. Execute nesta pasta, onde está o `package.json`.
 
 ```sh

@@ -1,6 +1,7 @@
 import { before, after, test } from "node:test"
 import assert from "node:assert/strict"
 import { randomUUID, randomInt } from "node:crypto"
+import { PNG } from "pngjs"
 import type {
   PrintingSettings,
   ReceiptDocument,
@@ -271,6 +272,8 @@ test("settings reject invalid references, missing required sections, scripts and
   const patches = [
     { logo: "https://remote.test/logo.png" },
     { logo: "data:image/png;base64,iVBORw0KGgoAAAAA" },
+    // Correct dimensions/chunks with an invalid pixel CRC previously passed validation.
+    { logo: corruptLogo() },
     { defaults: { ...config.defaults, ORDER: "unknown" } },
     {
       templates: {
@@ -301,6 +304,11 @@ test("settings reject invalid references, missing required sections, scripts and
       ).statusCode,
       422,
     )
+  assert.equal(
+    value<PrintingSettings>((await request("GET", endpoint, undefined, owner)).body)
+      .revision,
+    revision,
+  )
   const persisted = await server.runtime.db.client.storePrinting.findUniqueOrThrow({
     where: { restaurantId: owner.store.id },
   })
@@ -320,6 +328,12 @@ test("settings reject invalid references, missing required sections, scripts and
     })
   }
 })
+
+function corruptLogo() {
+  const bytes = PNG.sync.write(new PNG({ width: 1, height: 1 }))
+  bytes[bytes.length - 17] = bytes[bytes.length - 17]! ^ 1
+  return `data:image/png;base64,${bytes.toString("base64")}`
+}
 test("documents project exact totals and role privacy, and couriers need current assignment", async () => {
   const doc = value<ReceiptDocument>(
     (await request("GET", documentRoute(), undefined, owner)).body,
