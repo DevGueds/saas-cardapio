@@ -4,8 +4,10 @@ import type { MenuRepository } from "../../catalog/application/ports"
 import {
   updateRestaurant,
   setRestaurantOpen,
+  updateStoreHours,
   type RestaurantSettingsInput,
 } from "@cardapio/domain/restaurant-changes"
+import type { HoursInput } from "@cardapio/domain/store-hours"
 export type { RestaurantSettingsInput } from "@cardapio/domain/restaurant-changes"
 export class RestaurantCommands {
   constructor(
@@ -30,6 +32,16 @@ export class RestaurantCommands {
         restaurantId,
         expectedRevision,
         setRestaurantOpen(await this.repository.load(restaurantId), isOpen),
+      )
+    })
+  }
+  hours(restaurantId: string, expectedRevision: number, schedule: HoursInput) {
+    return this.executor.run("restaurant", "hours", async () => {
+      this.access.assertAdmin()
+      return this.repository.commit(
+        restaurantId,
+        expectedRevision,
+        updateStoreHours(await this.repository.load(restaurantId), schedule),
       )
     })
   }

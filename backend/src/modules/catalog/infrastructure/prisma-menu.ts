@@ -3,6 +3,7 @@ import type { Prisma } from "../../../generated/prisma/client.js"
 import { Failure } from "@cardapio/domain/failure"
 import { parseMenuDocument, type MenuDocument } from "@cardapio/domain/menu-document"
 import { normalizeName } from "@cardapio/domain/validation"
+import { applyStoreHours } from "@cardapio/domain/restaurant-changes"
 import type { Database, Transaction } from "../../../shared/infrastructure/database.js"
 import type { TenantScope } from "../../identity/domain/identity.js"
 import type { MenuRepository } from "../application/ports.js"
@@ -21,16 +22,18 @@ export async function readMenu(
   })
   if (!row) throw new Failure("NOT_FOUND", "Restaurante não encontrado.")
   try {
-    return parseMenuDocument(
-      {
-        schemaVersion: 1,
-        revision: row.revision,
-        restaurant: row,
-        categories: row.categories,
-        products: row.products,
-        ...(row.commerce ? { commerce: row.commerce } : {}),
-      },
-      scope.restaurantId,
+    return applyStoreHours(
+      parseMenuDocument(
+        {
+          schemaVersion: 1,
+          revision: row.revision,
+          restaurant: row,
+          categories: row.categories,
+          products: row.products,
+          ...(row.commerce ? { commerce: row.commerce } : {}),
+        },
+        scope.restaurantId,
+      ),
     )
   } catch {
     throw new Failure(
@@ -78,7 +81,10 @@ export class PrismaMenu implements MenuRepository {
           deliveryFee: restaurant.deliveryFee,
           minOrder: restaurant.minOrder,
           eta: restaurant.eta,
-          isOpen: restaurant.isOpen,
+          ...(restaurant.hours?.enabled ? {} : { isOpen: restaurant.isOpen }),
+          ...(restaurant.hours
+            ? { hours: restaurant.hours as unknown as Prisma.InputJsonValue }
+            : {}),
           revision: { increment: 1 },
         },
       })

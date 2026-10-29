@@ -10,6 +10,9 @@
 @import "./modules/catalog/presentation/catalog-management.css";
 
 @import "./modules/restaurant/presentation/restaurant-settings.css";
+@import "./modules/restaurant/presentation/store-hours.css";
+@import "./modules/catalog/presentation/menu-discovery.css";
+@import "./modules/analytics/presentation/analytics.css";
 @import "./modules/demo-orders/presentation/demo-orders.css";
 
 @import "./modules/checkout/presentation/checkout.css";

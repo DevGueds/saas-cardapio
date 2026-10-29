@@ -18,26 +18,28 @@ flowchart LR
 
 ## Mapa de responsabilidades
 
-| Pasta                          | Responsabilidade                                                                      |
-| ------------------------------ | ------------------------------------------------------------------------------------- |
-| `src/app`                      | Composição de serviços demo/API, rotas e escopos React                                |
-| `src/modules/identity`         | Acesso à conta, seleção de loja, senha e adaptador de autenticação                    |
-| `src/modules/catalog`          | Produtos, categorias, cardápio e adaptadores HTTP/local                               |
-| `src/modules/commerce`         | Combos, promoções, regiões de entrega e portas HTTP/local                             |
-| `src/modules/restaurant`       | Configurações e estado da loja                                                        |
-| `src/modules/checkout`         | Carrinho, entrega e envio/preparação de pedido                                        |
-| `src/modules/orders`           | Pedidos persistidos, etapas, detalhes e paginação                                     |
-| `src/modules/demo-orders`      | Quadro fictício isolado, apenas no modo demo                                          |
-| `src/shared`                   | Resultados, diagnóstico, transporte HTTP genérico e UI reutilizável                   |
-| `backend/src/app`              | Configuração, composição manual, bootstrap Nest/Fastify e OpenAPI                     |
-| `backend/src/modules/identity` | Conta, sessões, tenants, memberships e políticas de acesso                            |
-| `backend/src/modules/catalog`  | Leitura pública/privada, produtos, categorias e configurações do agregado restaurante |
-| `backend/src/modules/orders`   | Registro transacional, idempotência, listagem e transições                            |
-| `backend/src/modules/commerce` | Comandos de ofertas e entrega sobre o agregado de loja                                |
-| `backend/src/modules/delivery` | Consulta de CEP por porta externa; sem regra de frete no provedor                     |
-| `backend/src/shared`           | Portas técnicas, executor, Prisma, criptografia e tradução HTTP de erros              |
-| `packages/domain`              | Regras portáteis sem React, Zod, Node ou banco                                        |
-| `packages/contracts`           | DTOs, schemas estritos e tipos públicos compartilhados                                |
+| Pasta                           | Responsabilidade                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| `src/app`                       | Composição de serviços demo/API, rotas e escopos React                                |
+| `src/modules/identity`          | Acesso à conta, seleção de loja, senha e adaptador de autenticação                    |
+| `src/modules/catalog`           | Produtos, categorias, cardápio e adaptadores HTTP/local                               |
+| `src/modules/commerce`          | Combos, promoções, regiões de entrega e portas HTTP/local                             |
+| `src/modules/restaurant`        | Configurações, horários semanais, calendário de exceções e estado da loja             |
+| `src/modules/analytics`         | Dashboard de desempenho e consulta pública de mais vendidos                           |
+| `src/modules/checkout`          | Carrinho, entrega e envio/preparação de pedido                                        |
+| `src/modules/orders`            | Pedidos persistidos, etapas, detalhes e paginação                                     |
+| `src/modules/demo-orders`       | Quadro fictício isolado, apenas no modo demo                                          |
+| `src/shared`                    | Resultados, diagnóstico, transporte HTTP genérico e UI reutilizável                   |
+| `backend/src/app`               | Configuração, composição manual, bootstrap Nest/Fastify e OpenAPI                     |
+| `backend/src/modules/identity`  | Conta, sessões, tenants, memberships e políticas de acesso                            |
+| `backend/src/modules/catalog`   | Leitura pública/privada, produtos, categorias e configurações do agregado restaurante |
+| `backend/src/modules/analytics` | Indicadores e rankings agregados por tenant; descoberta pública sem dados pessoais    |
+| `backend/src/modules/orders`    | Registro transacional, idempotência, listagem e transições                            |
+| `backend/src/modules/commerce`  | Comandos de ofertas e entrega sobre o agregado de loja                                |
+| `backend/src/modules/delivery`  | Consulta de CEP por porta externa; sem regra de frete no provedor                     |
+| `backend/src/shared`            | Portas técnicas, executor, Prisma, criptografia e tradução HTTP de erros              |
+| `packages/domain`               | Regras portáteis sem React, Zod, Node ou banco                                        |
+| `packages/contracts`            | DTOs, schemas estritos e tipos públicos compartilhados                                |
 
 Cada contexto cria somente as camadas que utiliza: `domain`, `application`, `infrastructure`, `presentation`. Não existem diretórios vazios nem repositório base genérico. As fachadas antigas em `src/**/domain` reexportam o pacote puro para preservar imports e testes do frontend.
 

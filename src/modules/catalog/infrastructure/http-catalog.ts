@@ -1,4 +1,6 @@
 import { menuSchema } from "@cardapio/contracts"
+import type { MenuDocument } from "../application/menu-document"
+import type { HoursInput } from "@cardapio/domain/store-hours"
 import type { ApiClient } from "../../../shared/infrastructure/api-client"
 import type { SaveProductInput } from "../application/catalog-commands"
 import type { RestaurantSettingsInput } from "../../restaurant/application/restaurant-commands"
@@ -12,7 +14,7 @@ export class HttpCatalog {
   slug(id: string) {
     return this.slugs.get(id)
   }
-  subscribe(id: string, listener: () => void) {
+  subscribe(id: string, listener: (menu?: MenuDocument) => void) {
     return this.refresh.subscribe(id, listener)
   }
   async execute(slug: string) {
@@ -44,7 +46,7 @@ export class HttpCatalog {
       menuSchema,
       { method, body },
     )
-    if (result.ok) this.refresh.changed(id)
+    if (result.ok) this.refresh.changed(id, result.value)
     return result
   }
   save(input: SaveProductInput) {
@@ -101,5 +103,8 @@ export class HttpCatalog {
   }
   setOpen(id: string, expectedRevision: number, isOpen: boolean) {
     return this.mutate(id, "open", "PUT", { expectedRevision, isOpen })
+  }
+  hours(id: string, expectedRevision: number, schedule: HoursInput) {
+    return this.mutate(id, "hours", "PUT", { expectedRevision, schedule })
   }
 }

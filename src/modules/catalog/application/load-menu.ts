@@ -3,6 +3,7 @@ import type { Executor } from "../../../shared/application/execute"
 import type { AccessPolicy } from "../../../shared/application/ports"
 
 import type { MenuRepository, RestaurantDirectory } from "./ports"
+import type { MenuDocument } from "./menu-document"
 
 export class LoadMenu {
   constructor(
@@ -13,7 +14,7 @@ export class LoadMenu {
     private readonly executor: Executor,
   ) {}
 
-  subscribe(restaurantId: string, listener: () => void) {
+  subscribe(restaurantId: string, listener: (menu?: MenuDocument) => void) {
     return this.repository.subscribe(restaurantId, listener)
   }
 

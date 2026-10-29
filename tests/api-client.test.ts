@@ -2,7 +2,7 @@ import { browserIds } from "../src/shared/infrastructure/browser-ids"
 import { sha256Fingerprint } from "../src/shared/infrastructure/sha256-fingerprint"
 import { webcrypto } from "node:crypto"
 import { createReduxDrafts } from "../src/shared/infrastructure/redux-drafts"
-import { TestStorage } from "./helpers"
+import { TestStorage, sampleMenu } from "./helpers"
 import { describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import { Executor } from "../src/shared/application/execute"
@@ -18,6 +18,36 @@ function response(body: unknown, status = 200) {
   })
 }
 describe("HTTP adapters fail closed", () => {
+  it("publishes the confirmed menu before a write resolves, isolating stores and external invalidation", async () => {
+    const menu = { ...sampleMenu(), revision: 8 }
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ ok: true, value: menu })))
+    vi.stubGlobal("BroadcastChannel", undefined)
+    const refresh = new MenuRefresh()
+    const listener = vi.fn(),
+      otherStore = vi.fn()
+    const stop = refresh.subscribe(menu.restaurant.id, listener)
+    const stopOther = refresh.subscribe("another-store", otherStore)
+    try {
+      const catalog = new HttpCatalog(
+        new ApiClient("http://localhost:3001/api/v1", executor()),
+        refresh,
+      )
+      const result = await catalog.setOpen(menu.restaurant.id, 7, menu.restaurant.isOpen)
+      expect(result.ok).toBe(true)
+      expect(listener).toHaveBeenCalledExactlyOnceWith(menu)
+      expect(otherStore).not.toHaveBeenCalled()
+      window.dispatchEvent(new Event("focus"))
+      expect(listener).toHaveBeenLastCalledWith()
+      stop()
+      listener.mockClear()
+      refresh.changed(menu.restaurant.id, menu)
+      expect(listener).not.toHaveBeenCalled()
+    } finally {
+      stop()
+      stopOther()
+      vi.unstubAllGlobals()
+    }
+  })
   it("invalid configuration never sends a request", async () => {
     const fetcher = vi.fn()
     vi.stubGlobal("fetch", fetcher)

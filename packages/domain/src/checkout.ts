@@ -6,6 +6,7 @@ import { deliveryAddressLines, parseDeliveryAddress } from "./delivery-address.j
 import { type Cart } from "./cart.js"
 import { orderMessage, type DeliveryDetails } from "./order-message.js"
 import type { MenuDocument } from "./menu-document.js"
+import { effectiveStoreOpen } from "./store-hours.js"
 
 export function validateCheckout(
   menu: MenuDocument,
@@ -22,7 +23,7 @@ export function validateCheckout(
     )
 
   requireValid(
-    menu.restaurant.isOpen,
+    effectiveStoreOpen(menu.restaurant, options.now ?? Date.now()),
     "A loja está fechada e não está recebendo pedidos.",
   )
 

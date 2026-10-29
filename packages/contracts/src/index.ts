@@ -12,6 +12,8 @@ export * from "./engagement.js"
 export * from "./security.js"
 export * from "./printing.js"
 export * from "./privacy.js"
+export * from "./store-hours.js"
+export * from "./analytics.js"
 import { legalAcceptanceSchema } from "./privacy.js"
 import { addonSelectionsSchema } from "./menu-options.js"
 import {

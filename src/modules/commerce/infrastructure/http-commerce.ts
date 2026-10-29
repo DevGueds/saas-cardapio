@@ -19,7 +19,7 @@ export class HttpCommerce implements CommerceService, MapsService {
       menuSchema,
       { method, body },
     )
-    if (result.ok) this.refresh.changed(id)
+    if (result.ok) this.refresh.changed(id, result.value)
     return result
   }
   combo(...[id, revision, combo]: Parameters<CommerceService["combo"]>) {

@@ -2,7 +2,7 @@ import { z } from "zod"
 import { uuid } from "./common.js"
 import { currentPasswordField, emailField, personNameField, textField } from "./fields.js"
 
-export const LEGAL_VERSION = "2026-10-29.1"
+export const LEGAL_VERSION = "2026-10-29.2"
 export const privacyController = {
   brand: "Pede Aqui",
   legalName: "66.369.962 VITOR SOUSA MESQUITA",

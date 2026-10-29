@@ -1,4 +1,6 @@
 import { ParallelPrintingLogos } from "../modules/printing/infrastructure/parallel-logo.js"
+import { Analytics } from "../modules/analytics/application/analytics.js"
+import { PrismaAnalytics } from "../modules/analytics/infrastructure/prisma-analytics.js"
 import { Privacy } from "../modules/privacy/application/privacy.js"
 import { PrismaPrivacy } from "../modules/privacy/infrastructure/prisma-privacy.js"
 import { PostalAddresses } from "../modules/delivery/application/postal-address.js"
@@ -84,6 +86,16 @@ export async function compose(config: ApiConfig) {
       operation,
     )
     return {
+      analytics: new Analytics(
+        new PrismaAnalytics(db),
+        access,
+        menus,
+        clock,
+        secrets,
+        limiter,
+        redis,
+        operation,
+      ),
       privacy: new Privacy(
         new PrismaPrivacy(db),
         access,
@@ -176,7 +188,7 @@ export async function compose(config: ApiConfig) {
         operation,
       ),
       commerce: new CommerceManagement(menus, access, operation),
-      catalog: new Catalog(menus, access, ids, operation, menus),
+      catalog: new Catalog(menus, access, ids, operation, menus, clock),
       orders: new Orders(
         new PrismaOrders(db),
         menus,

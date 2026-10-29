@@ -1,4 +1,5 @@
 import { assertCents, type Cents } from "./money.js"
+import { parseStoreHours, type StoreHours } from "./store-hours.js"
 
 import {
   boolean,
@@ -25,6 +26,7 @@ export type Restaurant = Readonly<{
   address: string
   isOpen: boolean
   eta: string
+  hours?: StoreHours
 }>
 
 export function parseRestaurant(input: unknown): Restaurant {
@@ -58,5 +60,8 @@ export function parseRestaurant(input: unknown): Restaurant {
 
     isOpen: boolean(data.isOpen, "isOpen"),
     eta: text(data.eta, "eta", 80, true),
+    ...(data.hours === undefined || data.hours === null
+      ? {}
+      : { hours: parseStoreHours(data.hours) }),
   }
 }

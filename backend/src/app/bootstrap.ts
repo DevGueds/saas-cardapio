@@ -1,4 +1,5 @@
 import { DeliveryController } from "../modules/delivery/presentation/delivery.controller.js"
+import { AnalyticsController } from "../modules/analytics/presentation/analytics.controller.js"
 import { EngagementController } from "../modules/engagement/presentation/engagement.controller.js"
 import { PaymentsController } from "../modules/payments/presentation/payments.controller.js"
 import { PrintingController } from "../modules/printing/presentation/printing.controller.js"
@@ -30,6 +31,7 @@ export async function createApplication(config: ApiConfig) {
   const runtime = await compose(config)
   @Module({
     controllers: [
+      AnalyticsController,
       IdentityController,
       PrivacyController,
       MfaController,

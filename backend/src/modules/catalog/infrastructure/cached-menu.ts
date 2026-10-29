@@ -3,6 +3,7 @@ import type { CacheStore } from "../../../shared/application/cache.js"
 import type { TenantScope } from "../../identity/domain/identity.js"
 import { parseMenuDocument, type MenuDocument } from "@cardapio/domain/menu-document"
 import { Failure } from "@cardapio/domain/failure"
+import { applyStoreHours } from "@cardapio/domain/restaurant-changes"
 export class CachedMenu implements MenuRepository {
   private readonly pending = new Map<string, Promise<MenuDocument>>()
   constructor(
@@ -36,7 +37,7 @@ export class CachedMenu implements MenuRepository {
         const id = (value as MenuDocument).restaurant.id
         const menu = parseMenuDocument(value, id)
         if (menu.restaurant.slug !== slug) throw new Error()
-        return menu
+        return applyStoreHours(menu)
       } catch {
         throw new Failure(
           "CORRUPT_DATA",

@@ -5,19 +5,24 @@ import {
   saveProductSchema,
   updateSettingsSchema,
   uuid,
+  updateHoursSchema,
 } from "@cardapio/contracts"
 import {
   saveProduct,
   changeAvailability,
   deleteProduct,
 } from "@cardapio/domain/catalog-changes"
-import { updateRestaurant, setRestaurantOpen } from "@cardapio/domain/restaurant-changes"
+import {
+  updateRestaurant,
+  setRestaurantOpen,
+  updateStoreHours,
+} from "@cardapio/domain/restaurant-changes"
 import { requireValid } from "@cardapio/domain/failure"
 import type { MenuDocument } from "@cardapio/domain/menu-document"
 import type { Actor } from "../../identity/domain/identity.js"
 import type { AccessPolicy } from "../../identity/application/ports.js"
 import type { Operation } from "../../../shared/application/operation.js"
-import type { IdGenerator } from "../../../shared/application/ports.js"
+import type { Clock, IdGenerator } from "../../../shared/application/ports.js"
 import { validate } from "../../../shared/application/validate.js"
 import type { MenuRepository } from "./ports.js"
 export class Catalog {
@@ -27,6 +32,7 @@ export class Catalog {
     private readonly ids: IdGenerator,
     private readonly operation: Operation,
     private readonly publicMenus: { publicMenu(slug: string): Promise<MenuDocument> },
+    private readonly clock: Clock,
   ) {}
   publicMenu(slug: string) {
     return this.operation.run("catalog.public-menu", async () => {
@@ -93,7 +99,15 @@ export class Catalog {
     return this.operation.run("restaurant.open", async () => {
       const data = validate(openSchema, input)
       return this.mutate(actor, restaurantId, data.expectedRevision, (menu) =>
-        setRestaurantOpen(menu, data.isOpen),
+        setRestaurantOpen(menu, data.isOpen, this.clock.now().getTime()),
+      )
+    })
+  }
+  hours(actor: Actor, restaurantId: string, input: unknown) {
+    return this.operation.run("restaurant.hours", async () => {
+      const data = validate(updateHoursSchema, input)
+      return this.mutate(actor, restaurantId, data.expectedRevision, (menu) =>
+        updateStoreHours(menu, data.schedule, this.clock.now().getTime()),
       )
     })
   }

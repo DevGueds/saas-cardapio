@@ -12,6 +12,7 @@ import { useMenu } from "./MenuScope"
 import { useServices } from "./ServicesProvider"
 import AdminNavigation from "./AdminNavigation"
 import LegalLinks from "../../shared/presentation/legal/LegalLinks"
+import { storeAvailability } from "@cardapio/domain/store-hours"
 
 export default function AdminLayout() {
   const { menu, error: loadError, loading, reload } = useMenu()
@@ -24,31 +25,36 @@ export default function AdminLayout() {
   const main = useRef<HTMLElement>(null)
   const location = useLocation()
   const { restaurant } = menu
-  const section = location.pathname.endsWith("printing")
-    ? "Impressão e comprovantes"
-    : location.pathname.endsWith("security")
-      ? "Segurança da equipe"
-      : location.pathname.endsWith("addons")
-        ? "Adicionais"
-        : location.pathname.endsWith("appearance")
-          ? "Aparência e QR Code"
-          : location.pathname.endsWith("channels")
-            ? "Painel e notificações"
-            : location.pathname.endsWith("finance")
-              ? "Caixa e relatórios"
-              : location.pathname.endsWith("offers")
-                ? "Combos e promoções"
-                : location.pathname.endsWith("delivery")
-                  ? "Entregas e retirada"
-                  : location.pathname.endsWith("team")
-                    ? "Equipe e permissões"
-                    : location.pathname.endsWith("settings")
-                      ? "Configurações"
-                      : location.pathname.endsWith("orders")
-                        ? services.mode === "api"
-                          ? "Pedidos"
-                          : "Pedidos demonstrativos"
-                        : "Cardápio"
+  const availability = storeAvailability(restaurant)
+  const section = location.pathname.endsWith("analytics")
+    ? "Dashboard"
+    : location.pathname.endsWith("hours")
+      ? "Horários da loja"
+      : location.pathname.endsWith("printing")
+        ? "Impressão e comprovantes"
+        : location.pathname.endsWith("security")
+          ? "Segurança da equipe"
+          : location.pathname.endsWith("addons")
+            ? "Adicionais"
+            : location.pathname.endsWith("appearance")
+              ? "Aparência e QR Code"
+              : location.pathname.endsWith("channels")
+                ? "Painel e notificações"
+                : location.pathname.endsWith("finance")
+                  ? "Caixa e relatórios"
+                  : location.pathname.endsWith("offers")
+                    ? "Combos e promoções"
+                    : location.pathname.endsWith("delivery")
+                      ? "Entregas e retirada"
+                      : location.pathname.endsWith("team")
+                        ? "Equipe e permissões"
+                        : location.pathname.endsWith("settings")
+                          ? "Configurações"
+                          : location.pathname.endsWith("orders")
+                            ? services.mode === "api"
+                              ? "Pedidos"
+                              : "Pedidos demonstrativos"
+                            : "Cardápio"
 
   useEffect(() => {
     document.title = `${section} · ${restaurant.name} · Pede Aqui`
@@ -112,9 +118,13 @@ export default function AdminLayout() {
                 <small>
                   {mutation.pending
                     ? "Atualizando…"
-                    : restaurant.isOpen
-                      ? "Recebendo pedidos"
-                      : "Pedidos pausados"}
+                    : availability.mode === "OVERRIDE"
+                      ? `Manual até ${new Intl.DateTimeFormat("pt-BR", { timeZone: restaurant.hours!.timeZone, timeStyle: "short" }).format(new Date(availability.overrideUntil!))}`
+                      : availability.mode === "SCHEDULE"
+                        ? "Horário automático"
+                        : restaurant.isOpen
+                          ? "Recebendo pedidos"
+                          : "Pedidos pausados"}
                 </small>
               </div>
               <button
@@ -123,6 +133,11 @@ export default function AdminLayout() {
                 role="switch"
                 aria-label="Loja aberta"
                 aria-checked={restaurant.isOpen}
+                title={
+                  restaurant.hours?.enabled
+                    ? "Alteração manual temporária: até a próxima mudança programada ou por até 12 horas."
+                    : undefined
+                }
                 disabled={loading || !!loadError || mutation.pending || !canManage}
                 onClick={() => {
                   if (restaurant.isOpen) setConfirmClosing(true)
@@ -157,8 +172,9 @@ export default function AdminLayout() {
           onClose={() => setConfirmClosing(false)}
         >
           <p>
-            Novos pedidos ficarão pausados. Continue atendendo os pedidos já recebidos e
-            reabra quando estiver pronto.
+            {restaurant.hours?.enabled
+              ? "Novos pedidos ficarão pausados até a próxima mudança dos horários programados, por no máximo 12 horas. Depois a programação será retomada. Os pedidos já recebidos continuam em atendimento."
+              : "Novos pedidos ficarão pausados. Continue atendendo os pedidos já recebidos e reabra quando estiver pronto."}
           </p>
           {mutation.error && <ErrorNotice error={mutation.error} />}
           <div className="form-actions">

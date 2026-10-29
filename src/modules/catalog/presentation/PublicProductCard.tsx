@@ -27,7 +27,7 @@ function PublicProductCard({
       <div className="product-card__content">
         {product.popular && product.available && (
           <span className="popular-label">
-            <Flame size={13} aria-hidden="true" /> Mais pedido
+            <Flame size={13} aria-hidden="true" /> Destaque da loja
           </span>
         )}
         {!product.available && (

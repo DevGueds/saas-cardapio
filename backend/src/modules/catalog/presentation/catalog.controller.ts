@@ -74,4 +74,11 @@ export class CatalogController {
   ) {
     return this.app.catalog.open(authenticated(request).actor, id, data)
   }
+  @Put("restaurants/:restaurantId/hours") hours(
+    @Req() request: SessionRequest,
+    @Param("restaurantId") id: string,
+    @Body() data: unknown,
+  ) {
+    return this.app.catalog.hours(authenticated(request).actor, id, data)
+  }
 }

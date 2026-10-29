@@ -3,12 +3,16 @@ import FeatureBoundary from "../../../shared/presentation/FeatureBoundary"
 import PublicOffers from "../../commerce/presentation/PublicOffers"
 import RecentOrders from "../../checkout/presentation/RecentOrders"
 import { useSearchParams } from "react-router"
+import { useResource } from "../../../shared/presentation/use-resource"
+import ErrorNotice from "../../../shared/presentation/ErrorNotice"
+import { discoverProducts, type DiscoveryFilter } from "../application/menu-discovery"
+import { promotionActive } from "@cardapio/domain/quote"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import PublicProductCard from "./PublicProductCard"
 import AddonChoice from "../../commerce/presentation/AddonChoice"
 import { defaultAppearance } from "@cardapio/domain/menu-options"
 import { notifySuccess } from "../../../shared/presentation/notify"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { Link } from "react-router"
 import {
@@ -17,6 +21,8 @@ import {
   ChevronRight,
   Clock3,
   Flame,
+  TicketPercent,
+  ArrowDownWideNarrow,
   MapPin,
   MessageCircle,
   Search,
@@ -30,8 +36,6 @@ import { useMenu } from "../../../app/presentation/MenuScope"
 
 import { formatMoney } from "../../../shared/domain/money"
 
-import { normalizeName } from "../../../shared/domain/validation"
-
 import CheckoutDrawer from "../../checkout/presentation/CheckoutDrawer"
 import Brand from "../../../shared/presentation/Brand"
 import LegalLinks from "../../../shared/presentation/legal/LegalLinks"
@@ -40,7 +44,7 @@ import { useCart } from "../../checkout/presentation/use-cart"
 
 export default function PublicMenuPage() {
   const { menu, loading, error: loadError } = useMenu()
-  const { mode } = useServices()
+  const { mode, analytics } = useServices()
 
   const { restaurant: store, categories, products } = menu
   const appearance = menu.commerce?.appearance ?? defaultAppearance()
@@ -68,12 +72,34 @@ export default function PublicMenuPage() {
   const selectedProduct = products.find((p) => p.id === customizing)
 
   const [selection, setSelection] = useState("$popular")
+  const [discovery, setDiscovery] = useState<DiscoveryFilter>("NONE")
+  const [now, setNow] = useState(Date.now)
+  const loadRanking = useCallback(
+    () =>
+      analytics
+        ? analytics.bestSellers(store.slug)
+        : Promise.resolve({ ok: true as const, value: null }),
+    [analytics, store.slug],
+  )
+  const ranking = useResource(loadRanking)
+  const reloadRanking = ranking.reload
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now())
+      if (analytics && document.visibilityState === "visible") void reloadRanking()
+    }, 60000)
+    return () => window.clearInterval(timer)
+  }, [analytics, reloadRanking])
 
   const displayCategories = useMemo(
     () =>
       products.some((product) => product.popular)
-        ? [{ id: "$popular", name: "Mais vendidos" }, ...categories]
-        : categories,
+        ? [
+            { id: "$popular", name: "Destaques da loja" },
+            ...categories,
+            { id: "$all", name: "Todos" },
+          ]
+        : [...categories, { id: "$all", name: "Todos" }],
     [categories, products],
   )
 
@@ -83,17 +109,23 @@ export default function PublicMenuPage() {
 
   const visibleProducts = useMemo(
     () =>
-      products.filter((product) =>
-        search.trim()
-          ? normalizeName(`${product.name} ${product.description}`).includes(
-              normalizeName(search),
-            )
-          : activeCategory === "$popular"
-            ? product.popular
-            : product.categoryId === activeCategory,
+      discoverProducts(
+        menu,
+        activeCategory,
+        search,
+        discovery,
+        ranking.data?.productIds ?? [],
+        now,
       ),
-    [products, search, activeCategory],
+    [menu, search, activeCategory, discovery, ranking.data, now],
   )
+  const hasPromotions =
+    menu.commerce?.promotions.some((p) => promotionActive(p, now)) ?? false
+  const hasCombos = menu.commerce?.combos.some((c) => c.active) ?? false
+  function chooseFilter(filter: DiscoveryFilter) {
+    setDiscovery(filter)
+    setSelection("$all")
+  }
   const customizable = useMemo(
     () =>
       new Set(
@@ -210,11 +242,6 @@ export default function PublicMenuPage() {
         )}
         <div className="content">
           <RecentOrders restaurantId={store.id} slug={store.slug} />
-          <PublicOffers
-            controller={controller}
-            disabled={loading || !!loadError}
-            search={search}
-          />
           <div className="menu-discovery">
             <div className="search-box">
               <Search size={20} aria-hidden="true" />
@@ -235,6 +262,48 @@ export default function PublicMenuPage() {
                 </button>
               )}
             </div>
+            <div
+              className="discovery-filters"
+              role="group"
+              aria-label="Filtros rápidos do cardápio"
+            >
+              <button
+                type="button"
+                className={`discovery-filter discovery-filter--best ${discovery === "BEST_SELLERS" ? "is-active" : ""}`}
+                aria-pressed={discovery === "BEST_SELLERS"}
+                onClick={() => chooseFilter("BEST_SELLERS")}
+              >
+                <Flame size={19} aria-hidden="true" />
+                Mais vendidos<span aria-hidden="true">Top da casa</span>
+              </button>
+              <button
+                type="button"
+                className={`discovery-filter ${discovery === "PROMOTIONS" ? "is-active" : ""}`}
+                aria-pressed={discovery === "PROMOTIONS"}
+                onClick={() => chooseFilter("PROMOTIONS")}
+              >
+                <TicketPercent size={18} aria-hidden="true" />
+                Promoções
+              </button>
+              <button
+                type="button"
+                className={`discovery-filter ${discovery === "CHEAPEST" ? "is-active" : ""}`}
+                aria-pressed={discovery === "CHEAPEST"}
+                onClick={() => chooseFilter("CHEAPEST")}
+              >
+                <ArrowDownWideNarrow size={18} aria-hidden="true" />
+                Menores preços
+              </button>
+              {discovery !== "NONE" && (
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => chooseFilter("NONE")}
+                >
+                  Limpar filtros
+                </button>
+              )}
+            </div>
             <nav className="category-nav" aria-label="Categorias do cardápio">
               {displayCategories.map((category) => (
                 <button
@@ -250,6 +319,13 @@ export default function PublicMenuPage() {
               ))}
             </nav>
           </div>
+          {(discovery === "NONE" || discovery === "PROMOTIONS") && (
+            <PublicOffers
+              controller={controller}
+              disabled={loading || !!loadError}
+              search={search}
+            />
+          )}
           <section
             className="menu-section"
             id="cardapio"
@@ -260,10 +336,17 @@ export default function PublicMenuPage() {
               <div>
                 <span className="eyebrow">Feito para você</span>
                 <h2 id="category-title">
-                  {search
-                    ? `Resultados para “${search}”`
-                    : displayCategories.find((category) => category.id === activeCategory)
-                        ?.name || "Cardápio"}
+                  {discovery === "BEST_SELLERS"
+                    ? "Mais vendidos"
+                    : discovery === "CHEAPEST"
+                      ? "Do menor para o maior preço"
+                      : discovery === "PROMOTIONS"
+                        ? "Promoções e ofertas"
+                        : search
+                          ? `Resultados para “${search}”`
+                          : displayCategories.find(
+                              (category) => category.id === activeCategory,
+                            )?.name || "Cardápio"}
                 </h2>
               </div>
               <p>
@@ -271,6 +354,22 @@ export default function PublicMenuPage() {
                 {visibleProducts.length === 1 ? "opção" : "opções"}
               </p>
             </div>
+            {discovery === "BEST_SELLERS" && (
+              <p className="discovery-explanation">
+                Produtos mais comprados em pedidos concluídos nos últimos 30 dias.
+              </p>
+            )}
+            {discovery === "BEST_SELLERS" && ranking.loading && (
+              <p role="status">Consultando os mais vendidos…</p>
+            )}
+            {discovery === "BEST_SELLERS" && ranking.error && (
+              <ErrorNotice error={ranking.error} onRetry={() => void ranking.reload()} />
+            )}
+            {discovery === "PROMOTIONS" && hasPromotions && (
+              <p className="discovery-explanation">
+                Os cupons são aplicados no carrinho conforme as condições acima.
+              </p>
+            )}
             {visibleProducts.length ? (
               <div className="product-grid">
                 {visibleProducts.map((product) => (
@@ -291,15 +390,33 @@ export default function PublicMenuPage() {
                   </FeatureBoundary>
                 ))}
               </div>
-            ) : (
+            ) : discovery === "BEST_SELLERS" &&
+              (ranking.loading || ranking.error) ? null : (
               <div className="empty-search">
                 <Search size={28} aria-hidden="true" />
-                <h3>Nenhum item encontrado</h3>
-                <p>Tente buscar por outro nome ou ingrediente.</p>
+                <h3>
+                  {discovery === "BEST_SELLERS"
+                    ? "Ainda não há produtos neste ranking"
+                    : discovery === "PROMOTIONS"
+                      ? hasCombos
+                        ? "Confira os combos acima"
+                        : "Nenhuma promoção ativa no momento"
+                      : "Nenhum item encontrado"}
+                </h3>
+                <p>
+                  {discovery === "BEST_SELLERS"
+                    ? mode === "demo"
+                      ? "A demonstração não registra vendas reais. Explore as categorias da loja."
+                      : "O ranking aparece quando há pedidos concluídos no período e produtos disponíveis para sua seleção."
+                    : "Explore outras categorias ou tente outro nome ou ingrediente."}
+                </p>
                 <button
                   className="secondary-button"
                   type="button"
-                  onClick={() => setSearch("")}
+                  onClick={() => {
+                    setSearch("")
+                    chooseFilter("NONE")
+                  }}
                 >
                   Ver cardápio completo
                 </button>

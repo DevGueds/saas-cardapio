@@ -435,7 +435,7 @@ test("catálogo sem populares seleciona a primeira categoria existente", async (
 
   await expect(
     page.getByRole("button", { name: "Mais vendidos", exact: true }),
-  ).toHaveCount(0)
+  ).toHaveCount(1)
 
   await expect(
     page.getByRole("heading", { name: "Hambúrgueres", exact: true }),

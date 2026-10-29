@@ -250,7 +250,7 @@ export default function ProductForm({
                 checked={popular}
                 onChange={(event) => setPopular(event.target.checked)}
               />{" "}
-              Destacar em Mais vendidos
+              Destacar no cardápio
             </label>
           </div>
         </fieldset>

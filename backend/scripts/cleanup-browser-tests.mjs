@@ -11,6 +11,7 @@ for (const filename of [
   "mfa-browser-users.json",
   "printing-browser-users.json",
   "privacy-browser-users.json",
+  "analytics-browser-users.json",
 ]) {
   try {
     ids.push(

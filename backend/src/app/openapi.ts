@@ -38,8 +38,12 @@ const requestSchemas = {
   Availability: contracts.availabilitySchema,
   Delete: contracts.deleteSchema,
   Open: contracts.openSchema,
+  Hours: contracts.updateHoursSchema,
 }
 const operations = [
+  ["/restaurants/{restaurantId}/hours", "put", "Hours"],
+  ["/restaurants/{restaurantId}/analytics", "get"],
+  ["/public/restaurants/{slug}/best-sellers", "get", null, true],
   ["/me/privacy", "get"],
   ["/me/privacy/export", "post", "PrivacyExport"],
   ["/me/privacy/acceptance", "post", "LegalAcceptance"],

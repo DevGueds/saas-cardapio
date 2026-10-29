@@ -83,6 +83,7 @@ export const legalDocuments: Record<
         paragraphs: [
           "Conta e equipe: nome, e-mail, credenciais protegidas, vínculos com lojas e registros de acesso são usados para autenticar, autorizar e administrar o serviço. Senhas não são armazenadas em texto aberto.",
           "Pedidos: nome, telefone, itens, observações e, quando necessária a entrega, endereço e ponto indicado no mapa são usados para cotar, preparar, entregar e acompanhar o pedido. O endereço não é necessário para retirada. Evite inserir informações sensíveis nas observações.",
+          "Gestão do estabelecimento: os pedidos permitem calcular indicadores de vendas, recompra, produtos e desempenho das entregas. Proprietários e gerentes podem consultar rankings de compradores da própria loja, com nome e telefone parcialmente oculto. O cardápio público mostra apenas a ordenação dos produtos mais vendidos, sem identificar compradores ou divulgar quantidades de vendas.",
           "Segurança e suporte: informações técnicas de acesso, identificadores de sessão, registros de ações e dados informados em solicitações são tratados para prevenir abusos, atender titulares e investigar incidentes. Os logs da aplicação não devem conter senhas, mensagens de pedidos ou dados pessoais de clientes.",
         ],
       },

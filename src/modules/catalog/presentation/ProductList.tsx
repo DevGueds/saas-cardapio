@@ -95,7 +95,7 @@ function ProductList(props: Props) {
                     <div className="management-image">
                       <ImageWithFallback src={product.imageUrl} alt={product.name} />
                       {product.popular && (
-                        <span className="management-featured">Mais vendido</span>
+                        <span className="management-featured">Destaque</span>
                       )}
                     </div>
                     <div className="management-details">

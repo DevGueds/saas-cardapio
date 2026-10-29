@@ -100,12 +100,8 @@
   line-height: 1.7;
 }
 .privacy-notice {
-  position: fixed;
-  z-index: 75;
-  bottom: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
   width: min(calc(100% - 2rem), 53rem);
+  margin: 1rem auto;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -151,9 +147,6 @@
   background: var(--forest);
   color: white;
   font-weight: 700;
-}
-body:has(.privacy-notice) {
-  padding-bottom: 7.5rem;
 }
 .legal-acceptance {
   padding: 1rem;
@@ -413,7 +406,6 @@ body:has(.privacy-notice) {
     display: grid;
     grid-template-columns: auto 1fr auto;
     gap: 0.5rem 0.7rem;
-    bottom: 0.6rem;
     width: calc(100% - 1.2rem);
     padding: 0.8rem;
   }
@@ -426,9 +418,6 @@ body:has(.privacy-notice) {
   }
   .privacy-notice__dismiss {
     grid-column: 3;
-  }
-  body:has(.privacy-notice) {
-    padding-bottom: 12rem;
   }
   .privacy-documents,
   .privacy-account__grid {

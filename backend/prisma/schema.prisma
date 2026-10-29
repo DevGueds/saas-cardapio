@@ -168,6 +168,7 @@ model Restaurant {
   minOrder           Int                 @default(0)
   eta                String              @db.VarChar(80)
   isOpen             Boolean             @default(false)
+  hours              Json?
   revision           Int                 @default(0)
   createdAt          DateTime            @default(now()) @db.Timestamptz(3)
   categories         Category[]

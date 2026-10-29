@@ -3,10 +3,15 @@ import { spawn } from "node:child_process"
 const packageManager = process.env.npm_execpath
 if (!packageManager) throw new Error("Inicie com pnpm dev:full.")
 const run = (script) =>
-  spawn(process.execPath, [packageManager, script], {
-    stdio: "inherit",
-    detached: process.platform !== "win32",
-  })
+  spawn(
+    packageManager.endsWith(".exe") ? packageManager : process.execPath,
+    packageManager.endsWith(".exe") ? [script] : [packageManager, script],
+    {
+      stdio: "inherit",
+      detached: process.platform !== "win32",
+      windowsHide: true,
+    },
+  )
 const prepared = run("build:shared")
 const prepareCode = await new Promise((resolve, reject) => {
   prepared.once("error", reject)

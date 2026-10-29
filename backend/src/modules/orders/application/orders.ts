@@ -1,4 +1,5 @@
 import { visibleOrder } from "./order-visibility.js"
+import { effectiveStoreOpen } from "@cardapio/domain/store-hours"
 import {
   checkoutSchema,
   orderTransitionSchema,
@@ -67,8 +68,9 @@ export class Orders {
           "CONFLICT",
           "O cardápio mudou. Atualize os itens antes de continuar.",
         )
-      requireValid(menu.restaurant.isOpen, "A loja está fechada.")
-      return quoteOrder(menu, data.cart, data.options, this.clock.now().getTime())
+      const now = this.clock.now().getTime()
+      requireValid(effectiveStoreOpen(menu.restaurant, now), "A loja está fechada.")
+      return quoteOrder(menu, data.cart, data.options, now)
     })
   }
   prepare(slug: string, input: unknown, ip: string) {

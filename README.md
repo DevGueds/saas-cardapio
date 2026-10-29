@@ -55,6 +55,8 @@ Execute verificações uma por vez. Para Vitest, use `pnpm exec vitest run --max
 
 ## O que funciona
 
+O [dashboard de desempenho, os filtros do cardápio e os horários automáticos](docs/analytics-and-hours.md) incluem rankings com vendas reais, comparações por dia/semana/mês/ano, grade semanal e calendário de feriados e exceções.
+
 Comprovantes de pedidos, preparo, entrega e recebimentos manuais em PDF selecionável, impressão pelo sistema e arquivo térmico ESC/POS. Perfis de 58/80 mm e A4, modelos de impressora, vias, logo e layout com Editor.js. Veja [configuração e limites de impressão](docs/printing.md).
 
 Novidades: **adicionais reutilizáveis, três modelos de cardápio, QR Codes com logo, painel público TV/celular ao vivo, caixa manual, reversões e relatórios PDF reais**. Notificações React-Toastify, Web Push e integração WhatsApp com consentimento; falhas isoladas por área e logs Pino com rotação. Consulte [operação financeira](docs/finance.md), [cardápio e canais](docs/menu-and-channels.md) e [entregas](docs/evolution-plan.md).

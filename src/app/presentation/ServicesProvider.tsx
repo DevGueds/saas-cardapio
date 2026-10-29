@@ -1,4 +1,5 @@
 import type { IdGenerator } from "../../shared/application/ports"
+import type { AnalyticsService } from "../../modules/analytics/application/ports"
 import type { PrivacyService } from "../../modules/privacy/application/ports"
 import type { FileDownloads } from "../../shared/application/file-downloads"
 import type { PrintingService } from "../../modules/printing/application/printing"
@@ -40,6 +41,7 @@ import type { Result } from "../../shared/application/result"
 import type { ImageReader } from "../../shared/application/image-reader"
 
 export interface ApplicationServices {
+  analytics?: AnalyticsService
   privacy?: PrivacyService
   files?: FileDownloads
   ids: IdGenerator
@@ -67,7 +69,8 @@ export interface ApplicationServices {
   tracking?(slug: string, id: string, token: string): Promise<Result<TrackingView>>
   menu: Pick<LoadMenu, "execute" | "subscribe"> & { loadAdmin?: LoadMenu["execute"] }
   catalog: Pick<CatalogCommands, "save" | "setAvailability" | "delete">
-  restaurant: Pick<RestaurantCommands, "update" | "setOpen">
+  restaurant: Pick<RestaurantCommands, "update" | "setOpen"> &
+    Partial<Pick<RestaurantCommands, "hours">>
   checkout: Pick<PrepareOrder, "execute"> & {
     reset?(restaurantId: string): void
     hasPending?(restaurantId: string): boolean

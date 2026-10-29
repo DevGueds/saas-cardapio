@@ -1,0 +1,69 @@
+.discovery-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+}
+.discovery-filter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 46px;
+  padding: 0.7rem 1rem;
+  border: 1px solid #d2decf;
+  border-radius: 100px;
+  background: white;
+  color: var(--forest);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.discovery-filter:hover,
+.discovery-filter.is-active {
+  border-color: var(--brand);
+  background: #e8f3e1;
+  box-shadow: 0 2px 8px #123e3412;
+}
+.discovery-filter--best {
+  background: linear-gradient(120deg, #fff0c2, #ffdfaa);
+  border-color: #e5b761;
+  color: #703b09;
+}
+.discovery-filter--best.is-active {
+  background: linear-gradient(115deg, #8b3c16, #ad4d1f);
+  border-color: #863c18;
+  color: #fff;
+  box-shadow: 0 5px 18px #a84e2526;
+}
+.discovery-filter--best > svg {
+  fill: currentColor;
+  fill-opacity: 0.13;
+}
+.discovery-filter > span {
+  padding: 0.15rem 0.35rem;
+  font-size: 0.6rem;
+  border-radius: 100px;
+  background: #ffffff70;
+}
+.discovery-explanation {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin: -0.25rem 0 1.25rem;
+  line-height: 1.7;
+}
+.discovery-filters > .text-button {
+  font-size: 0.75rem;
+}
+@media (max-width: 540px) {
+  .discovery-filters {
+    gap: 0.5rem;
+  }
+  .discovery-filter {
+    font-size: 0.78rem;
+    padding: 0.65rem 0.8rem;
+  }
+  .discovery-filter--best > span {
+    display: none;
+  }
+}

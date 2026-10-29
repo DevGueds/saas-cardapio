@@ -9,7 +9,7 @@ export interface MenuRepository {
     next: MenuDocument,
   ): Promise<MenuDocument>
 
-  subscribe(restaurantId: string, listener: () => void): () => void
+  subscribe(restaurantId: string, listener: (menu?: MenuDocument) => void): () => void
 }
 
 export interface RestaurantDirectory {

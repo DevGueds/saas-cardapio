@@ -1,6 +1,15 @@
 import { can } from "@cardapio/domain/permissions"
 import { useAccount } from "../../modules/identity/presentation/AccountContext"
-import { PackagePlus, Bike, Users, Layers, Palette, Radio, Printer } from "lucide-react"
+import {
+  PackagePlus,
+  Bike,
+  Users,
+  Layers,
+  Palette,
+  Radio,
+  Printer,
+  CalendarClock,
+} from "lucide-react"
 import { useServices } from "./ServicesProvider"
 import AccountActions from "../../modules/identity/presentation/AccountActions"
 import { NavLink, Link } from "react-router"
@@ -38,6 +47,26 @@ export default function AdminNavigation({ onNavigate }: { onNavigate?: () => voi
       </div>
       <p className="nav-section-label">Gerenciar</p>
       <nav className="admin-nav" aria-label="Navegação principal">
+        {(!api || can(account?.restaurant.role, "reports:read")) && (
+          <NavLink
+            to={`/admin/analytics${query}`}
+            onClick={onNavigate}
+            className={({ isActive }) => (isActive ? "is-active" : "")}
+          >
+            <BarChart3 size={20} aria-hidden="true" />
+            <span>Dashboard</span>
+          </NavLink>
+        )}
+        {(!account || can(account.restaurant.role, "catalog:write")) && (
+          <NavLink
+            to={`/admin/hours${query}`}
+            onClick={onNavigate}
+            className={({ isActive }) => (isActive ? "is-active" : "")}
+          >
+            <CalendarClock size={20} aria-hidden="true" />
+            <span>Horários da loja</span>
+          </NavLink>
+        )}
         {api && can(account?.restaurant.role, "printing:configure") && (
           <NavLink
             to={`/admin/printing${query}`}

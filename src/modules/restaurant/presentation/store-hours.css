@@ -1,0 +1,323 @@
+.store-hours-page,
+.hours-form {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+.hours-status-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.4rem;
+  border: 1px solid #d7e7ce;
+  border-radius: 1.1rem;
+  background: linear-gradient(125deg, #edf7e7, #fff);
+}
+.hours-status-card > svg {
+  color: var(--brand);
+}
+.hours-status-card > div {
+  flex: 1;
+}
+.hours-status-card strong {
+  font-size: 1.1rem;
+}
+.hours-status-card p,
+.hours-status-card small {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.hours-settings-card,
+.hours-calendar {
+  min-width: 0;
+  margin: 0;
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  background: white;
+}
+.hours-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.hours-section-heading h2 {
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.hours-section-heading p,
+.hours-help {
+  font-size: 0.83rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.hours-section-heading p {
+  margin-top: 0.4rem;
+}
+.hours-timezone {
+  max-width: 26rem;
+  margin-bottom: 2rem;
+}
+.hours-timezone small {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.hours-weekly {
+  display: grid;
+  gap: 0;
+}
+.hours-day-row {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 1.5rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--line);
+}
+.hours-day-row > strong {
+  font-size: 0.9rem;
+  padding-top: 0.65rem;
+}
+.hours-intervals {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.hours-interval {
+  display: grid;
+  grid-template-columns: minmax(0, 9rem) auto minmax(0, 9rem) 44px;
+  gap: 0.65rem;
+  align-items: end;
+}
+.hours-interval input {
+  min-width: 0;
+  width: 100%;
+  padding: 0.6rem 0.65rem;
+}
+.hours-interval .field > span {
+  font-size: 0.75rem;
+}
+.hours-interval__separator {
+  font-size: 0.75rem;
+  padding-bottom: 0.85rem;
+  color: var(--muted);
+}
+.hours-overnight {
+  grid-column: 1/-1;
+  color: var(--brand);
+  font-size: 0.75rem;
+}
+.hours-intervals__actions {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+.hours-intervals__actions button {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  font-size: 0.78rem;
+}
+.hours-closed-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.hours-all-day {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--brand);
+  font-size: 0.85rem;
+}
+.hours-copy-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0 1.25rem;
+}
+.hours-copy-actions p {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.hours-copy-actions button {
+  font-size: 0.8rem;
+}
+.calendar-controls {
+  display: flex;
+  align-items: end;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.calendar-controls .field {
+  min-width: 0;
+}
+.calendar-controls input {
+  min-width: 0;
+  max-width: 12rem;
+}
+.calendar-month-title {
+  text-transform: capitalize;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.hours-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.calendar-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem;
+}
+.calendar-day {
+  min-width: 0;
+  min-height: 6rem;
+  display: flex;
+  align-items: start;
+  flex-direction: column;
+  gap: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.75rem;
+  background: #fafcf8;
+  text-align: left;
+}
+.calendar-day strong {
+  font-size: 0.95rem;
+}
+.calendar-day span,
+.calendar-day small {
+  font-size: 0.68rem;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.calendar-day small {
+  color: var(--muted);
+}
+.calendar-day span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.calendar-day.is-exception {
+  border-color: #d3ad65;
+  background: linear-gradient(140deg, #fff7e6, #fffdf8);
+}
+.calendar-day .calendar-day__compact,
+.calendar-mobile-legend {
+  display: none;
+}
+.calendar-day.is-today strong {
+  background: var(--forest);
+  color: white;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.35rem;
+}
+.calendar-day:hover {
+  border-color: var(--brand);
+}
+.hours-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+}
+.hours-save-bar p {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+@media (max-width: 700px) {
+  .hours-status-card {
+    flex-wrap: wrap;
+  }
+  .hours-status-card > button {
+    width: 100%;
+  }
+  .hours-settings-card,
+  .hours-calendar {
+    padding: 1rem;
+  }
+  .hours-day-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+  .hours-day-row > strong {
+    padding: 0;
+  }
+  .hours-section-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+  .calendar-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .calendar-controls .field {
+    flex: 1;
+  }
+  .calendar-controls input {
+    width: 100%;
+    max-width: none;
+  }
+  .hours-calendar-grid {
+    gap: 0.2rem;
+  }
+  .calendar-day {
+    padding: 0.4rem 0.2rem;
+    min-height: 5rem;
+    border-radius: 0.35rem;
+  }
+  .calendar-day span,
+  .calendar-day small {
+    font-size: 0.65rem;
+  }
+  .calendar-day small {
+    display: none;
+  }
+  .calendar-day .calendar-day__label {
+    display: none;
+  }
+  .calendar-day .calendar-day__compact,
+  .calendar-mobile-legend {
+    display: inline;
+  }
+  .calendar-weekday {
+    font-size: 0.65rem;
+  }
+  .hours-interval {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px;
+    gap: 0.4rem;
+  }
+  .hours-interval__separator {
+    display: none;
+  }
+  .hours-interval input {
+    padding: 0.6rem 0.3rem;
+    font-size: 0.85rem;
+  }
+  .hours-interval .icon-button {
+    width: 36px;
+    min-width: 36px;
+  }
+  .hours-save-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .hours-copy-actions > button {
+    width: 100%;
+  }
+}
