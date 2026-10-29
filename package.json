@@ -23,6 +23,8 @@
     "railway:check": "npm --prefix .railway run check",
     "railway:plan": "node scripts/railway-cli.mjs config plan",
     "test:railway:images": "node scripts/test-railway-images.mjs",
+    "render:check": "npm --prefix .render run check",
+    "test:render:images": "node .render/test-images.mjs",
     "test:docker:security": "node scripts/test-docker-security.mjs",
     "format:check": "prettier --check .",
     "postinstall": "pnpm --filter @cardapio/domain build && pnpm --filter @cardapio/contracts build && pnpm --filter @cardapio/api db:generate",
@@ -50,6 +52,7 @@
     "benchmark:fixture": "pnpm --filter @cardapio/api exec node scripts/benchmark-fixture.mjs",
     "benchmark:up": "docker compose --env-file backend/.env -f compose.yaml -f compose.benchmark.yaml --profile app up -d --wait",
     "benchmark": "node scripts/benchmark.mjs",
+    "benchmark:cpu": "node scripts/benchmark-cpu.mjs",
     "benchmark:restore": "docker compose --env-file backend/.env -f compose.yaml --profile app up -d --wait",
     "test:docker:resilience": "node scripts/test-docker-resilience.mjs"
   },

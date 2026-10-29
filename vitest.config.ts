@@ -8,7 +8,8 @@ export default defineConfig({
     environment: "jsdom",
     include: ["tests/**/*.test.{ts,tsx}"],
     setupFiles: ["./tests/setup.ts"],
-
+    // Bound jsdom memory/CPU instead of competing with Docker on every host core.
+    maxWorkers: 2,
     clearMocks: true,
     restoreMocks: true,
   },

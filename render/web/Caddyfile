@@ -1,0 +1,74 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+	log default {
+		format filter {
+			wrap json
+			fields {
+				request delete
+				resp_headers delete
+			}
+		}
+	}
+}
+
+# Render terminates HTTPS before forwarding HTTP on PORT. This is the only
+# public service. Cloudflare sets CF-Connecting-IP at Render's public edge.
+:{$PORT:10000} {
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Strict-Transport-Security "max-age=31536000"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+		-Server
+	}
+
+	# Missing/invalid edge metadata falls back to the peer, never browser XFF.
+	# Map outputs use regex captures: nested placeholders remain literal in Caddy.
+	map "{http.request.header.CF-Connecting-IP}/{http.request.remote.host}" {edge_client_ip} {
+		~^([0-9a-fA-F:.]+)/[0-9a-fA-F:.]+$ "${1}"
+		~^.*/([0-9a-fA-F:.]+)$ "${1}"
+		default 127.0.0.1
+	}
+
+	handle /healthz {
+		header Cache-Control "no-store"
+		respond "ok" 200
+	}
+
+	handle /api/* {
+		reverse_proxy {$API_HOST}:{$API_PORT} {$API_REPLICA_HOST}:{$API_PORT} {
+			flush_interval -1
+			lb_policy least_conn
+			health_uri /api/v1/health/ready
+			health_interval 5s
+			health_timeout 5s
+			health_fails 2
+			fail_duration 5s
+			max_fails 1
+			header_up X-Forwarded-For {edge_client_ip}
+			header_up X-Forwarded-Proto https
+			header_up -X-Real-IP
+			header_up -Forwarded
+			lb_try_duration 3s
+			lb_try_interval 250ms
+			transport http {
+				dial_timeout 2s
+				response_header_timeout 20s
+				keepalive 4s
+			}
+		}
+	}
+
+	handle {
+		@worker path /notifications-sw.js /manifest.webmanifest
+		header @worker Cache-Control "no-cache"
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

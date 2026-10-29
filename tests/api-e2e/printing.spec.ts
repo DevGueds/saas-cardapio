@@ -42,10 +42,30 @@ test("impressão configura Bluetooth, editor, logo e gera PDF/ESC-POS com recebi
       "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'"
     document.head.append(meta)
   })
-  await page.getByLabel("Modelo para adicionar").selectOption("generic-58")
-  await page.getByRole("button", { name: "Adicionar perfil", exact: true }).click()
-  await page.getByLabel("Nome do perfil", { exact: true }).fill("Minha Bluetooth")
-  await page.getByRole("button", { name: "Editar layout e logo", exact: true }).click()
+  await expect(
+    page.locator(".printing-page input:visible, .printing-page select:visible"),
+  ).toHaveCount(0)
+  const printers = page.getByRole("tab", { name: "Impressoras", exact: true })
+  await printers.focus()
+  await page.keyboard.press("ArrowRight")
+  await expect(page.getByRole("tab", { name: "Comprovantes", exact: true })).toBeFocused()
+  await page.keyboard.press("ArrowLeft")
+  await expect(printers).toBeFocused()
+  const add = page.getByRole("button", { name: "Adicionar impressora", exact: true })
+  await add.click()
+  await page.getByLabel("Nome da impressora", { exact: true }).fill("Rascunho cancelado")
+  await page.keyboard.press("Escape")
+  await expect(add).toBeFocused()
+  await expect(page.getByText("Rascunho cancelado", { exact: true })).toHaveCount(0)
+  await add.click()
+  await page.getByLabel("Modelo e papel").selectOption("generic-58")
+  await page.getByLabel("Nome da impressora", { exact: true }).fill("Minha Bluetooth")
+  await page
+    .getByRole("dialog", { name: "Adicionar impressora", exact: true })
+    .getByRole("button", { name: "Adicionar", exact: true })
+    .click()
+  await page.getByRole("tab", { name: "Comprovantes", exact: true }).click()
+  await page.getByRole("button", { name: /^Layout e logo/ }).click()
   await expect(
     page.getByRole("button", { name: "Adicionar bloco", exact: true }),
   ).toBeEnabled()
@@ -66,22 +86,26 @@ test("impressão configura Bluetooth, editor, logo e gera PDF/ESC-POS com recebi
     buffer: PNG.sync.write(logo),
   })
   await expect(page.getByAltText("Logo usado nos comprovantes")).toBeVisible()
-  const save = page.getByRole("button", { name: "Salvar configurações", exact: true })
+  const save = page.getByRole("button", { name: "Salvar alterações", exact: true })
   await expect(save).toBeEnabled()
   await text.fill("<img src=x onerror=alert(1)>")
   await expect(save).toBeDisabled()
-  await page.getByLabel("Documento para editar e testar").selectOption("KITCHEN")
+  await page.getByRole("button", { name: /^Cozinha/ }).click()
   await expect(
     page.getByRole("button", { name: "Adicionar bloco", exact: true }),
   ).toBeEnabled()
   await expect(save).toBeDisabled()
-  await page.getByLabel("Documento para editar e testar").selectOption("ORDER")
+  await page.getByRole("tab", { name: "Impressoras", exact: true }).click()
+  await expect(save).toBeDisabled()
+  await page.getByRole("tab", { name: "Comprovantes", exact: true }).click()
+  await page.getByRole("button", { name: /^Pedido/ }).click()
   await expect(text).toHaveValue("<img src=x onerror=alert(1)>")
   await text.fill("Obrigado & volte sempre!")
   await expect(save).toBeEnabled()
   await page
-    .getByRole("button", { name: "Testar layout no perfil em edição", exact: true })
-    .click()
+    .getByLabel("Impressora padrão")
+    .selectOption({ label: "Minha Bluetooth · 58 mm" })
+  await page.getByRole("button", { name: "Testar impressão", exact: true }).click()
   const preview = page.getByRole("dialog", {
     name: "Teste de impressão — dados fictícios",
     exact: true,
@@ -100,7 +124,7 @@ test("impressão configura Bluetooth, editor, logo e gera PDF/ESC-POS com recebi
   expect((await readFile(".cache/printing-58.pdf")).subarray(0, 5).toString()).toBe(
     "%PDF-",
   )
-  await preview.getByText("Arquivo térmico ESC/POS (avançado)", { exact: true }).click()
+  await preview.getByText("Opções avançadas de impressão", { exact: true }).click()
   await preview
     .getByRole("button", { name: "Gerar arquivo ESC/POS", exact: true })
     .click()
@@ -117,21 +141,34 @@ test("impressão configura Bluetooth, editor, logo e gera PDF/ESC-POS com recebi
   expect(bytes.subarray(0, 2)).toEqual(Buffer.from([0x1b, 0x40]))
   await preview.getByRole("button", { name: "Fechar", exact: true }).click()
   await save.click()
+  const saved = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      response.url().endsWith(`/restaurants/${store.id}/printing/settings`),
+  )
   await page
     .getByRole("dialog", { name: "Salvar configuração da loja?" })
     .getByRole("button", { name: "Confirmar", exact: true })
     .click()
+  const savedResponse = await saved
+  const savedResult = await savedResponse.json()
+  expect(savedResponse.status(), savedResult.error?.code).toBe(200)
   await expect(
     page.getByText("Configurações de impressão salvas para a loja."),
   ).toBeVisible()
   await page.reload()
-  await page
-    .getByLabel("Perfil em edição")
-    .selectOption({ label: "Minha Bluetooth · 58 mm" })
-  await expect(page.getByLabel("Nome do perfil", { exact: true })).toHaveValue(
+  await page.getByRole("button", { name: "Ajustar Minha Bluetooth", exact: true }).click()
+  await expect(page.getByLabel("Nome da impressora", { exact: true })).toHaveValue(
     "Minha Bluetooth",
   )
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click()
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = "auto"
+    window.scrollTo(0, 0)
+  })
+  await page.screenshot({ path: ".cache/printing-settings-desktop.png", fullPage: true })
   await page.setViewportSize({ width: 320, height: 740 })
+  await page.evaluate(() => window.scrollTo(0, 0))
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
   ).toBe(true)
@@ -191,4 +228,96 @@ test("impressão configura Bluetooth, editor, logo e gera PDF/ESC-POS com recebi
     paymentDialog.getByRole("button", { name: "Baixar PDF", exact: true }),
   ).toHaveCount(0)
   expect(errors).toEqual([])
+})
+
+test("impressão simplifica ajustes no celular, preserva cancelamento e substitui os padrões ao remover", async ({
+  page,
+  baseURL,
+}) => {
+  const slug = `ux-impressao-${randomUUID().slice(0, 8)}`
+  const registered = await (
+    await page.request.post("/api/v1/auth/register", {
+      headers: { origin: baseURL! },
+      data: {
+        name: "Gestora UX",
+        email: `${slug}@browser.example.test`,
+        password: "test-passphrase-123",
+        restaurantName: "Loja UX",
+        slug,
+      },
+    })
+  ).json()
+  expect(registered.ok).toBe(true)
+  const records = JSON.parse(
+    await readFile(".cache/printing-browser-users.json", "utf8").catch(() => "[]"),
+  ) as string[]
+  await writeFile(
+    ".cache/printing-browser-users.json",
+    JSON.stringify([...new Set([...records, registered.value.user.id])]),
+  )
+  const stores = await (await page.request.get("/api/v1/me/restaurants")).json(),
+    store = stores.value[0]
+  await page.setViewportSize({ width: 320, height: 740 })
+  await page.goto(`/admin/printing?restaurant=${store.id}`)
+  await expect(
+    page.getByRole("button", { name: "Adicionar impressora", exact: true }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Ajustar Térmica 80 mm", exact: true }).click()
+  const adjust = page.getByRole("dialog", { name: "Ajustar impressora", exact: true })
+  await expect(adjust.getByLabel("Largura útil (mm)", { exact: true })).toBeHidden()
+  await adjust
+    .getByLabel("Nome da impressora", { exact: true })
+    .fill("Rascunho que será cancelado")
+  await adjust.getByRole("button", { name: "Cancelar", exact: true }).click()
+  await expect(
+    page.getByRole("button", { name: "Ajustar Térmica 80 mm", exact: true }),
+  ).toBeFocused()
+  await expect(
+    page.getByRole("button", { name: "Salvar alterações", exact: true }),
+  ).toHaveCount(0)
+  await page.getByRole("button", { name: "Ajustar Térmica 80 mm", exact: true }).click()
+  await adjust.getByText("Ajustes avançados", { exact: true }).click()
+  await adjust.getByLabel("Largura útil (mm)", { exact: true }).fill("209")
+  await expect(
+    adjust.getByRole("button", { name: "Aplicar ajustes", exact: true }),
+  ).toBeDisabled()
+  await expect(adjust.getByRole("alert")).toContainText("devem caber no papel")
+  expect(
+    await adjust.evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth),
+  ).toBe(true)
+  await adjust.getByLabel("Largura útil (mm)", { exact: true }).fill("72")
+  await adjust.getByRole("button", { name: "Remover impressora", exact: true }).click()
+  const remove = page.getByRole("dialog", { name: "Remover impressora?", exact: true })
+  await remove.getByLabel("Usar no lugar").selectOption("office-a4")
+  await remove.getByRole("button", { name: "Remover", exact: true }).click()
+  await page.getByRole("tab", { name: "Comprovantes", exact: true }).click()
+  for (const name of ["Pedido", "Cozinha", "Entrega", "Recebimento"]) {
+    await page.getByRole("button", { name, exact: true }).click()
+    await expect(page.getByLabel("Impressora padrão")).toHaveValue("office-a4")
+  }
+  await page.getByRole("button", { name: "Salvar alterações", exact: true }).click()
+  await page
+    .getByRole("dialog", { name: "Salvar configuração da loja?", exact: true })
+    .getByRole("button", { name: "Confirmar", exact: true })
+    .click()
+  await expect(
+    page.getByText("Configurações de impressão salvas para a loja."),
+  ).toBeVisible()
+  await page.reload()
+  await expect(
+    page.getByRole("button", { name: "Ajustar Térmica 80 mm", exact: true }),
+  ).toHaveCount(0)
+  await page.getByRole("tab", { name: "Comprovantes", exact: true }).click()
+  for (const name of ["Pedido", "Cozinha", "Entrega", "Recebimento"]) {
+    await page.getByRole("button", { name, exact: true }).click()
+    await expect(page.getByLabel("Impressora padrão")).toHaveValue("office-a4")
+  }
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+  ).toBe(true)
+  await page.evaluate(() => {
+    document.documentElement.style.scrollBehavior = "auto"
+    window.scrollTo(0, 0)
+  })
+  await page.screenshot({ path: ".cache/printing-receipts-mobile.png", fullPage: true })
 })

@@ -1,4 +1,22 @@
-import { lazy, Suspense, useCallback, useMemo, useState } from "react"
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useId,
+  useMemo,
+  useState,
+  type KeyboardEvent,
+} from "react"
+import {
+  Check,
+  ChevronRight,
+  CircleHelp,
+  FileText,
+  Plus,
+  Printer,
+  RefreshCw,
+  SlidersHorizontal,
+} from "lucide-react"
 import { can } from "@cardapio/domain/permissions"
 import { receiptKinds } from "@cardapio/domain/printing"
 import {
@@ -19,16 +37,17 @@ import PageHeading from "../../../shared/presentation/PageHeading"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import Dialog from "../../../shared/presentation/Dialog"
 import FeatureBoundary from "../../../shared/presentation/FeatureBoundary"
-import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
 import { SelectField } from "../../../shared/presentation/Fields"
-import { presetProfile, printerModels } from "../domain/printer-models"
-import PrinterProfileForm from "./PrinterProfileForm"
+import { presetProfile } from "../domain/printer-models"
+import PrinterProfileDialog from "./PrinterProfileDialog"
+import PrintingHelpDialog from "./PrintingHelpDialog"
 import ReceiptPreview from "./ReceiptPreview"
-import { receiptLabels } from "./receipt-labels"
+import { receiptLabels, receiptShortLabels } from "./receipt-labels"
 import { receiptTestDocument } from "./receipt-test-document"
 import "./printing.css"
 
 const ReceiptLayoutEditor = lazy(() => import("./ReceiptLayoutEditor"))
+type Tab = "printers" | "receipts"
 
 export default function PrintingSettingsPage() {
   const { printing } = useServices(),
@@ -36,6 +55,7 @@ export default function PrintingSettingsPage() {
     { menu } = useMenu()
   const restaurantId = menu.restaurant.id
   const [reset, setReset] = useState(0)
+  const [help, setHelp] = useState(false)
   const allowed = can(account?.restaurant.role, "printing:configure")
   const load = useCallback(async () => {
     if (!printing || !allowed)
@@ -46,15 +66,14 @@ export default function PrintingSettingsPage() {
   return (
     <section className="printing-page">
       <PageHeading
-        eyebrow="Documentos da operação"
+        eyebrow="Sua loja"
         title="Impressão e comprovantes"
-        description="Configure papel, modelos e conteúdo. Emita documentos a partir dos pedidos ou do histórico de recebimentos."
-      />
-      <div className="info-notice">
-        <strong>Todos os comprovantes são não fiscais.</strong> A impressão não registra
-        pagamento nem confirma entrega. A indicação não fiscal e a situação registrada
-        permanecem no documento, mesmo após editar o layout.
-      </div>
+        description="Impressoras e modelos de documentos da loja."
+      >
+        <button type="button" className="secondary-button" onClick={() => setHelp(true)}>
+          <CircleHelp size={18} aria-hidden="true" /> Ajuda
+        </button>
+      </PageHeading>
       {resource.error && (
         <ErrorNotice error={resource.error} onRetry={() => void resource.reload()} />
       )}
@@ -71,6 +90,7 @@ export default function PrintingSettingsPage() {
           }}
         />
       )}
+      {help && <PrintingHelpDialog onClose={() => setHelp(false)} />}
     </section>
   )
 }
@@ -87,34 +107,32 @@ function PrintingSettingsForm({
   onReload(): Promise<void>
 }) {
   const { printing, ids } = useServices(),
-    mutation = useMutation()
+    mutation = useMutation(),
+    id = useId()
   const [draft, setDraft] = useState(initial)
   const [saved, setSaved] = useState(() => JSON.stringify(initial))
-  const [profileId, setProfileId] = useState(initial.profiles[0]!.id)
-  const [modelId, setModelId] = useState("generic-58")
+  const [tab, setTab] = useState<Tab>("printers")
+  const [profileEditor, setProfileEditor] = useState<{
+    profile: PrinterProfile
+    creating: boolean
+  } | null>(null)
   const [kind, setKind] = useState<ReceiptKind>("ORDER")
   const [editorOpen, setEditorOpen] = useState(false)
+  const [editorLoaded, setEditorLoaded] = useState(false)
   const [validity, setValidity] = useState<Partial<Record<ReceiptKind, boolean>>>({})
-  const [confirm, setConfirm] = useState<"save" | "reload" | "remove" | null>(null)
+  const [confirm, setConfirm] = useState<"save" | "reload" | null>(null)
+  const [removing, setRemoving] = useState<PrinterProfile | null>(null)
+  const [replacementId, setReplacementId] = useState("")
   const [test, setTest] = useState<ReceiptDocument | null>(null)
   const busy = disabled || mutation.pending
-  const selected =
-    draft.profiles.find((profile) => profile.id === profileId) ?? draft.profiles[0]!
   const validation = useMemo(() => printingSettingsSchema.safeParse(draft), [draft])
+  const serialized = useMemo(() => JSON.stringify(draft), [draft])
   const invalidKinds = receiptKinds.filter((entry) => validity[entry] === false)
   const valid = validation.success && invalidKinds.length === 0
-  const dirty = JSON.stringify(draft) !== saved || invalidKinds.length > 0
-  const used = receiptKinds.filter((entry) => draft.defaults[entry] === selected.id)
-  const updateProfile = useCallback(
-    (profile: PrinterProfile) =>
-      setDraft((current) => ({
-        ...current,
-        profiles: current.profiles.map((entry) =>
-          entry.id === profile.id ? profile : entry,
-        ),
-      })),
-    [],
-  )
+  const dirty = serialized !== saved || invalidKinds.length > 0
+  const defaultProfile = draft.profiles.find(
+    (profile) => profile.id === draft.defaults[kind],
+  )!
   const updateTemplate = useCallback(
     (template: ReceiptTemplate) =>
       setDraft((current) => ({
@@ -134,6 +152,24 @@ function PrintingSettingsForm({
       ),
     [kind],
   )
+  function openEditor() {
+    setEditorOpen(true)
+    setEditorLoaded(true)
+  }
+  function changeTabKey(event: KeyboardEvent<HTMLButtonElement>) {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return
+    event.preventDefault()
+    const next =
+      event.key === "Home"
+        ? "printers"
+        : event.key === "End"
+          ? "receipts"
+          : tab === "printers"
+            ? "receipts"
+            : "printers"
+    setTab(next)
+    document.getElementById(`${id}-${next}-tab`)?.focus()
+  }
   async function save() {
     if (!printing || busy || !valid) return
     const result = await mutation.run(
@@ -146,134 +182,227 @@ function PrintingSettingsForm({
       setConfirm(null)
     }
   }
+  function removeProfile() {
+    if (
+      !removing ||
+      draft.profiles.length < 2 ||
+      !draft.profiles.some((p) => p.id === replacementId && p.id !== removing.id)
+    )
+      return
+    setDraft((current) => ({
+      ...current,
+      profiles: current.profiles.filter((p) => p.id !== removing.id),
+      defaults: Object.fromEntries(
+        receiptKinds.map((entry) => [
+          entry,
+          current.defaults[entry] === removing.id
+            ? replacementId
+            : current.defaults[entry],
+        ]),
+      ) as PrintingSettings["defaults"],
+    }))
+    setRemoving(null)
+  }
   return (
     <>
-      <ValidatedForm
-        className="printing-settings"
-        onSubmit={(event) => {
-          event.preventDefault()
-          if (!busy && valid && dirty) {
-            mutation.clearError()
-            setConfirm("save")
-          }
-        }}
-      >
-        <fieldset disabled={busy} className="printing-fieldset">
-          <div className="settings-card">
-            <h2>1. Escolha a impressora e o papel</h2>
-            <p>
-              Use um perfil pronto como ponto de partida. Você pode salvar até oito perfis
-              e ajustar cada um após uma impressão de teste.
-            </p>
-            <div className="printing-profile-picker">
-              <SelectField
-                label="Modelo para adicionar"
-                value={modelId}
-                onChange={(event) => setModelId(event.target.value)}
-              >
-                {printerModels.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                  </option>
-                ))}
-              </SelectField>
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={draft.profiles.length >= 8}
-                onClick={() => {
-                  const profile = presetProfile(modelId, ids.next())
-                  setDraft((current) => ({
-                    ...current,
-                    profiles: [...current.profiles, profile],
-                  }))
-                  setProfileId(profile.id)
-                }}
-              >
-                Adicionar perfil
-              </button>
-            </div>
-            <SelectField
-              label="Perfil em edição"
-              value={selected.id}
-              onChange={(event) => setProfileId(event.target.value)}
+      <div className="printing-toolbar">
+        <div
+          className="printing-tabs"
+          role="tablist"
+          aria-label="Configurações de impressão"
+        >
+          {(["printers", "receipts"] as const).map((entry) => (
+            <button
+              key={entry}
+              type="button"
+              role="tab"
+              id={`${id}-${entry}-tab`}
+              aria-controls={`${id}-${entry}-panel`}
+              aria-selected={tab === entry}
+              tabIndex={tab === entry ? 0 : -1}
+              onKeyDown={changeTabKey}
+              onClick={() => setTab(entry)}
             >
-              {draft.profiles.map((profile) => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.name} · {profile.paperWidthMm} mm
-                </option>
-              ))}
-            </SelectField>
-            <PrinterProfileForm profile={selected} onChange={updateProfile} />
+              {entry === "printers" ? (
+                <Printer size={18} aria-hidden="true" />
+              ) : (
+                <FileText size={18} aria-hidden="true" />
+              )}
+              {entry === "printers" ? "Impressoras" : "Comprovantes"}
+            </button>
+          ))}
+        </div>
+        <span className="printing-status">
+          <Check size={15} aria-hidden="true" /> Documentos não fiscais
+        </span>
+        {!dirty && (
+          <button
+            type="button"
+            className="text-button printing-refresh"
+            disabled={busy}
+            onClick={() => void onReload()}
+          >
+            <RefreshCw size={16} aria-hidden="true" /> Atualizar
+          </button>
+        )}
+      </div>
+      <section
+        role="tabpanel"
+        id={`${id}-printers-panel`}
+        aria-labelledby={`${id}-printers-tab`}
+        hidden={tab !== "printers"}
+        tabIndex={0}
+      >
+        <div className="printing-section-heading">
+          <div>
+            <h2>Suas impressoras</h2>
+            <span className="field-help">{draft.profiles.length} de 8 configuradas</span>
+          </div>
+          <button
+            type="button"
+            className="primary-button"
+            disabled={busy || draft.profiles.length >= 8}
+            onClick={() =>
+              setProfileEditor({
+                profile: presetProfile("generic-58", ids.next()),
+                creating: true,
+              })
+            }
+          >
+            <Plus size={18} aria-hidden="true" /> Adicionar impressora
+          </button>
+        </div>
+        <ul className="printing-printer-list">
+          {draft.profiles.map((profile) => {
+            const used = receiptKinds.filter(
+              (entry) => draft.defaults[entry] === profile.id,
+            )
+            return (
+              <li className="printing-printer-card" key={profile.id}>
+                <span className="printing-printer-icon">
+                  <Printer size={24} aria-hidden="true" />
+                </span>
+                <div className="printing-printer-info">
+                  <h3>{profile.name}</h3>
+                  <p>
+                    {profile.paperWidthMm === 210
+                      ? "Papel A4"
+                      : `Bobina ${profile.paperWidthMm} mm`}{" "}
+                    <span aria-hidden="true">·</span> {profile.copies}{" "}
+                    {profile.copies === 1 ? "via" : "vias"}
+                  </p>
+                  <div className="printing-usage">
+                    {used.length ? (
+                      used.map((entry) => (
+                        <span key={entry}>{receiptShortLabels[entry]}</span>
+                      ))
+                    ) : (
+                      <span>Sem uso padrão</span>
+                    )}
+                  </div>
+                </div>
+                <div className="printing-printer-actions">
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    disabled={busy || !valid}
+                    onClick={() =>
+                      setTest(receiptTestDocument(draft, "ORDER", profile.id))
+                    }
+                  >
+                    Testar impressão
+                  </button>
+                  <button
+                    type="button"
+                    className="text-button"
+                    disabled={busy}
+                    aria-label={`Ajustar ${profile.name}`}
+                    onClick={() => setProfileEditor({ profile, creating: false })}
+                  >
+                    <SlidersHorizontal size={16} aria-hidden="true" /> Ajustar
+                  </button>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+      <section
+        role="tabpanel"
+        id={`${id}-receipts-panel`}
+        aria-labelledby={`${id}-receipts-tab`}
+        hidden={tab !== "receipts"}
+        tabIndex={0}
+      >
+        <h2 className="printing-panel-title">Modelos de comprovante</h2>
+        <div className="printing-document-picker" aria-label="Tipo de comprovante">
+          {receiptKinds.map((entry) => (
             <button
               type="button"
-              className="text-button"
-              disabled={draft.profiles.length === 1 || used.length > 0}
-              onClick={() => setConfirm("remove")}
+              key={entry}
+              aria-pressed={kind === entry}
+              disabled={busy}
+              onClick={() => setKind(entry)}
             >
-              Remover este perfil
+              <FileText size={20} aria-hidden="true" />
+              <span>{receiptShortLabels[entry]}</span>
+              {validity[entry] === false && (
+                <span className="printing-review-badge">Revisar</span>
+              )}
             </button>
-            {used.length > 0 && (
-              <p className="field-help">
-                Para remover, escolha outro perfil padrão em:{" "}
-                {used.map((entry) => receiptLabels[entry]).join(", ")}.
-              </p>
-            )}
-          </div>
-          <div className="settings-card">
-            <h2>2. Defina o perfil de cada documento</h2>
-            <div className="printing-field-grid">
-              {receiptKinds.map((entry) => (
-                <SelectField
-                  key={entry}
-                  label={receiptLabels[entry]}
-                  value={draft.defaults[entry]}
-                  onChange={(event) =>
-                    setDraft((current) => ({
-                      ...current,
-                      defaults: { ...current.defaults, [entry]: event.target.value },
-                    }))
-                  }
-                >
-                  {draft.profiles.map((profile) => (
-                    <option key={profile.id} value={profile.id}>
-                      {profile.name}
-                    </option>
-                  ))}
-                </SelectField>
-              ))}
-            </div>
-            <p className="field-help">
-              A equipe poderá escolher outro perfil ao emitir. Na cozinha, o documento
-              contém apenas as informações necessárias para o preparo.
-            </p>
-          </div>
-          <div className="settings-card">
-            <h2>3. Personalize o comprovante</h2>
-            <SelectField
-              label="Documento para editar e testar"
-              value={kind}
-              onChange={(event) => setKind(event.target.value as ReceiptKind)}
+          ))}
+        </div>
+        <div className="settings-card printing-document-settings">
+          <div className="printing-section-heading">
+            <h3>{receiptLabels[kind]}</h3>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={busy || !valid}
+              onClick={() => setTest(receiptTestDocument(draft, kind, defaultProfile.id))}
             >
-              {receiptKinds.map((entry) => (
-                <option key={entry} value={entry}>
-                  {receiptLabels[entry]}
-                  {validity[entry] === false ? " — revisar editor" : ""}
-                </option>
-              ))}
-            </SelectField>
-            {!editorOpen ? (
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => {
-                  setValidity((current) => ({ ...current, [kind]: false }))
-                  setEditorOpen(true)
-                }}
-              >
-                Editar layout e logo
-              </button>
-            ) : (
+              <Printer size={17} aria-hidden="true" /> Testar impressão
+            </button>
+          </div>
+          <SelectField
+            label="Impressora padrão"
+            disabled={busy}
+            value={draft.defaults[kind]}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                defaults: { ...current.defaults, [kind]: event.target.value },
+              }))
+            }
+          >
+            {draft.profiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name} · {profile.paperWidthMm} mm
+              </option>
+            ))}
+          </SelectField>
+          <button
+            type="button"
+            className="printing-edit-layout"
+            aria-expanded={editorOpen}
+            aria-controls={`${id}-layout`}
+            disabled={busy}
+            onClick={() => (editorOpen ? setEditorOpen(false) : openEditor())}
+          >
+            <span>
+              <strong>Layout e logo</strong>
+              <small>
+                {draft.templates[kind].blocks.length} blocos ·{" "}
+                {draft.logo ? "Com logo" : "Sem logo"}
+              </small>
+            </span>
+            <span>
+              {editorOpen ? "Recolher" : "Personalizar"}
+              <ChevronRight size={18} aria-hidden="true" />
+            </span>
+          </button>
+          <div id={`${id}-layout`} hidden={!editorOpen}>
+            {editorLoaded && (
               <FeatureBoundary label="Editor de comprovantes">
                 <Suspense fallback={<p role="status">Abrindo editor…</p>}>
                   <ReceiptLayoutEditor
@@ -288,96 +417,129 @@ function PrintingSettingsForm({
                 </Suspense>
               </FeatureBoundary>
             )}
-            <p className="field-help">
-              Logo e textos são salvos apenas após confirmar as alterações. Dados dos
-              pedidos entram automaticamente; não digite nomes de clientes ou valores
-              fixos no layout.
-            </p>
-            {invalidKinds.length > 0 && (
-              <p className="field-help" role="status">
-                Aguarde ou revise o editor de:{" "}
-                {invalidKinds.map((entry) => receiptLabels[entry]).join(", ")}.
-              </p>
-            )}
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={!valid}
-              onClick={() => setTest(receiptTestDocument(draft, kind, selected.id))}
-            >
-              Testar layout no perfil em edição
-            </button>
           </div>
-        </fieldset>
-        {mutation.error && <ErrorNotice error={mutation.error} />}
-        {!validation.success && (
-          <p className="field-error" role="alert">
-            Revise as configurações antes de salvar: {validation.error.issues[0]?.message}
-          </p>
-        )}
-        <div className="printing-save-bar">
-          <span role="status">
-            {dirty ? "Alterações ainda não salvas" : "Configurações salvas"}
+        </div>
+      </section>
+      {mutation.error && <ErrorNotice error={mutation.error} />}
+      {!validation.success && (
+        <p className="field-error" role="alert">
+          Revise as configurações antes de salvar: {validation.error.issues[0]?.message}
+        </p>
+      )}
+      {invalidKinds.length > 0 && (tab !== "receipts" || !editorOpen) && (
+        <div className="printing-invalid" role="status">
+          <span>
+            Há ajustes pendentes em{" "}
+            {invalidKinds.map((entry) => receiptShortLabels[entry]).join(", ")}.
           </span>
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => {
+              setTab("receipts")
+              setKind(invalidKinds[0]!)
+              openEditor()
+            }}
+          >
+            Revisar comprovante
+          </button>
+        </div>
+      )}
+      {dirty && (
+        <div className="printing-save-bar">
+          <span role="status">Alterações não salvas</span>
           <button
             type="button"
             className="secondary-button"
             disabled={busy}
             onClick={() => setConfirm("reload")}
           >
-            Recarregar configurações
+            Descartar
           </button>
-          <button className="primary-button" disabled={busy || !valid || !dirty}>
-            {mutation.pending ? "Salvando…" : "Salvar configurações"}
+          <button
+            type="button"
+            className="primary-button"
+            disabled={busy || !valid}
+            onClick={() => {
+              mutation.clearError()
+              setConfirm("save")
+            }}
+          >
+            {mutation.pending ? "Salvando…" : "Salvar alterações"}
           </button>
         </div>
-      </ValidatedForm>
-      <div className="settings-card">
-        <h2>Conectar sua impressora Bluetooth</h2>
-        <ol>
-          <li>
-            Pareie a impressora nas configurações do dispositivo e instale o driver ou
-            serviço de impressão compatível com o modelo.
-          </li>
-          <li>
-            Se não souber o modelo, comece pelo perfil térmico de 58 ou 80 mm, conforme a
-            bobina.
-          </li>
-          <li>
-            Abra o teste e escolha “Imprimir pelo sistema”. Se a impressora não aparecer,
-            baixe o PDF e abra no aplicativo recomendado pelo fabricante.
-          </li>
-        </ol>
-        <p className="field-help">
-          No Android, é necessário um serviço de impressão compatível. No iPhone/iPad, a
-          impressão do sistema depende de AirPrint ou do aplicativo do fabricante; uma
-          impressora Bluetooth genérica pode não ser compatível. O navegador não detecta
-          automaticamente a fila, o modelo ou o papel.
-        </p>
-        <p className="field-help">
-          Os perfis incluem Epson, Elgin, Bematech e Xprinter. São configurações iniciais
-          baseadas nas referências indicadas, sem homologação física ou garantia de
-          compatibilidade entre variantes.
-        </p>
-      </div>
+      )}
+      {profileEditor && (
+        <PrinterProfileDialog
+          key={profileEditor.profile.id}
+          initial={profileEditor.profile}
+          creating={profileEditor.creating}
+          canRemove={draft.profiles.length > 1}
+          onClose={() => setProfileEditor(null)}
+          onApply={(profile) => {
+            setDraft((current) => ({
+              ...current,
+              profiles: profileEditor.creating
+                ? [...current.profiles, profile]
+                : current.profiles.map((entry) =>
+                    entry.id === profile.id ? profile : entry,
+                  ),
+            }))
+            setProfileEditor(null)
+          }}
+          onRemove={() => {
+            setReplacementId(
+              draft.profiles.find((p) => p.id !== profileEditor.profile.id)!.id,
+            )
+            setRemoving(profileEditor.profile)
+            setProfileEditor(null)
+          }}
+        />
+      )}
+      {removing && (
+        <Dialog title="Remover impressora?" onClose={() => setRemoving(null)}>
+          <p>Remover “{removing.name}” das configurações da loja.</p>
+          {receiptKinds.some((entry) => draft.defaults[entry] === removing.id) && (
+            <SelectField
+              label="Usar no lugar"
+              value={replacementId}
+              onChange={(event) => setReplacementId(event.target.value)}
+            >
+              {draft.profiles
+                .filter((p) => p.id !== removing.id)
+                .map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
+                  </option>
+                ))}
+            </SelectField>
+          )}
+          <div className="form-actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setRemoving(null)}
+            >
+              Cancelar
+            </button>
+            <button type="button" className="primary-button" onClick={removeProfile}>
+              Remover
+            </button>
+          </div>
+        </Dialog>
+      )}
       {confirm && (
         <Dialog
           title={
-            confirm === "save"
-              ? "Salvar configuração da loja?"
-              : confirm === "remove"
-                ? "Remover perfil?"
-                : "Recarregar configurações?"
+            confirm === "save" ? "Salvar configuração da loja?" : "Descartar alterações?"
           }
           busy={mutation.pending}
           onClose={() => setConfirm(null)}
         >
           <p>
             {confirm === "save"
-              ? "Os próximos documentos de toda a equipe usarão estes padrões. Arquivos já baixados permanecem como foram gerados."
-              : confirm === "remove"
-                ? `O perfil “${selected.name}” sairá do rascunho. Confirme depois em Salvar configurações para aplicar à loja.`
-                : "O rascunho local será descartado e as configurações mais recentes da loja serão carregadas."}
+              ? "Os próximos documentos de toda a equipe usarão estes padrões. Arquivos já baixados permanecem iguais."
+              : "Os ajustes não salvos serão descartados. As configurações da loja serão recarregadas."}
           </p>
           {mutation.error && <ErrorNotice error={mutation.error} />}
           <div className="form-actions">
@@ -395,22 +557,17 @@ function PrintingSettingsForm({
               disabled={busy || (confirm === "save" && !valid)}
               onClick={() => {
                 if (confirm === "save") void save()
-                else if (confirm === "remove") {
-                  if (!used.length && draft.profiles.length > 1) {
-                    const profiles = draft.profiles.filter(
-                      (profile) => profile.id !== selected.id,
-                    )
-                    setDraft((current) => ({ ...current, profiles }))
-                    setProfileId(profiles[0]!.id)
-                  }
-                  setConfirm(null)
-                } else {
+                else {
                   setConfirm(null)
                   void onReload()
                 }
               }}
             >
-              {mutation.pending ? "Salvando…" : "Confirmar"}
+              {mutation.pending
+                ? "Salvando…"
+                : confirm === "save"
+                  ? "Confirmar"
+                  : "Descartar alterações"}
             </button>
           </div>
         </Dialog>
@@ -421,10 +578,10 @@ function PrintingSettingsForm({
           className="receipt-dialog"
           onClose={() => setTest(null)}
         >
-          <p className="info-notice">
-            Teste do rascunho no perfil {test.profile.name}. Nenhum pedido ou recebimento
-            será criado.
-          </p>
+          <div className="printing-test-heading">
+            <span className="printing-status">Dados fictícios</span>
+            <span>{test.profile.name}</span>
+          </div>
           <ReceiptPreview document={test} />
         </Dialog>
       )}

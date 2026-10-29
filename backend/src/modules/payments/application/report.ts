@@ -12,6 +12,30 @@ export function buildReport(
   payments: PaymentView[],
   generatedAt: string,
 ): FinancialReport {
+  return {
+    range,
+    generatedAt,
+    orders,
+    payments,
+    ...summarizeReport(range, orders, payments),
+  }
+}
+
+export type ReportOrderMetrics = Pick<
+  ReportOrder,
+  "createdAt" | "status" | "subtotal" | "discount" | "deliveryFee" | "total" | "paid"
+>
+export type ReportPaymentMetrics = Pick<
+  PaymentView,
+  "amount" | "method" | "createdAt" | "reversedAt"
+>
+export type ReportMetrics = Pick<FinancialReport, "summary" | "methods" | "daily">
+
+export function summarizeReport(
+  range: ReportRange,
+  orders: readonly ReportOrderMetrics[],
+  payments: readonly ReportPaymentMetrics[],
+): ReportMetrics {
   const sales = orders.filter((o) => o.status !== "CANCELLED")
   const movements = payments.map((p) => ({
     method: p.method,
@@ -30,10 +54,6 @@ export function buildReport(
     days.set(day, bucket)
   }
   return {
-    range,
-    generatedAt,
-    orders,
-    payments,
     summary: {
       orders: orders.length,
       cancelled: orders.length - sales.length,

@@ -1,8 +1,7 @@
 import { memo } from "react"
-import type { PrinterProfile } from "@cardapio/contracts"
-import { printerProfileSchema } from "@cardapio/contracts"
+import { printerProfileSchema, type PrinterProfile } from "@cardapio/contracts"
 import { InputField, SelectField } from "../../../shared/presentation/Fields"
-import { printerModels } from "../domain/printer-models"
+import { presetProfile, printerModels } from "../domain/printer-models"
 
 function PrinterProfileForm({
   profile,
@@ -44,33 +43,49 @@ function PrinterProfileForm({
   const validation = printerProfileSchema.safeParse(profile)
   return (
     <div className="printer-profile-form">
+      <SelectField
+        label="Modelo e papel"
+        value={profile.modelId}
+        onChange={(event) => {
+          const name = profile.name === model?.name ? undefined : profile.name
+          onChange(presetProfile(event.target.value, profile.id, name))
+        }}
+      >
+        <optgroup label="Mais usados">
+          {printerModels.slice(0, 3).map((entry) => (
+            <option key={entry.id} value={entry.id}>
+              {entry.name}
+            </option>
+          ))}
+        </optgroup>
+        <optgroup label="Outros modelos">
+          {printerModels.slice(3).map((entry) => (
+            <option key={entry.id} value={entry.id}>
+              {entry.name}
+            </option>
+          ))}
+        </optgroup>
+        {!model && <option value={profile.modelId}>Modelo salvo · personalizado</option>}
+      </SelectField>
       <InputField
-        label="Nome do perfil"
+        label="Nome da impressora"
         required
         maxLength={80}
         value={profile.name}
         onChange={(event) => onChange({ ...profile, name: event.target.value })}
       />
-      {model && (
-        <p className="field-help">
-          Base: {model.name}. {model.description}{" "}
-          <a href={model.sourceUrl} target="_blank" rel="noopener noreferrer">
-            Consultar referência do perfil (nova aba)
-          </a>
-        </p>
-      )}
       <div className="printing-field-grid">
-        {number("paperWidthMm", "Largura do papel (mm)", 40, 210)}
-        {number("printableWidthMm", "Largura útil (mm)", 32, 210, 0.1)}
-        {number("fontSize", "Tamanho da letra (pt)", 8, 18, 0.5)}
         {number("copies", "Vias por documento", 1, 5)}
+        {number("fontSize", "Tamanho da letra (pt)", 8, 18, 0.5)}
       </div>
       <details className="receipt-advanced">
-        <summary>Ajustes de margem e comandos térmicos</summary>
+        <summary>Ajustes avançados</summary>
         <div className="printing-field-grid">
+          {number("paperWidthMm", "Largura do papel (mm)", 40, 210)}
+          {number("printableWidthMm", "Largura útil (mm)", 32, 210, 0.1)}
           {number("marginMm", "Margem mínima em cada lado (mm)", 0, 15, 0.1)}
           <SelectField
-            label="Resolução para ESC/POS"
+            label="Resolução térmica"
             value={profile.dpi}
             onChange={(event) =>
               onChange({
@@ -97,20 +112,27 @@ function PrinterProfileForm({
           {number("feedLines", "Avanço final (linhas, ESC/POS)", 0, 8)}
         </div>
         <p className="field-help">
-          A largura útil fica centralizada no papel, respeitando a margem mínima. Corte e
-          avanço só valem para o arquivo ESC/POS; na impressão pelo sistema, configure
-          essas opções no driver.
+          Corte e avanço valem para o arquivo ESC/POS. Na impressão pelo sistema, essas
+          opções pertencem ao driver.
         </p>
         {profile.cut !== "NONE" && (
           <p className="info-notice">
-            Ative o corte somente se sua impressora tiver guilhotina e suportar esse
-            comando ESC/POS. Modelos Bluetooth portáteis frequentemente usam corte manual.
+            O corte exige guilhotina e suporte ESC/POS no modelo da impressora.
           </p>
+        )}
+        {model && (
+          <details className="printing-model-reference">
+            <summary>Especificações do modelo</summary>
+            <p className="field-help">{model.description}</p>
+            <a href={model.sourceUrl} target="_blank" rel="noopener noreferrer">
+              Referência do fabricante ou protocolo (nova aba)
+            </a>
+          </details>
         )}
       </details>
       {!validation.success && (
         <p className="field-error" role="alert">
-          Revise o perfil: {validation.error.issues[0]?.message}
+          {validation.error.issues[0]?.message}
         </p>
       )}
     </div>

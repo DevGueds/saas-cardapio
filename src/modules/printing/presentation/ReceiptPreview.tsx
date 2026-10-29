@@ -103,11 +103,19 @@ function ReceiptOutputActions({
           Baixar PDF
         </button>
       </div>
-      <p className="field-help">
-        {output.pageCount} página(s), incluindo {document.profile.copies} via(s). No
-        diálogo da impressora, use <strong>1 cópia</strong>, papel de{" "}
-        {document.profile.paperWidthMm} mm, escala de 100% e desative cabeçalhos e rodapés
-        do navegador. Confira a prévia do sistema antes de confirmar.
+      <p className="receipt-output-meta">
+        <span>
+          {output.pageCount} {output.pageCount === 1 ? "página" : "páginas"}
+        </span>
+        <span>
+          {document.profile.paperWidthMm === 210
+            ? "A4"
+            : `${document.profile.paperWidthMm} mm`}
+        </span>
+        <span>
+          {document.profile.copies}{" "}
+          {document.profile.copies === 1 ? "via incluída" : "vias incluídas"}
+        </span>
       </p>
       {output.warnings.map((warning) => (
         <p className="info-notice" key={warning}>
@@ -124,7 +132,12 @@ function ReceiptOutputActions({
         onLoad={() => setReady(true)}
       />
       <details className="receipt-advanced">
-        <summary>Arquivo térmico ESC/POS (avançado)</summary>
+        <summary>Opções avançadas de impressão</summary>
+        <p className="field-help">
+          No diálogo do sistema, use <strong>1 cópia</strong>: as vias já estão incluídas.
+          Confira papel de {document.profile.paperWidthMm} mm, escala de 100% e
+          cabeçalhos/rodapés desativados.
+        </p>
         <p>
           Para impressoras compatíveis com ESC/POS, gere um arquivo binário para um
           utilitário local de impressão em modo RAW. Não abra como texto nem use um driver

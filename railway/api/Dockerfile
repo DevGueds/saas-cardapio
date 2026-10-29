@@ -19,7 +19,8 @@ COPY packages ./packages
 RUN pnpm -r rebuild && pnpm run postinstall && pnpm api:build
 
 FROM build AS api-package
-RUN pnpm --filter @cardapio/api deploy --prod --legacy /opt/api
+# Prefer cached metadata; limit registry bursts when legacy deploy needs a lookup.
+RUN pnpm --filter @cardapio/api deploy --prod --legacy --prefer-offline --network-concurrency=4 /opt/api
 
 FROM node:24-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS api
 ENV NODE_ENV=production

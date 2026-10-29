@@ -266,6 +266,7 @@ test("cases of use authorize direct calls before reading repositories and valida
     access,
     new Operation({ record() {} }, { next: randomUUID }, clock),
     clock,
+    { validate: async () => true },
   )
   assert.equal((await app.order(actor, restaurantId, orderId, "ORDER")).ok, true)
   assert.equal(reads, 1)

@@ -310,10 +310,6 @@ function ReceiptEditorSurface({
   const safeLogo = logo && printingLogoSchema.safeParse(logo).success ? logo : ""
   return (
     <section className="receipt-editor" aria-label="Editor do comprovante">
-      <p className="field-help">
-        Edite o texto e use Subir ou Descer para organizar os blocos. As seções
-        automáticas usam os dados reais ao imprimir.
-      </p>
       {status === "loading" && <p role="status">Carregando editor de comprovantes…</p>}
       {failure && (
         <div className="error-notice" role="alert">
@@ -371,7 +367,7 @@ function ReceiptEditorSurface({
           label="Enviar logo"
           type="file"
           accept="image/png,image/jpeg,image/webp"
-          help="PNG, JPEG ou WebP, até 5 MB. A imagem será ajustada para impressão. Adicione um bloco de logo para escolher sua posição."
+          help="PNG, JPEG ou WebP · até 5 MB"
           onChange={(event) => {
             const file = event.target.files?.[0]
             event.target.value = ""

@@ -1,7 +1,7 @@
 import { isIP } from "node:net"
 import { z } from "zod"
 import { Failure } from "@cardapio/domain/failure"
-import { railwayPrivateTransport } from "../shared/infrastructure/private-network.js"
+import { privateTransport } from "../shared/infrastructure/private-network.js"
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
@@ -16,6 +16,9 @@ const schema = z.object({
   REDIS_URL: z.string().min(1),
   HTTP_RATE_LIMIT: z.coerce.number().int().min(60).max(100000).default(600),
   MAX_IN_FLIGHT: z.coerce.number().int().min(16).max(1024).default(128),
+  CPU_WORKERS: z.coerce.number().int().min(1).max(4).default(2),
+  REPORT_PARALLEL_THRESHOLD: z.coerce.number().int().min(100).max(10000).default(2000),
+  CPU_JOB_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(7000),
   TRUSTED_PROXY_CIDRS: z.string().default(""),
   // Trust exactly N proxies directly in front of the API (e.g. 1 = the web proxy).
   // Only valid when the API is unreachable except through that proxy.
@@ -23,7 +26,7 @@ const schema = z.object({
   MAP_TILE_URL: z.string().default("https://tile.openstreetmap.org/{z}/{x}/{y}.png"),
   DATABASE_URL: z.string().min(1),
   DATABASE_TLS: z.enum(["true", "false"]),
-  PRIVATE_NETWORK_TRANSPORT: z.enum(["tls", "railway"]).default("tls"),
+  PRIVATE_NETWORK_TRANSPORT: z.enum(["tls", "railway", "render"]).default("tls"),
   DATABASE_MIGRATION_PENDING: z.enum(["true", "false"]).default("false"),
   DATABASE_CA_FILE: z.string().min(1).optional(),
   DATABASE_POOL_MAX: z.coerce.number().int().min(2).max(50).default(10),
@@ -92,7 +95,7 @@ export function loadConfig(input: Record<string, unknown>) {
       !/^\/\d*$/.test(redis.pathname || "/") ||
       (env.NODE_ENV === "production" &&
         redis.protocol !== "rediss:" &&
-        !railwayPrivateTransport(redis, input))
+        !privateTransport(redis, input))
     )
       throw new Error()
     if (env.TRUSTED_PROXY_HOPS > 0 && env.TRUSTED_PROXY_CIDRS) throw new Error()
@@ -158,7 +161,7 @@ export function loadConfig(input: Record<string, unknown>) {
       throw new Error()
     if (
       env.NODE_ENV === "production" &&
-      ((env.DATABASE_TLS !== "true" && !railwayPrivateTransport(database, input)) ||
+      ((env.DATABASE_TLS !== "true" && !privateTransport(database, input)) ||
         env.DOCS_ENABLED === "true")
     )
       throw new Error()
@@ -186,6 +189,9 @@ export function loadConfig(input: Record<string, unknown>) {
     redisUrl: redis.href,
     httpRateLimit: env.HTTP_RATE_LIMIT,
     maxInFlight: env.MAX_IN_FLIGHT,
+    cpuWorkers: env.CPU_WORKERS,
+    reportParallelThreshold: env.REPORT_PARALLEL_THRESHOLD,
+    cpuJobTimeoutMs: env.CPU_JOB_TIMEOUT_MS,
     trustedProxies,
     trustedProxyHops: env.TRUSTED_PROXY_HOPS,
     mapTileUrl: env.MAP_TILE_URL,

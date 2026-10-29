@@ -1,5 +1,5 @@
 import { resolve } from "node:path"
-import { railwayPrivateTransport } from "./private-network.js"
+import { privateTransport } from "./private-network.js"
 
 /** Prisma CLI uses its own driver; enforce the runtime transport policy. */
 export function migrationConnection(
@@ -16,7 +16,7 @@ export function migrationConnection(
     url.hash ||
     (env.NODE_ENV === "production" &&
       env.DATABASE_TLS !== "true" &&
-      !railwayPrivateTransport(url, env))
+      !privateTransport(url, env))
   )
     throw new Error("Configuração PostgreSQL para migrations inválida.")
   const tls = env.DATABASE_TLS === "true"

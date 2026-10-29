@@ -1,3 +1,4 @@
+import { validLogoStructure } from "./png-logo.js"
 import { lockRestaurant } from "../../../shared/infrastructure/row-locks.js"
 import {
   orderSchema,
@@ -21,38 +22,13 @@ import type { TenantScope } from "../../identity/domain/identity.js"
 import { assertOrderSnapshot } from "../../orders/domain/order.js"
 import type { PrintingRepository } from "../application/ports.js"
 
-function validLogo(logo: string): boolean {
-  if (!logo) return true
-  const encoded = logo.slice("data:image/png;base64,".length)
-  const bytes = Buffer.from(encoded, "base64")
-  if (bytes.length < 45 || bytes.toString("base64") !== encoded) return false
-  if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])))
-    return false
-  if (bytes.readUInt32BE(8) !== 13 || bytes.toString("ascii", 12, 16) !== "IHDR")
-    return false
-  const width = bytes.readUInt32BE(16),
-    height = bytes.readUInt32BE(20)
-  if (!width || !height || width > 2048 || height > 2048 || width * height > 4_194_304)
-    return false
-  let offset = 8,
-    imageData = false
-  while (offset + 12 <= bytes.length) {
-    const length = bytes.readUInt32BE(offset)
-    if (offset + 12 + length > bytes.length) return false
-    const type = bytes.toString("ascii", offset + 4, offset + 8)
-    if (type === "IDAT") imageData = true
-    if (type === "IEND") return imageData && length === 0 && offset + 12 === bytes.length
-    offset += length + 12
-  }
-  return false
-}
 function settingsView(row: StorePrinting | null): PrintingSettings {
   if (!row) return defaultPrintingSettings()
   const parsed = printingSettingsSchema.safeParse({
     ...(row.configuration as object),
     revision: row.revision,
   })
-  if (!parsed.success || !validLogo(parsed.data.logo))
+  if (!parsed.success || !validLogoStructure(parsed.data.logo))
     throw new Failure(
       "CORRUPT_DATA",
       "A configuração de impressão está inválida. Contate o suporte.",
@@ -139,7 +115,7 @@ export class PrismaPrinting implements PrintingRepository {
           "CONFLICT",
           "As configurações mudaram. Atualize antes de salvar.",
         )
-      if (!validLogo(input.logo))
+      if (!validLogoStructure(input.logo))
         throw new Failure(
           "VALIDATION",
           "Use uma imagem PNG válida de até 2.048 pixels por lado.",

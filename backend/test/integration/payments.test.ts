@@ -490,3 +490,52 @@ test("real reports use movement dates independently from order dates and preserv
   assert.equal(second.summary.reversed, 100)
   assert.equal(second.summary.netReceived, 901)
 })
+
+test("large financial snapshots use real workers with exact cents and bounded concurrent requests", async () => {
+  const at = new Date("2026-02-10T12:00:00.000Z")
+  await server.runtime.db.client.payment.createMany({
+    data: Array.from({ length: 2000 }, (_, index) => ({
+      id: randomUUID(),
+      tenantId: owner.store.tenantId,
+      restaurantId: owner.store.id,
+      amount: 101,
+      method: "PIX",
+      description: "Movimento sintético para teste de carga",
+      recordedBy: owner.userId,
+      requestHash: index.toString(16).padStart(64, "0"),
+      payloadHash: "0".repeat(64),
+      createdAt: at,
+      ...(index % 2 === 0
+        ? {
+            reversedAt: at,
+            reversedBy: owner.userId,
+            reversalReason: "Conferência sintética",
+          }
+        : {}),
+    })),
+  })
+  const endpoint = `${route()}/reports/financial?from=2026-02-10T00:00:00Z&to=2026-02-11T00:00:00Z`
+  const jobs = Array.from({ length: 5 }, () => request("GET", endpoint, undefined, owner))
+  const healthy = await request("GET", "/health/ready")
+  assert.equal(healthy.statusCode, 200)
+  const responses = await Promise.all(jobs)
+  assert.ok(responses.some((response) => response.statusCode === 200))
+  for (const response of responses) {
+    assert.ok([200, 503].includes(response.statusCode))
+    if (response.statusCode === 503) {
+      assert.equal(JSON.parse(response.body).error.code, "CAPABILITY_UNAVAILABLE")
+      continue
+    }
+    const report = value<FinancialReport>(response.body)
+    assert.equal(report.payments.length, 2000)
+    assert.equal(report.summary.received, 202000)
+    assert.equal(report.summary.reversed, 101000)
+    assert.equal(report.summary.netReceived, 101000)
+  }
+  assert.equal(server.runtime.cpuTasks.active, 0)
+  await server.runtime.db.client.membership.update({
+    where: { tenantId_userId: { tenantId: owner.store.tenantId, userId: other.userId } },
+    data: { role: "CASHIER" },
+  })
+  assert.equal((await request("GET", endpoint, undefined, other)).statusCode, 403)
+})

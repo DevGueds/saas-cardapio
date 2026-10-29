@@ -18,11 +18,12 @@
   lb_policy least_conn
   health_uri /api/v1/health/ready
   health_interval 5s
-  health_timeout 2s
-  fail_duration 10s
+  health_timeout 5s
+  health_fails 2
+  fail_duration 5s
   max_fails 1
   transport http {
-    dial_timeout 500ms
+    dial_timeout 2s
     response_header_timeout 20s
     keepalive 4s
   }
