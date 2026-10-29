@@ -42,7 +42,7 @@
 			health_timeout 5s
 			health_fails 2
 			fail_duration 5s
-			max_fails 3
+			max_fails 1
 			# Somente a borda do Railway define X-Real-IP com o IP do cliente. O Caddy
 			# substitui qualquer X-Forwarded-For enviado pelo navegador, e a API
 			# (TRUSTED_PROXY_HOPS=1) confia apenas neste salto.
