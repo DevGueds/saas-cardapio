@@ -7,6 +7,9 @@ export interface Account {
   email: string
   passwordHash: string
   active: boolean
+  createdAt?: Date
+  emailVerifiedAt?: Date | null
+  emailVerificationDeadline?: Date
   mfa?: { enabledAt: Date | null } | null
   memberships?: {
     active: boolean

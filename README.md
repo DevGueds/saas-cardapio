@@ -4,6 +4,8 @@
 
 SaaS multitenant de cardápio digital, com frontend React 19/TypeScript/Vite/Tailwind e API NestJS/Fastify/TypeScript. Persistência PostgreSQL 18.6 com Prisma 7 e Redis para cache e proteção compartilhada. Domínio e validações compartilhados, arquitetura DDD/hexagonal e falhas explícitas, sem fallback para dados fictícios.
 
+Cadastro protegido, confirmação de e-mail com Postal autohospedado e ativação de Cloudflare: [guia de segurança e configuração](docs/cloudflare-and-email.md). O desenvolvimento usa Mailpit para capturar mensagens localmente.
+
 ## Começar com Docker
 
 Para implantação completa em nuvem, veja [o guia Railway](docs/railway.md) e o blueprint [`.railway/railway.ts`](.railway/railway.ts). Usa o formato atual de infraestrutura como código, com domínio gratuito HTTPS e cookies seguros por padrão.

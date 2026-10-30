@@ -121,6 +121,10 @@ before(async () => {
   server = await createApplication(
     loadConfig({
       ...process.env,
+      MAIL_PROVIDER: "disabled",
+      TURNSTILE_SITE_KEY: "",
+      TURNSTILE_SECRET_KEY: "",
+      CLOUDFLARE_ORIGIN_SECRET: "",
       NODE_ENV: "test",
       DATABASE_URL: database,
       CORS_ORIGINS: origin,
@@ -135,7 +139,7 @@ before(async () => {
     legalAcceptance: currentLegalAcceptance,
     name: "Gestor Teste",
     email: `engagement-${suffix}@example.test`,
-    password: "test-123456",
+    password: "Fixture-9!mQ",
     restaurantName: "Loja Teste",
     slug: `engagement-${suffix}`,
   })

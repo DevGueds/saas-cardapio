@@ -20,6 +20,9 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   timeout: 120000,
+  // Real API requests have a 15 s deadline, and cold Vite lazy routes may compile
+  // while the assertion is waiting. Keep the check bounded without fixed sleeps.
+  expect: { timeout: 15000 },
   use: {
     baseURL: origin,
     trace: "retain-on-failure",

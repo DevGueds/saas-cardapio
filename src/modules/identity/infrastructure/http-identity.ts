@@ -1,6 +1,7 @@
 import type { DraftManager } from "../../../shared/application/drafts"
 import { z } from "zod"
 import { restaurantAccessSchema, sessionSchema, uuid } from "@cardapio/contracts"
+import { emailVerificationSchema, emailDeliverySchema } from "@cardapio/contracts"
 import type { ApiClient } from "../../../shared/infrastructure/api-client"
 import type { IdentityService } from "../application/ports"
 export class HttpIdentity implements IdentityService {
@@ -20,7 +21,12 @@ export class HttpIdentity implements IdentityService {
   configuration() {
     return this.client.request(
       "/configuration",
-      z.strictObject({ signupEnabled: z.boolean(), mapTileUrl: z.string().optional() }),
+      z.strictObject({
+        signupEnabled: z.boolean(),
+        mapTileUrl: z.string().optional(),
+        turnstileSiteKey: z.string().optional(),
+        emailVerificationGraceSeconds: z.number().int().positive().optional(),
+      }),
     )
   }
   session() {
@@ -39,6 +45,7 @@ export class HttpIdentity implements IdentityService {
             email: data.email,
             password: data.password,
             legalAcceptance: data.legalAcceptance,
+            turnstileToken: data.turnstileToken,
           }
         : data,
     )
@@ -50,6 +57,20 @@ export class HttpIdentity implements IdentityService {
       this.drafts?.clearPrefix("api:admin:")
     }
     return result
+  }
+  emailStatus() {
+    return this.client.request("/auth/email", emailVerificationSchema)
+  }
+  sendEmailCode() {
+    return this.client.request("/auth/email/send", emailDeliverySchema, {
+      method: "POST",
+    })
+  }
+  confirmEmail(code: string) {
+    return this.client.request("/auth/email/confirm", z.null(), {
+      method: "POST",
+      body: { code },
+    })
   }
   async changePassword(input: Parameters<IdentityService["changePassword"]>[0]) {
     const result = await this.client.request("/auth/password", z.null(), {
@@ -72,7 +93,11 @@ export class HttpIdentity implements IdentityService {
       { method: "POST", body: input },
     )
   }
-  subscribeExpired(listener: (reason?: "UNAUTHENTICATED" | "MFA_REQUIRED") => void) {
+  subscribeExpired(
+    listener: (
+      reason?: "UNAUTHENTICATED" | "MFA_REQUIRED" | "EMAIL_VERIFICATION_REQUIRED",
+    ) => void,
+  ) {
     return this.client.subscribeExpired(listener)
   }
 }

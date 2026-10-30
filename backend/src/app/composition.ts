@@ -32,6 +32,13 @@ import {
 import { RedisStore, RedisLimiter } from "../shared/infrastructure/redis.js"
 import { CachedMenu } from "../modules/catalog/infrastructure/cached-menu.js"
 import { Authentication } from "../modules/identity/application/authentication.js"
+import { EmailVerification } from "../modules/identity/application/email-verification.js"
+import { PrismaEmailVerification } from "../modules/identity/infrastructure/prisma-email-verification.js"
+import {
+  SecureEmailCodes,
+  SelfHostedVerificationMail,
+} from "../modules/identity/infrastructure/verification-mail.js"
+import { Turnstile } from "../modules/identity/infrastructure/turnstile.js"
 import { Authorization } from "../modules/identity/application/authorization.js"
 import { Tenancy } from "../modules/identity/application/tenancy.js"
 import { PrismaIdentity } from "../modules/identity/infrastructure/prisma-identity.js"
@@ -70,6 +77,15 @@ export async function compose(config: ApiConfig) {
       memberships = new PrismaAccess(db)
     const access = new Authorization(identity, memberships, clock)
     const passwords = await ArgonPasswords.create()
+    const emailVerification = new EmailVerification(
+      identity,
+      new PrismaEmailVerification(db, ids),
+      new SelfHostedVerificationMail(config.mail),
+      new SecureEmailCodes(config.secret),
+      clock,
+      limiter,
+      operation,
+    )
     const menus = new CachedMenu(new PrismaMenu(db), redis)
     const cipher = new SubscriptionCipher(config.secret),
       whatsapp = new EvolutionWhatsapp(config.evolutionUrl, config.evolutionKey),
@@ -120,6 +136,7 @@ export async function compose(config: ApiConfig) {
         config.sessionTtl,
       ),
       notificationWorker,
+      emailVerification,
       cpuTasks,
       engagement: new Engagement(
         new PrismaEngagement(db, cipher),
@@ -165,6 +182,12 @@ export async function compose(config: ApiConfig) {
         limiter,
         operation,
         { signupEnabled: config.signupEnabled, ttl: config.sessionTtl },
+        {
+          bot: new Turnstile(config.turnstileSecretKey, config.turnstileHosts),
+          email: emailVerification,
+          graceSeconds: config.emailGraceSeconds,
+          autoSend: config.mail.provider !== "disabled",
+        },
       ),
       tenancy: new Tenancy(memberships, access, ids, operation),
       addresses: new PostalAddresses(

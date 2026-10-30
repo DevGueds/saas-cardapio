@@ -10,6 +10,7 @@ import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import { useMutation } from "../../../shared/presentation/use-mutation"
 import AccountContext from "./AccountContext"
 import CreateStoreDialog from "./CreateStoreDialog"
+import EmailVerificationNotice from "./EmailVerificationNotice"
 export default function ApiAdminRoute() {
   const { auth } = useServices(),
     navigate = useNavigate(),
@@ -35,6 +36,10 @@ export default function ApiAdminRoute() {
       navigate("/mfa", { replace: true })
       return
     }
+    if (session.value.emailVerification?.required) {
+      navigate("/confirmar-email", { replace: true })
+      return
+    }
     const stores = await auth.restaurants()
     if (!stores.ok) {
       setError(stores.error)
@@ -50,13 +55,33 @@ export default function ApiAdminRoute() {
   useEffect(
     () =>
       auth?.subscribeExpired((reason) =>
-        navigate(reason === "MFA_REQUIRED" ? "/mfa" : "/login", {
-          replace: true,
-          state: { returnTo: location.pathname + location.search },
-        }),
+        navigate(
+          reason === "MFA_REQUIRED"
+            ? "/mfa"
+            : reason === "EMAIL_VERIFICATION_REQUIRED"
+              ? "/confirmar-email"
+              : "/login",
+          {
+            replace: true,
+            state: { returnTo: location.pathname + location.search },
+          },
+        ),
       ),
     [auth, navigate, location.pathname, location.search],
   )
+  useEffect(() => {
+    const verification = data?.session.emailVerification
+    if (!verification || verification.verified) return
+    const timer = window.setTimeout(
+      () =>
+        navigate("/confirmar-email", {
+          replace: true,
+          state: { returnTo: location.pathname + location.search },
+        }),
+      Math.min(2147483647, Math.max(0, Date.parse(verification.deadline) - Date.now())),
+    )
+    return () => window.clearTimeout(timer)
+  }, [data?.session.emailVerification, navigate, location.pathname, location.search])
   if (error?.code === "UNAUTHENTICATED")
     return (
       <Navigate
@@ -108,6 +133,7 @@ export default function ApiAdminRoute() {
   }
   return (
     <main className="stores-page">
+      <EmailVerificationNotice session={data.session} />
       <header className="page-heading">
         <div>
           <p className="eyebrow">Sua conta</p>

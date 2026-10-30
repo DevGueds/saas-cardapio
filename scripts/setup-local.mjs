@@ -62,6 +62,10 @@ for (const [key, value] of Object.entries({
   EVOLUTION_DATABASE_PASSWORD: randomBytes(24).toString("hex"),
   DOCKER_CORS_ORIGINS: ["http://localhost:8080", "http://127.0.0.1:8080"].join(","),
   WEB_BIND_ADDRESS: "127.0.0.1",
+  MAIL_PROVIDER: "mailpit",
+  MAIL_API_URL: "http://127.0.0.1:8025",
+  MAIL_FROM: "conta@localhost.invalid",
+  EMAIL_VERIFICATION_GRACE_SECONDS: "604800",
 }))
   if (!new RegExp(`^${key}=`, "m").test(existing)) additions.push(`${key}=${value}`)
 if (!/^REDIS_PASSWORD=/m.test(existing)) additions.push(`REDIS_PASSWORD=${redisPassword}`)

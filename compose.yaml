@@ -1,5 +1,28 @@
 name: cardapio-local
 services:
+  # Local capture only. Production sends through a separately hosted Postal server.
+  mailpit:
+    image: axllent/mailpit:v1.32.0@sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498
+    restart: unless-stopped
+    user: "1000:1000"
+    ports: ["127.0.0.1:8025:8025"]
+    environment:
+      MP_DATABASE: /tmp/mailpit.db
+      MP_MAX_MESSAGES: "300"
+      MP_MAX_AGE: 24h
+      MP_DISABLE_VERSION_CHECK: "true"
+      MP_QUIET: "true"
+    read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    mem_limit: 128m
+    pids_limit: 64
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
   redis:
     image: redis:8.2-alpine@sha256:b51665e66f00759be7c3152ad5ac3c66fb2f619c13ef62dea7cc1f9914524635
     restart: unless-stopped
@@ -124,6 +147,15 @@ services:
       EVOLUTION_URL: http://evolution:8080
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:?Execute pnpm setup:local}
       SIGNUP_ENABLED: "true"
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-mailpit}
+      MAIL_API_URL: ${DOCKER_MAIL_API_URL:-http://mailpit:8025}
+      MAIL_API_KEY: ${MAIL_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-conta@localhost.invalid}
+      EMAIL_VERIFICATION_GRACE_SECONDS: ${EMAIL_VERIFICATION_GRACE_SECONDS:-604800}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      TURNSTILE_HOSTNAMES: ${TURNSTILE_HOSTNAMES:-}
+      CLOUDFLARE_ORIGIN_SECRET: ${CLOUDFLARE_ORIGIN_SECRET:-}
       DOCS_ENABLED: "false"
     depends_on:
       redis:

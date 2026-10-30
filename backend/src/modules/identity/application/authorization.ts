@@ -5,6 +5,7 @@ import { validate } from "../../../shared/application/validate.js"
 import { assertPermission, type Actor, type Permission } from "../domain/identity.js"
 import type { AccessPolicy, AccessRepository, IdentityRepository } from "./ports.js"
 import { mfaPending } from "./mfa-state.js"
+import { assertEmailVerified } from "./email-state.js"
 
 export class Authorization implements AccessPolicy {
   constructor(
@@ -22,6 +23,7 @@ export class Authorization implements AccessPolicy {
         "MFA_REQUIRED",
         "Confirme a verificação em duas etapas para continuar.",
       )
+    assertEmailVerified(session.user, this.clock.now())
   }
   async restaurant(actor: Actor, restaurantId: string, permission: Permission) {
     return (await this.grant(actor, restaurantId, permission)).scope

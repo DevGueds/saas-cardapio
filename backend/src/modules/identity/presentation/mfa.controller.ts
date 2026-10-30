@@ -12,8 +12,14 @@ import {
 } from "@nestjs/common"
 import type { FastifyReply } from "fastify"
 import { RUNTIME, type Runtime } from "../../../app/composition.js"
-import { authenticated, MfaAllowed, type SessionRequest } from "./session-guard.js"
+import {
+  authenticated,
+  MfaAllowed,
+  EmailAllowed,
+  type SessionRequest,
+} from "./session-guard.js"
 @Controller()
+@EmailAllowed()
 export class MfaController {
   constructor(@Inject(RUNTIME) private readonly app: Runtime) {}
   @MfaAllowed() @Get("auth/mfa") status(@Req() req: SessionRequest) {

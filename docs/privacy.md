@@ -1,6 +1,6 @@
 # Privacidade e LGPD — Pede Aqui
 
-Responsável informado pelo titular da operação: **66.369.962 VITOR SOUSA MESQUITA**, CNPJ **66.369.962/0001-20**, canal **pedeaqui99@gmail.com**. Os documentos públicos usam esses dados; não há envio automático de mensagens por e-mail.
+Responsável informado pelo titular da operação: **66.369.962 VITOR SOUSA MESQUITA**, CNPJ **66.369.962/0001-20**, canal **pedeaqui99@gmail.com**. Os documentos públicos usam esses dados; solicitações de privacidade continuam sem resposta automática por e-mail. O cadastro envia códigos de confirmação pelo Postal autohospedado quando configurado; no desenvolvimento, o Mailpit captura somente mensagens locais. Consulte [Cloudflare e e-mail](cloudflare-and-email.md).
 
 Esta implementação oferece controles técnicos e transparência. A adequação à LGPD também depende da operação, dos contratos e da análise das finalidades e bases legais. Não constitui certificação de conformidade jurídica.
 

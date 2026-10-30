@@ -41,6 +41,7 @@ test("brand, legal modals and account privacy work on mobile with real persisten
   await page.getByLabel("Seu nome *", { exact: true }).fill("Ana Privacidade")
   await page.getByLabel("E-mail *", { exact: true }).fill(`${slug}@browser.example.test`)
   await page.getByLabel("Senha *", { exact: true }).fill(password)
+  await page.getByLabel("Confirme a senha *", { exact: true }).fill(password)
   await page.getByLabel("Nome da loja *", { exact: true }).fill("Loja Privacidade")
   await page.getByLabel("Endereço do cardápio *", { exact: true }).fill(slug)
   const acceptance = page.getByRole("checkbox", { name: /Li e aceito/ })
@@ -61,6 +62,7 @@ test("brand, legal modals and account privacy work on mobile with real persisten
   await page.getByRole("button", { name: "Criar conta e loja", exact: true }).click()
   const account = await (await registered).json()
   expect(account.ok).toBe(true)
+  await page.getByRole("link", { name: "Confirmar depois e acessar o app" }).click()
   await mkdir(".cache", { recursive: true })
   await writeFile(
     ".cache/privacy-browser-users.json",

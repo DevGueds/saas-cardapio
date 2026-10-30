@@ -12,6 +12,7 @@ for (const filename of [
   "printing-browser-users.json",
   "privacy-browser-users.json",
   "analytics-browser-users.json",
+  "email-security-browser-users.json",
 ]) {
   try {
     ids.push(

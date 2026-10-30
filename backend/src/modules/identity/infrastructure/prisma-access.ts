@@ -107,10 +107,19 @@ export class PrismaAccess implements AccessRepository {
     return this.db.transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { email },
-        select: { id: true, active: true },
+        select: { id: true, active: true, emailVerifiedAt: true },
       })
       if (!user?.active)
         throw new Failure("NOT_FOUND", "Conta indisponível para associação.")
+      if (!user.emailVerifiedAt)
+        throw new Failure(
+          "VALIDATION",
+          "A pessoa precisa confirmar o e-mail antes de entrar na equipe.",
+          {
+            email:
+              "Peça à pessoa para confirmar o e-mail na própria conta e tente novamente.",
+          },
+        )
       const previous = await tx.membership.findUnique({
         where: { tenantId_userId: { tenantId, userId: user.id } },
       })

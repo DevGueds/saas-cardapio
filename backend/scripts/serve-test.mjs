@@ -8,6 +8,13 @@ if (!database || !new URL(database).pathname.endsWith("_test"))
 const server = await createApplication(
   loadConfig({
     ...process.env,
+    MAIL_PROVIDER: "mailpit",
+    MAIL_API_URL: "http://127.0.0.1:8025",
+    MAIL_FROM: "conta@localhost.invalid",
+    MAIL_API_KEY: "",
+    TURNSTILE_SITE_KEY: "",
+    TURNSTILE_SECRET_KEY: "",
+    CLOUDFLARE_ORIGIN_SECRET: "",
     DATABASE_URL: database,
     NODE_ENV: "test",
     PORT: "3002",

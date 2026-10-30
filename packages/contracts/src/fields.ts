@@ -2,6 +2,7 @@ import { z } from "zod"
 import { brazilianStates } from "@cardapio/domain/delivery-address"
 import { brazilianPhone, imageReference } from "@cardapio/domain/validation"
 import { parseMoney } from "@cardapio/domain/money"
+import { passwordStrength } from "@cardapio/domain/password-strength"
 
 // Input contracts are shared by the browser and API. Drafts deliberately remain
 // more permissive: an unfinished field must survive a reload without being erased.
@@ -46,6 +47,10 @@ export const passwordField = z
   .string({ error: "Informe uma senha." })
   .refine((v) => Array.from(v).length >= 8, "Use pelo menos 8 caracteres na senha.")
   .refine((v) => Array.from(v).length <= 128, "Use no máximo 128 caracteres na senha.")
+  .refine(
+    (v) => passwordStrength(v).accepted,
+    "Crie uma senha de força média ou maior. Misture letras, números e símbolos, ou use uma frase longa com palavras diferentes. Evite senhas comuns e sequências.",
+  )
 export const currentPasswordField = z
   .string({ error: "Informe sua senha." })
   .min(1, "Informe sua senha.")

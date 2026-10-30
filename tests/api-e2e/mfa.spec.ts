@@ -1,4 +1,5 @@
 import { currentLegalAcceptance } from "@cardapio/contracts"
+import { verifyFixtureEmail } from "./verified-fixture"
 import { expect, test } from "@playwright/test"
 import { randomUUID } from "node:crypto"
 import { createRequire } from "node:module"
@@ -47,6 +48,7 @@ test("MFA guides enrollment, mobile recovery, login and per-person management ex
     })
   ).json()
   expect(staffAccount.ok, staffAccount.error?.code).toBe(true)
+  await verifyFixtureEmail(staffEmail)
   const added = await (
     await page.request.post(`/api/v1/tenants/${store.tenantId}/members`, {
       headers: { origin: baseURL!, "x-csrf-token": registered.value.csrfToken },

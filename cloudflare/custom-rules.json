@@ -1,0 +1,18 @@
+{
+  "description": "Regras sugeridas para revisar e incorporar ao ruleset existente; não aplicar como substituição integral.",
+  "phase": "http_request_firewall_custom",
+  "rules": [
+    {
+      "description": "Bloquear leitura de metadados e arquivos privados",
+      "expression": "(starts_with(http.request.uri.path, \"/.git/\") or http.request.uri.path eq \"/.git\" or http.request.uri.path eq \"/.env\" or starts_with(http.request.uri.path, \"/.env.\") or starts_with(http.request.uri.path, \"/backend/\") or starts_with(http.request.uri.path, \"/node_modules/\"))",
+      "action": "block",
+      "enabled": true
+    },
+    {
+      "description": "Bloquear métodos HTTP não utilizados pelo app",
+      "expression": "(http.request.method in {\"TRACE\" \"TRACK\" \"CONNECT\"})",
+      "action": "block",
+      "enabled": true
+    }
+  ]
+}

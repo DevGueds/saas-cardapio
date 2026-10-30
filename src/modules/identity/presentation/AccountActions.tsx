@@ -1,4 +1,3 @@
-import { passwordField } from "@cardapio/contracts"
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
 import { useState, type FormEvent } from "react"
@@ -7,6 +6,7 @@ import { useServices } from "../../../app/presentation/ServicesProvider"
 import { useMutation } from "../../../shared/presentation/use-mutation"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import Dialog from "../../../shared/presentation/Dialog"
+import PasswordFields from "./PasswordFields"
 export default function AccountActions() {
   const { auth } = useServices(),
     navigate = useNavigate(),
@@ -34,6 +34,7 @@ export default function AccountActions() {
       <div className="account-actions">
         <Link to="/admin">Trocar de loja</Link>
         <Link to="/mfa">Proteção da minha conta</Link>
+        <Link to="/confirmar-email">Confirmar meu e-mail</Link>
         <Link to="/privacidade">Minha privacidade e meus dados</Link>
         <button onClick={() => setChanging(true)}>Alterar senha</button>
         <button disabled={mutation.pending} onClick={() => void logout()}>
@@ -61,18 +62,7 @@ export default function AccountActions() {
                   required
                 />
               </label>
-              <label className="field">
-                <span>Nova senha *</span>
-                <ValidatedInput
-                  type="password"
-                  name="newPassword"
-                  schema={passwordField}
-                  autoComplete="new-password"
-                  required
-                  minLength={8}
-                />
-                <small className="field-help">Use de 8 a 128 caracteres.</small>
-              </label>
+              <PasswordFields name="newPassword" label="Nova senha *" />
             </fieldset>
             {mutation.error && <ErrorNotice error={mutation.error} />}
             <div className="form-actions">

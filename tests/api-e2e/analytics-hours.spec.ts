@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test"
 import { randomUUID } from "node:crypto"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { currentLegalAcceptance, type OrderView } from "@cardapio/contracts"
+import { verifyFixtureEmail } from "./verified-fixture"
 import type { MenuDocument } from "@cardapio/domain/menu-document"
 import { localClock } from "@cardapio/domain/store-hours"
 import { sampleAddress } from "../address-fixture"
@@ -20,7 +21,7 @@ test("filters, sales analytics and automatic hours work with real orders on mobi
       data: {
         name: "Gestora Desempenho",
         email: `analytics-${suffix}@browser.example.test`,
-        password: "12345678",
+        password: "M7!qR2@x",
         restaurantName: "Cozinha do Bairro",
         slug,
         legalAcceptance: currentLegalAcceptance,
@@ -40,12 +41,13 @@ test("filters, sales analytics and automatic hours work with real orders on mobi
       data: {
         name: "Entregador Teste",
         email: courierEmail,
-        password: "12345678",
+        password: "M7!qR2@x",
         legalAcceptance: currentLegalAcceptance,
       },
     })
   ).json()
   expect(courier.ok).toBe(true)
+  await verifyFixtureEmail(courierEmail)
   await courierContext.close()
   await mkdir(".cache", { recursive: true })
   let known: string[] = []

@@ -12,6 +12,7 @@ const requestSchemas = {
   Consent: contracts.customerConsentSchema,
   ReadNotifications: z.strictObject({ before: z.iso.datetime() }),
   Login: contracts.loginSchema,
+  EmailConfirmation: contracts.emailCodeSchema,
   MfaSetup: contracts.reauthenticationSchema,
   MfaProof: contracts.mfaProofSchema,
   MfaDisable: contracts.mfaDisableSchema,
@@ -41,6 +42,9 @@ const requestSchemas = {
   Hours: contracts.updateHoursSchema,
 }
 const operations = [
+  ["/auth/email", "get"],
+  ["/auth/email/send", "post"],
+  ["/auth/email/confirm", "post", "EmailConfirmation"],
   ["/restaurants/{restaurantId}/hours", "put", "Hours"],
   ["/restaurants/{restaurantId}/analytics", "get"],
   ["/public/restaurants/{slug}/best-sellers", "get", null, true],

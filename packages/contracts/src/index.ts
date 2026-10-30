@@ -10,11 +10,13 @@ export * from "./payments.js"
 export * from "./menu-options.js"
 export * from "./engagement.js"
 export * from "./security.js"
+export * from "./email-verification.js"
 export * from "./printing.js"
 export * from "./privacy.js"
 export * from "./store-hours.js"
 export * from "./analytics.js"
 import { legalAcceptanceSchema } from "./privacy.js"
+import { emailVerificationSchema } from "./email-verification.js"
 import { addonSelectionsSchema } from "./menu-options.js"
 import {
   checkoutOptionsSchema,
@@ -39,7 +41,12 @@ export * from "./fields.js"
 export * from "./delivery-address.js"
 import { deliveryAddressDraftSchema, deliveryAddressSchema } from "./delivery-address.js"
 export const password = passwordField
-export const loginSchema = z.strictObject({ email, password: currentPasswordField })
+const botToken = z.string().min(1).max(2048).optional()
+export const loginSchema = z.strictObject({
+  email,
+  password: currentPasswordField,
+  turnstileToken: botToken,
+})
 export const registrationSchema = z.strictObject({
   name: personNameField,
   email,
@@ -47,12 +54,14 @@ export const registrationSchema = z.strictObject({
   restaurantName: name,
   slug,
   legalAcceptance: legalAcceptanceSchema,
+  turnstileToken: botToken,
 })
 export const accountRegistrationSchema = registrationSchema.pick({
   name: true,
   email: true,
   password: true,
   legalAcceptance: true,
+  turnstileToken: true,
 })
 export const tenantCreationSchema = z.strictObject({ name, restaurantName: name, slug })
 export const restaurantCreationSchema = z.strictObject({ name, slug })
@@ -75,6 +84,7 @@ export const sessionSchema = z.strictObject({
   csrfToken: z.string().regex(/^[a-f0-9]{64}$/),
   expiresAt: z.iso.datetime(),
   mfa: z.enum(["NONE", "ENROLL", "VERIFY", "VERIFIED"]).optional(),
+  emailVerification: emailVerificationSchema.optional(),
 })
 export type SessionView = z.infer<typeof sessionSchema>
 export const restaurantAccessSchema = z.strictObject({
