@@ -18,6 +18,9 @@ import { validate } from "../../../shared/application/validate.js"
 import type { Actor } from "../domain/identity.js"
 import type { IdentityRepository, SessionInput, SessionRecord } from "./ports.js"
 import { mfaPending, mfaState } from "./mfa-state.js"
+import { emailState, assertEmailVerified } from "./email-state.js"
+import type { BotProtection } from "./email-ports.js"
+import type { EmailVerification } from "./email-verification.js"
 
 export interface AuthenticatedSession {
   actor: Actor
@@ -34,6 +37,12 @@ export class Authentication {
     private readonly limiter: RequestLimiter,
     private readonly operation: Operation,
     private readonly policy: { signupEnabled: boolean; ttl: number },
+    private readonly security?: {
+      bot: BotProtection
+      email: EmailVerification
+      graceSeconds: number
+      autoSend: boolean
+    },
   ) {}
   private newSession(userId: string) {
     const token = this.secrets.create()
@@ -59,12 +68,16 @@ export class Authentication {
       const data = accountOnly
         ? { ...validate(accountRegistrationSchema, input), restaurantName: "", slug: "" }
         : validate(registrationSchema, input)
+      await this.security?.bot.verify(data.turnstileToken, ip, "register")
       const user = {
         id: this.ids.next(),
         name: data.name,
         email: data.email,
         passwordHash: await this.passwords.hash(data.password),
         active: true,
+        emailVerificationDeadline: new Date(
+          this.clock.now().getTime() + (this.security?.graceSeconds ?? 604800) * 1000,
+        ),
       }
       const session = this.newSession(user.id)
       try {
@@ -89,6 +102,9 @@ export class Authentication {
           )
         throw error
       }
+      // Delivery failure never rolls back a successfully created account.
+      if (this.security?.autoSend)
+        await this.security.email.send({ userId: user.id, sessionId: session.record.id })
       return {
         token: session.token,
         session: {
@@ -96,6 +112,7 @@ export class Authentication {
           csrfToken: session.csrfToken,
           expiresAt: session.record.expiresAt.toISOString(),
           mfa: "NONE" as const,
+          emailVerification: emailState(user, this.clock.now()),
         },
       }
     })
@@ -104,6 +121,7 @@ export class Authentication {
     return this.operation.run("identity.login", async () => {
       await this.limiter.consume("login-ip:" + ip, 20, 900)
       const data = validate(loginSchema, input)
+      await this.security?.bot.verify(data.turnstileToken, ip, "login")
       await this.limiter.consume("login-account:" + data.email, 10, 900)
       const user = await this.repository.findAccount(data.email)
       const valid = await this.passwords.verify(
@@ -121,6 +139,7 @@ export class Authentication {
           csrfToken: session.csrfToken,
           expiresAt: session.record.expiresAt.toISOString(),
           mfa: mfaState({ ...session.record, user, revokedAt: null }),
+          emailVerification: emailState(user, this.clock.now()),
         },
       }
     })
@@ -155,6 +174,7 @@ export class Authentication {
       csrfToken,
       expiresAt: record.expiresAt.toISOString(),
       mfa: mfaState(record),
+      emailVerification: emailState(record.user, this.clock.now()),
     }
   }
   logout(actor: Actor) {
@@ -168,6 +188,7 @@ export class Authentication {
       const data = validate(passwordChangeSchema, input)
       await this.limiter.consume("change-password:" + actor.userId, 5, 900)
       const session = await this.repository.sessionByActor(actor, this.clock.now())
+      if (session) assertEmailVerified(session.user, this.clock.now())
       if (
         !session ||
         mfaPending(session) ||

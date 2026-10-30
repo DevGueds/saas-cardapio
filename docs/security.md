@@ -1,5 +1,7 @@
 # Segurança e verificação em duas etapas
 
+Cadastro com senha de força média ou maior, confirmação de e-mail por código e preparação para Cloudflare estão descritos em [Cloudflare e e-mail](cloudflare-and-email.md), incluindo limites, configuração do Postal e verificações externas necessárias para ativação.
+
 ## Uso pela equipe
 
 Em **Proteção da minha conta**, informe a senha, adicione o QR Code ao aplicativo autenticador e confirme um código de seis dígitos. A chave manual permite configurar no mesmo celular. A ativação só ocorre após essa confirmação. Guarde os dez códigos de recuperação: aparecem uma única vez, não são gravados no navegador e cada um funciona uma vez.
@@ -66,4 +68,4 @@ Foram aplicadas contextualmente as skills `testing-api-authentication-weaknesses
 
 Fontes primárias: [OWASP MFA](https://cheatsheetseries.owasp.org/cheatsheets/Multifactor_Authentication_Cheat_Sheet.html), [testes de MFA OWASP](https://owasp.github.io/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/04-Authentication/11-Multi-Factor_Authentication), [otplib](https://otplib.yeojz.dev/guide/getting-started), [tolerância TOTP](https://otplib.yeojz.dev/guide/advanced-usage), [Gitleaks](https://github.com/gitleaks/gitleaks) e [QR Code Styling](https://github.com/kozakdenys/qr-code-styling).
 
-Antes da operação pública: domínio/HTTPS, verificação e recuperação de e-mail, recuperação administrativa documentada com verificação de identidade, retenção de auditoria/backups, proteção de borda e revisão independente. Passkeys e rotação versionada de chaves são evoluções recomendadas. Não há alegação de certificação ou de sistema invulnerável.
+Antes da operação pública: domínio/HTTPS, ativação do envio pelo Postal e da proteção Cloudflare conforme [o guia](cloudflare-and-email.md), recuperação de senha e troca de endereço de e-mail, recuperação administrativa documentada com verificação de identidade, retenção de auditoria/backups e revisão independente. Passkeys e rotação versionada de chaves são evoluções recomendadas. Não há alegação de certificação ou de sistema invulnerável.

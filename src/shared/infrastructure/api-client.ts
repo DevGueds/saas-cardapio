@@ -5,7 +5,7 @@ import type { Executor } from "../application/execute"
 export class ApiClient {
   private csrf = ""
   private readonly expired = new Set<
-    (reason?: "UNAUTHENTICATED" | "MFA_REQUIRED") => void
+    (reason?: "UNAUTHENTICATED" | "MFA_REQUIRED" | "EMAIL_VERIFICATION_REQUIRED") => void
   >()
   constructor(
     private readonly base: unknown,
@@ -14,7 +14,11 @@ export class ApiClient {
   setCsrf(value: string) {
     this.csrf = value
   }
-  subscribeExpired(listener: (reason?: "UNAUTHENTICATED" | "MFA_REQUIRED") => void) {
+  subscribeExpired(
+    listener: (
+      reason?: "UNAUTHENTICATED" | "MFA_REQUIRED" | "EMAIL_VERIFICATION_REQUIRED",
+    ) => void,
+  ) {
     this.expired.add(listener)
     return () => {
       this.expired.delete(listener)
@@ -112,7 +116,8 @@ export class ApiClient {
       if (
         !result.data.ok &&
         (result.data.error.code === "UNAUTHENTICATED" ||
-          result.data.error.code === "MFA_REQUIRED") &&
+          result.data.error.code === "MFA_REQUIRED" ||
+          result.data.error.code === "EMAIL_VERIFICATION_REQUIRED") &&
         path !== "/auth/login"
       ) {
         if (result.data.error.code === "UNAUTHENTICATED") this.csrf = ""

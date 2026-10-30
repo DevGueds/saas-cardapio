@@ -39,6 +39,14 @@ export const router = createBrowserRouter(
         },
         { path: "/login", Component: LoginPage },
         {
+          path: "/confirmar-email",
+          lazy: async () => ({
+            Component: (
+              await import("../modules/identity/presentation/EmailVerificationPage")
+            ).default,
+          }),
+        },
+        {
           path: "/mfa",
           lazy: async () => ({
             Component: (await import("../modules/identity/presentation/MfaPage")).default,

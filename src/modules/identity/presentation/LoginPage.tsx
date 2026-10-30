@@ -1,8 +1,4 @@
-import {
-  passwordField,
-  currentPasswordField,
-  currentLegalAcceptance,
-} from "@cardapio/contracts"
+import { currentPasswordField, currentLegalAcceptance } from "@cardapio/contracts"
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
 import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
 import { useEffect, useState, type FormEvent } from "react"
@@ -15,6 +11,8 @@ import { useMutation } from "../../../shared/presentation/use-mutation"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import type { AppError } from "../../../shared/application/result"
 import StoreFields from "./StoreFields"
+import PasswordFields from "./PasswordFields"
+import TurnstileChallenge from "../../../shared/presentation/TurnstileChallenge"
 export default function LoginPage() {
   const { auth } = useServices()
   const navigate = useNavigate(),
@@ -25,19 +23,31 @@ export default function LoginPage() {
   const [signup, setSignup] = useState(accountOnly),
     [signupEnabled, setSignupEnabled] = useState(false)
   const [configError, setConfigError] = useState<AppError | null>(null)
+  const [configured, setConfigured] = useState(false),
+    [siteKey, setSiteKey] = useState("")
+  const [graceSeconds, setGraceSeconds] = useState(604800),
+    [configAttempt, setConfigAttempt] = useState(0)
+  const [turnstileToken, setTurnstileToken] = useState(""),
+    [challengeAttempt, setChallengeAttempt] = useState(0)
   const mutation = useMutation()
   useEffect(() => {
     let active = true
     if (auth)
       void auth.configuration().then((result) => {
         if (!active) return
-        if (result.ok) setSignupEnabled(result.value.signupEnabled)
-        else setConfigError(result.error)
+        if (result.ok) {
+          setSignupEnabled(result.value.signupEnabled)
+          setSiteKey(result.value.turnstileSiteKey ?? "")
+          setGraceSeconds(result.value.emailVerificationGraceSeconds ?? 604800)
+          setConfigured(true)
+          setConfigError(null)
+          if (!result.value.signupEnabled) setSignup(false)
+        } else setConfigError(result.error)
       })
     return () => {
       active = false
     }
-  }, [auth])
+  }, [auth, configAttempt])
   if (!auth)
     return (
       <main className="state-page">
@@ -52,7 +62,12 @@ export default function LoginPage() {
     if (!auth) return
     const data = new FormData(event.currentTarget)
     const get = (key: string) => String(data.get(key) ?? "")
-    const credentials = { email: get("email"), password: get("password") }
+    if (!configured || (siteKey && !turnstileToken)) return
+    const credentials = {
+      email: get("email"),
+      password: get("password"),
+      ...(turnstileToken ? { turnstileToken } : {}),
+    }
     if (signup && get("legalAcceptance") !== "on") return
     const result = await mutation.run(() =>
       signup
@@ -71,6 +86,10 @@ export default function LoginPage() {
         navigate("/mfa", { replace: true })
         return
       }
+      if (signup || result.value.emailVerification?.required) {
+        navigate("/confirmar-email", { replace: true })
+        return
+      }
       const returnTo: unknown = location.state?.returnTo
       navigate(
         typeof returnTo === "string" && /^\/admin(?:[/?]|$)/.test(returnTo)
@@ -78,6 +97,10 @@ export default function LoginPage() {
           : "/admin",
         { replace: true },
       )
+    }
+    if (siteKey && result && !result.ok) {
+      setTurnstileToken("")
+      setChallengeAttempt((attempt) => attempt + 1)
     }
   }
   return (
@@ -143,7 +166,13 @@ export default function LoginPage() {
                 : "Crie sua conta e comece com um cardápio vazio. Você abre a loja quando estiver tudo pronto."
               : "Entre para cuidar do cardápio e acompanhar os pedidos."}
           </p>
-          {configError && <ErrorNotice error={configError} />}
+          {configError && (
+            <ErrorNotice
+              error={configError}
+              onRetry={() => setConfigAttempt((attempt) => attempt + 1)}
+            />
+          )}
+          {!configured && !configError && <p role="status">Preparando acesso seguro…</p>}
           <ValidatedForm
             className="account-form"
             onSubmit={(event) => void submit(event)}
@@ -172,24 +201,22 @@ export default function LoginPage() {
                   autoCapitalize="none"
                 />
               </label>
-              <label className="field">
-                <span id="auth-password-label">Senha *</span>
-                <ValidatedInput
-                  aria-labelledby="auth-password-label"
-                  name="password"
-                  schema={signup ? passwordField : currentPasswordField}
-                  type="password"
-                  required
-                  minLength={signup ? 8 : 1}
-                  autoComplete={signup ? "new-password" : "current-password"}
-                  aria-describedby={signup ? "password-help" : undefined}
-                />
-                {signup && (
-                  <small className="field-help" id="password-help">
-                    Use de 8 a 128 caracteres. Você pode usar uma frase como senha.
-                  </small>
-                )}
-              </label>
+              {signup ? (
+                <PasswordFields key="signup-password" />
+              ) : (
+                <label className="field">
+                  <span id="auth-password-label">Senha *</span>
+                  <ValidatedInput
+                    aria-labelledby="auth-password-label"
+                    name="password"
+                    schema={currentPasswordField}
+                    type="password"
+                    required
+                    minLength={1}
+                    autoComplete="current-password"
+                  />
+                </label>
+              )}
               {signup && (
                 <label className="check-field">
                   <ValidatedInput
@@ -213,9 +240,30 @@ export default function LoginPage() {
                   <LegalLinks center={false} />
                 </div>
               )}
+              {signup && (
+                <p className="field-help">
+                  Você poderá usar sua conta por{" "}
+                  {graceSeconds >= 86400
+                    ? `${Math.round(graceSeconds / 86400)} dias`
+                    : `${Math.round(graceSeconds / 3600)} horas`}{" "}
+                  antes de confirmar o e-mail. Enviaremos um código de 6 números para
+                  proteger seu acesso.
+                </p>
+              )}
+              {siteKey && (
+                <TurnstileChallenge
+                  key={`${signup}-${challengeAttempt}`}
+                  siteKey={siteKey}
+                  action={signup ? "register" : "login"}
+                  onToken={setTurnstileToken}
+                />
+              )}
             </fieldset>
             {mutation.error && <ErrorNotice error={mutation.error} />}
-            <button className="primary-button" disabled={mutation.pending}>
+            <button
+              className="primary-button"
+              disabled={mutation.pending || !configured || (!!siteKey && !turnstileToken)}
+            >
               {mutation.pending
                 ? "Aguarde…"
                 : signup
@@ -232,6 +280,7 @@ export default function LoginPage() {
               disabled={mutation.pending}
               onClick={() => {
                 mutation.clearError()
+                setTurnstileToken("")
                 setSignup(!signup)
               }}
             >

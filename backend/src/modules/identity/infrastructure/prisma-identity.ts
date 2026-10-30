@@ -59,7 +59,16 @@ export class PrismaIdentity implements IdentityRepository {
   ) {
     return this.db.transaction(async (tx) => {
       const { id, name, email, passwordHash, active } = account
-      await tx.user.create({ data: { id, name, email, passwordHash, active } })
+      await tx.user.create({
+        data: {
+          id,
+          name,
+          email,
+          passwordHash,
+          active,
+          emailVerificationDeadline: account.emailVerificationDeadline,
+        },
+      })
       await tx.legalAcceptance.create({
         data: {
           id: acceptance.id,

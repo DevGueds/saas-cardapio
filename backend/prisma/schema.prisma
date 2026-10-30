@@ -34,12 +34,26 @@ model User {
   passwordHash   String          @db.VarChar(255)
   active         Boolean         @default(true)
   createdAt      DateTime        @default(now()) @db.Timestamptz(3)
+  emailVerifiedAt DateTime?       @db.Timestamptz(3)
+  emailVerificationDeadline DateTime @default(dbgenerated("(now() + '7 days'::interval)")) @db.Timestamptz(3)
+  emailChallenge EmailVerificationChallenge?
   memberships    Membership[]
   sessions       Session[]
   mfa            MfaCredential?
   securityEvents SecurityEvent[]
   legalAcceptances LegalAcceptance[]
   privacyRequests PrivacyRequest[]
+}
+
+model EmailVerificationChallenge {
+  userId    String   @id @db.Uuid
+  codeHash  String   @db.Char(64)
+  expiresAt DateTime @db.Timestamptz(3)
+  retryAt   DateTime @db.Timestamptz(3)
+  attempts  Int      @default(0)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
 }
 
 model LegalAcceptance {

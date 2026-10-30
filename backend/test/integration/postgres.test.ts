@@ -11,7 +11,15 @@ if (
   !new URL(value).pathname.endsWith("_test")
 )
   throw new Error("Use um banco PostgreSQL exclusivo com sufixo _test.")
-const config = loadConfig({ ...process.env, NODE_ENV: "test", DATABASE_URL: value })
+const config = loadConfig({
+  ...process.env,
+  MAIL_PROVIDER: "disabled",
+  TURNSTILE_SITE_KEY: "",
+  TURNSTILE_SECRET_KEY: "",
+  CLOUDFLARE_ORIGIN_SECRET: "",
+  NODE_ENV: "test",
+  DATABASE_URL: value,
+})
 
 test("PostgreSQL native types, indexes and least-privilege runtime survive migrations", async () => {
   const db = new Database(config)

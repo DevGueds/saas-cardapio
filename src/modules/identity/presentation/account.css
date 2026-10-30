@@ -190,6 +190,98 @@
   gap: 0.35rem 1rem;
   padding-top: 1rem;
 }
+.password-fields {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.password-fields .field > label {
+  font-weight: 700;
+}
+.password-control {
+  position: relative;
+}
+.password-control input {
+  width: 100%;
+  padding-right: 5rem;
+}
+.password-visibility {
+  position: absolute;
+  right: 0.25rem;
+  top: 0.15rem;
+  min-height: 44px;
+  min-width: 68px;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--brand);
+  font-weight: 700;
+}
+.password-visibility:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+.password-meter {
+  display: flex;
+  gap: 0.35rem;
+  height: 0.4rem;
+  margin-top: 0.35rem;
+}
+.password-meter span {
+  flex: 1;
+  border-radius: 1rem;
+  background: #e2e6df;
+}
+.password-meter [data-filled="true"] {
+  background: #926314;
+}
+.password-meter[data-strength="weak"] [data-filled="true"] {
+  background: #b53a3a;
+}
+.password-meter[data-strength="strong"] [data-filled="true"],
+.password-meter[data-strength="very-strong"] [data-filled="true"] {
+  background: var(--brand);
+}
+.password-strength {
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+.email-verification-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 3rem);
+  background: var(--soft-green);
+}
+.email-verification-card {
+  width: 100%;
+  max-width: 34rem;
+  display: grid;
+  gap: 1rem;
+}
+.email-verification-card > svg {
+  color: var(--brand);
+}
+.email-verification-card h1 {
+  font-size: clamp(1.6rem, 5vw, 2rem);
+  letter-spacing: -0.03em;
+}
+.email-verification-card .account-form {
+  margin: 0.5rem 0;
+}
+.email-address {
+  overflow-wrap: anywhere;
+}
+.email-verification-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.email-verification-notice p {
+  margin: 0.25rem 0 0;
+}
 .account-actions a,
 .account-actions button {
   background: none;

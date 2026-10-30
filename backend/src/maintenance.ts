@@ -13,6 +13,9 @@ const result = await operation.run("maintenance.expired-records", async () => {
         where: { OR: [{ expiresAt: { lte: now } }, { revokedAt: { not: null } }] },
       })
       const limits = await tx.rateLimit.deleteMany({ where: { expiresAt: { lte: now } } })
+      const emailCodes = await tx.emailVerificationChallenge.deleteMany({
+        where: { expiresAt: { lte: now } },
+      })
       const subscriptions = await tx.pushSubscription.deleteMany({
         where: { expiresAt: { lte: now } },
       })
@@ -22,6 +25,7 @@ const result = await operation.run("maintenance.expired-records", async () => {
       return {
         expiredSessions: sessions.count,
         expiredLimits: limits.count,
+        expiredEmailCodes: emailCodes.count,
         expiredSubscriptions: subscriptions.count,
         expiredNotificationEvents: events.count,
       }

@@ -14,7 +14,7 @@ describe("privacy and legal acceptance", () => {
     const data = {
       name: "Ana",
       email: "ana@example.test",
-      password: "12345678",
+      password: "M7!qR2@x",
       restaurantName: "Loja",
       slug: "minha-loja",
     }

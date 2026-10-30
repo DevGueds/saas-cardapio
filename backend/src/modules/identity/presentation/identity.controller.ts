@@ -13,7 +13,12 @@ import {
 import type { FastifyReply } from "fastify"
 import { RUNTIME, type Runtime } from "../../../app/composition.js"
 import { Public } from "../../../shared/presentation/http.js"
-import { authenticated, MfaAllowed, type SessionRequest } from "./session-guard.js"
+import {
+  authenticated,
+  MfaAllowed,
+  EmailAllowed,
+  type SessionRequest,
+} from "./session-guard.js"
 @Controller()
 export class IdentityController {
   constructor(@Inject(RUNTIME) private readonly app: Runtime) {}
@@ -57,10 +62,12 @@ export class IdentityController {
   ) {
     return this.establish(this.app.auth.login(input, request.ip), reply)
   }
-  @MfaAllowed() @Get("auth/session") session(@Req() request: SessionRequest) {
+  @EmailAllowed() @MfaAllowed() @Get("auth/session") session(
+    @Req() request: SessionRequest,
+  ) {
     return { ok: true, value: authenticated(request).view }
   }
-  @MfaAllowed() @Post("auth/logout") async logout(
+  @EmailAllowed() @MfaAllowed() @Post("auth/logout") async logout(
     @Req() request: SessionRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
@@ -91,6 +98,18 @@ export class IdentityController {
   }
   @Get("me/restaurants") restaurants(@Req() request: SessionRequest) {
     return this.app.tenancy.restaurants(authenticated(request).actor)
+  }
+  @EmailAllowed() @Get("auth/email") emailStatus(@Req() request: SessionRequest) {
+    return this.app.emailVerification.status(authenticated(request).actor)
+  }
+  @EmailAllowed() @Post("auth/email/send") emailSend(@Req() request: SessionRequest) {
+    return this.app.emailVerification.send(authenticated(request).actor)
+  }
+  @EmailAllowed() @Post("auth/email/confirm") emailConfirm(
+    @Req() request: SessionRequest,
+    @Body() input: unknown,
+  ) {
+    return this.app.emailVerification.confirm(authenticated(request).actor, input)
   }
   @Post("tenants") tenant(@Req() request: SessionRequest, @Body() input: unknown) {
     return this.app.tenancy.create(authenticated(request).actor, input)

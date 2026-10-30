@@ -11,6 +11,8 @@ import type {
 } from "../application/authentication.js"
 export type SessionRequest = FastifyRequest & { session?: AuthenticatedSession }
 const MFA_ALLOWED = Symbol("mfa-allowed")
+const EMAIL_ALLOWED = Symbol("email-allowed")
+export const EmailAllowed = () => SetMetadata(EMAIL_ALLOWED, true)
 export const MfaAllowed = () => SetMetadata(MFA_ALLOWED, true)
 export function authenticated(request: SessionRequest) {
   if (!request.session)
@@ -57,6 +59,17 @@ export class SessionGuard implements CanActivate {
           "Sua sessão precisa ser atualizada. Recarregue a página antes de tentar novamente.",
         )
     }
+    if (
+      request.session.view.emailVerification?.required &&
+      !this.reflector.getAllAndOverride<boolean>(EMAIL_ALLOWED, [
+        context.getHandler(),
+        context.getClass(),
+      ])
+    )
+      throw new Failure(
+        "EMAIL_VERIFICATION_REQUIRED",
+        "Confirme seu e-mail para continuar usando sua conta.",
+      )
     return true
   }
 }

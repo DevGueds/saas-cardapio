@@ -80,6 +80,10 @@ async function register(label: string, store = true) {
   )
   const login = accept(response, email)
   users.push(login.userId)
+  await server.runtime.db.client.user.update({
+    where: { id: login.userId },
+    data: { emailVerifiedAt: new Date() },
+  })
   if (store) {
     login.store = value<RestaurantAccess[]>(
       await request("GET", "/me/restaurants", undefined, login),
@@ -112,6 +116,10 @@ before(async () => {
   server = await createApplication(
     loadConfig({
       ...process.env,
+      MAIL_PROVIDER: "disabled",
+      TURNSTILE_SITE_KEY: "",
+      TURNSTILE_SECRET_KEY: "",
+      CLOUDFLARE_ORIGIN_SECRET: "",
       NODE_ENV: "test",
       DATABASE_URL: database,
       SIGNUP_ENABLED: "true",

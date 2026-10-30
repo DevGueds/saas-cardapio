@@ -1,6 +1,7 @@
 import { can } from "@cardapio/domain/permissions"
 import FeatureBoundary from "../../shared/presentation/FeatureBoundary"
 import { useAccount } from "../../modules/identity/presentation/AccountContext"
+import EmailVerificationNotice from "../../modules/identity/presentation/EmailVerificationNotice"
 import { useEffect, useRef, useState } from "react"
 import { Outlet, useLocation } from "react-router"
 import { Menu } from "lucide-react"
@@ -150,6 +151,7 @@ export default function AdminLayout() {
           </div>
         </header>
         <main className="admin-main" id="admin-content" ref={main} tabIndex={-1}>
+          {account && <EmailVerificationNotice session={account.session} />}
           {mutation.error && (
             <ErrorNotice error={mutation.error} onRetry={() => void reload()} />
           )}

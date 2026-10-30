@@ -56,7 +56,7 @@ async function register(label: string): Promise<Login> {
     legalAcceptance: currentLegalAcceptance,
     name: "Operador de testes",
     email: `${label}-${suffix}@example.test`,
-    password: "test-123456",
+    password: "Fixture-9!mQ",
     restaurantName: "Loja de impressão",
     slug: `${label}-${suffix}`,
   })
@@ -137,6 +137,10 @@ before(async () => {
   server = await createApplication(
     loadConfig({
       ...process.env,
+      MAIL_PROVIDER: "disabled",
+      TURNSTILE_SITE_KEY: "",
+      TURNSTILE_SECRET_KEY: "",
+      CLOUDFLARE_ORIGIN_SECRET: "",
       NODE_ENV: "test",
       DATABASE_URL: database,
       CORS_ORIGINS: origin,

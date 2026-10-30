@@ -1,4 +1,5 @@
 import { currentLegalAcceptance } from "@cardapio/contracts"
+import { verifyFixtureEmail } from "./verified-fixture"
 import { fillDeliveryAddress } from "../browser-address"
 import { expect, test } from "@playwright/test"
 import { randomUUID } from "node:crypto"
@@ -19,7 +20,7 @@ test("frete por raio sincroniza ponto, endereço, faixas e total em HTTP local",
       legalAcceptance: currentLegalAcceptance,
       name: "Gestor Raio",
       email: `${slug}@browser.example.test`,
-      password: "12345678",
+      password: "M7!qR2@x",
       restaurantName: "Loja por Raio",
       slug,
     },
@@ -169,7 +170,8 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
   await page.getByRole("button", { name: "Primeiro acesso? Criar minha conta" }).click()
   await page.getByLabel("Seu nome *", { exact: true }).fill("José da Conceição")
   await page.getByLabel("E-mail *", { exact: true }).fill(`${slug}@browser.example.test`)
-  await page.getByLabel("Senha *", { exact: true }).fill("12345678")
+  await page.getByLabel("Senha *", { exact: true }).fill("M7!qR2@x")
+  await page.getByLabel("Confirme a senha *", { exact: true }).fill("M7!qR2@x")
   await page.getByLabel("Nome da loja *", { exact: true }).fill("Cozinha São José")
   await page.getByLabel("Endereço do cardápio *", { exact: true }).fill(slug)
   const registered = page.waitForResponse(
@@ -181,6 +183,7 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
   const account = await (await registered).json()
   expect(account.ok).toBe(true)
   users.push(account.value.user.id)
+  await page.getByRole("link", { name: "Confirmar depois e acessar o app" }).click()
   await expect(
     page.getByRole("heading", { name: "Qual loja vamos cuidar hoje?" }),
   ).toBeVisible()
@@ -463,7 +466,7 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
       legalAcceptance: currentLegalAcceptance,
       name: "Gestor Extras",
       email: `${slug}@browser.example.test`,
-      password: "12345678",
+      password: "M7!qR2@x",
       restaurantName: "Casa dos Extras",
       slug,
     },
@@ -713,7 +716,8 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   await page.getByLabel("Faço parte de uma equipe; não quero criar uma loja").uncheck()
   await page.getByLabel("Seu nome *", { exact: true }).fill("Ana Conceição")
   await page.getByLabel("E-mail *", { exact: true }).fill(`${slug}@browser.example.test`)
-  await page.getByLabel("Senha *", { exact: true }).fill("12345678")
+  await page.getByLabel("Senha *", { exact: true }).fill("M7!qR2@x")
+  await page.getByLabel("Confirme a senha *", { exact: true }).fill("M7!qR2@x")
   await page.getByLabel("Nome da loja *", { exact: true }).fill("Cozinha da Praça")
   await page.getByLabel("Endereço do cardápio *", { exact: true }).fill(slug)
   const registered = page.waitForResponse(
@@ -724,6 +728,7 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   const account = await (await registered).json()
   expect(account.ok).toBe(true)
   users.push(account.value.user.id)
+  await page.getByRole("link", { name: "Confirmar depois e acessar o app" }).click()
   await page
     .locator(".account-store-card")
     .filter({ hasText: "Cozinha da Praça" })
@@ -926,7 +931,8 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   await staff.goto("/login?equipe=1")
   await staff.getByLabel("Seu nome *", { exact: true }).fill("Equipe Cozinha")
   await staff.getByLabel("E-mail *", { exact: true }).fill(email)
-  await staff.getByLabel("Senha *", { exact: true }).fill("12345678")
+  await staff.getByLabel("Senha *", { exact: true }).fill("M7!qR2@x")
+  await staff.getByLabel("Confirme a senha *", { exact: true }).fill("M7!qR2@x")
   const teamRegistered = staff.waitForResponse((r) =>
     r.url().endsWith("/auth/register-account"),
   )
@@ -937,6 +943,8 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
   const teamAccount = await (await teamRegistered).json()
   expect(teamAccount.ok).toBe(true)
   users.push(teamAccount.value.user.id)
+  await staff.getByRole("link", { name: "Confirmar depois e acessar o app" }).click()
+  await verifyFixtureEmail(email)
   await expect(staff.getByText(/Sua conta ainda não tem lojas/)).toBeVisible()
   await page.getByRole("link", { name: "Equipe e permissões", exact: true }).click()
   await page.getByLabel("E-mail da conta", { exact: true }).fill(email)
@@ -986,13 +994,14 @@ test("cadastro valida todos os campos antes da API e preserva a senha exata", as
   await page.getByLabel("Endereço do cardápio *", { exact: true }).fill("a!")
   await page.getByRole("checkbox", { name: /Li e aceito/ }).check()
   await page.getByRole("button", { name: "Criar conta e loja", exact: true }).click()
-  await expect(page.locator('input[aria-invalid="true"]')).toHaveCount(5)
+  await expect(page.locator('input[aria-invalid="true"]')).toHaveCount(6)
   await expect(page.getByLabel("Seu nome *", { exact: true })).toBeFocused()
   await expect(password).toHaveValue("1234567")
   expect(submissions).toBe(0)
   await page.getByLabel("Seu nome *", { exact: true }).fill("João D’Ávila")
   await page.getByLabel("E-mail *", { exact: true }).fill("JOAO@EXEMPLO.COM")
-  await password.fill(" frase  ")
+  await password.fill(" Frase-9!  ")
+  await page.getByLabel("Confirme a senha *", { exact: true }).fill(" Frase-9!  ")
   await page.getByLabel("Nome da loja *", { exact: true }).fill("Açaí da Praça")
   await page.getByLabel("Endereço do cardápio *", { exact: true }).fill("Açaí da Praça")
   await page.getByLabel("Endereço do cardápio *", { exact: true }).press("Tab")
@@ -1002,7 +1011,7 @@ test("cadastro valida todos os campos antes da API e preserva a senha exata", as
   await expect(page.getByLabel("Endereço do cardápio *", { exact: true })).toHaveValue(
     "acai-da-praca",
   )
-  await expect(password).toHaveValue(" frase  ")
+  await expect(password).toHaveValue(" Frase-9!  ")
   await expect(page.locator('input[aria-invalid="true"]')).toHaveCount(0)
   await password.fill("x".repeat(129))
   await password.press("Tab")

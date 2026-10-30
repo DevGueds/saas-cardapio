@@ -42,6 +42,23 @@ const schema = z.object({
   CORS_ORIGINS: z.string().min(1),
   SIGNUP_ENABLED: z.enum(["true", "false"]).default("false"),
   DOCS_ENABLED: z.enum(["true", "false"]).default("false"),
+  EMAIL_VERIFICATION_GRACE_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(3600)
+    .max(2592000)
+    .default(604800),
+  MAIL_PROVIDER: z.enum(["disabled", "postal", "mailpit"]).default("disabled"),
+  MAIL_API_URL: z.string().default(""),
+  MAIL_API_KEY: z.string().max(512).default(""),
+  MAIL_FROM: z.email().default("conta@localhost.invalid"),
+  TURNSTILE_SITE_KEY: z.string().max(100).default(""),
+  TURNSTILE_SECRET_KEY: z.string().max(200).default(""),
+  TURNSTILE_HOSTNAMES: z.string().default(""),
+  CLOUDFLARE_ORIGIN_SECRET: z
+    .string()
+    .regex(/^(?:[a-f0-9]{64}|)$/)
+    .default(""),
   VAPID_PUBLIC_KEY: z.string().default(""),
   VAPID_PRIVATE_KEY: z.string().default(""),
   VAPID_SUBJECT: z.string().default("mailto:admin@localhost.invalid"),
@@ -65,6 +82,32 @@ export function loadConfig(input: Record<string, unknown>) {
   let origins: string[]
   let secureCookies: boolean
   try {
+    if (
+      !!env.TURNSTILE_SITE_KEY !== !!env.TURNSTILE_SECRET_KEY ||
+      (env.TURNSTILE_SECRET_KEY &&
+        !env.TURNSTILE_HOSTNAMES.split(",").every((host) =>
+          /^[a-z0-9.-]+$/.test(host.trim()),
+        ))
+    )
+      throw new Error()
+    if (env.MAIL_PROVIDER !== "disabled") {
+      const mail = new URL(env.MAIL_API_URL)
+      if (
+        mail.username ||
+        mail.password ||
+        mail.search ||
+        mail.hash ||
+        mail.pathname !== "/" ||
+        !["http:", "https:"].includes(mail.protocol) ||
+        (env.MAIL_PROVIDER === "postal" &&
+          ((mail.protocol !== "https:" && env.NODE_ENV === "production") ||
+            env.MAIL_API_KEY.length < 16)) ||
+        (env.MAIL_PROVIDER === "mailpit" &&
+          (env.NODE_ENV === "production" ||
+            !["127.0.0.1", "localhost", "[::1]", "mailpit"].includes(mail.hostname)))
+      )
+        throw new Error()
+    }
     if (
       !!env.VAPID_PUBLIC_KEY !== !!env.VAPID_PRIVATE_KEY ||
       (env.VAPID_PUBLIC_KEY &&
@@ -174,6 +217,19 @@ export function loadConfig(input: Record<string, unknown>) {
     )
   }
   return {
+    emailGraceSeconds: env.EMAIL_VERIFICATION_GRACE_SECONDS,
+    mail: {
+      provider: env.MAIL_PROVIDER,
+      url: env.MAIL_API_URL.replace(/\/$/, ""),
+      key: env.MAIL_API_KEY,
+      from: env.MAIL_FROM,
+    },
+    turnstileSiteKey: env.TURNSTILE_SITE_KEY,
+    turnstileSecretKey: env.TURNSTILE_SECRET_KEY,
+    turnstileHosts: env.TURNSTILE_HOSTNAMES.split(",")
+      .map((host) => host.trim())
+      .filter(Boolean),
+    cloudflareOriginSecret: env.CLOUDFLARE_ORIGIN_SECRET,
     environment: env.NODE_ENV,
     vapidPublicKey: env.VAPID_PUBLIC_KEY,
     vapidPrivateKey: env.VAPID_PRIVATE_KEY,
@@ -202,7 +258,9 @@ export function loadConfig(input: Record<string, unknown>) {
     secret: env.SESSION_SECRET,
     sessionTtl: env.SESSION_TTL_SECONDS,
     origins,
-    signupEnabled: env.SIGNUP_ENABLED === "true",
+    signupEnabled:
+      env.SIGNUP_ENABLED === "true" &&
+      (env.NODE_ENV !== "production" || env.MAIL_PROVIDER === "postal"),
     docsEnabled: env.DOCS_ENABLED === "true",
     secureCookies,
     cookieName: secureCookies ? "__Host-cardapio_session" : "cardapio_session",

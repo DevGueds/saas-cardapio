@@ -63,7 +63,7 @@ async function register(name: string, store = true): Promise<Login> {
     {
       name,
       email: `analytics-${name.toLowerCase().replaceAll(" ", "-")}-${suffix}@example.test`,
-      password: "12345678",
+      password: "M7!qR2@x",
       legalAcceptance: currentLegalAcceptance,
       ...(store
         ? {
@@ -81,6 +81,10 @@ async function register(name: string, store = true): Promise<Login> {
       userId: session.user.id,
     }
   users.push(login.userId)
+  await server.runtime.db.client.user.update({
+    where: { id: login.userId },
+    data: { emailVerifiedAt: new Date() },
+  })
   if (store)
     login.store = value<RestaurantAccess[]>(
       await request("GET", "/me/restaurants", undefined, login),
@@ -178,6 +182,10 @@ before(async () => {
   server = await createApplication(
     loadConfig({
       ...process.env,
+      MAIL_PROVIDER: "disabled",
+      TURNSTILE_SITE_KEY: "",
+      TURNSTILE_SECRET_KEY: "",
+      CLOUDFLARE_ORIGIN_SECRET: "",
       NODE_ENV: "test",
       DATABASE_URL: database,
       SIGNUP_ENABLED: "true",

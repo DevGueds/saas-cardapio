@@ -20,10 +20,10 @@ const env = {
   CORS_ORIGINS: "http://localhost:8443",
 }
 test("password accepts exactly eight characters, spaces and Unicode without trim", () => {
-  assert.equal(password.safeParse("12345678").success, true)
+  assert.equal(password.safeParse("M7!qR2@x").success, true)
   assert.equal(password.safeParse("1234567").success, false)
-  assert.equal(password.parse(" frase  "), " frase  ")
-  assert.equal(password.safeParse("🍕".repeat(8)).success, true)
+  assert.equal(password.parse(" Frase-9!  "), " Frase-9!  ")
+  assert.equal(password.safeParse("🍕".repeat(8)).success, false)
   assert.equal(password.safeParse("x".repeat(129)).success, false)
 })
 test("Argon2id hashes passwords and rejects wrong credentials", async () => {
@@ -205,7 +205,7 @@ test("schemas reject mass assignment and bad prices", () => {
       legalAcceptance: currentLegalAcceptance,
       name: "Maria",
       email: "a@example.test",
-      password: "12345678",
+      password: "M7!qR2@x",
       restaurantName: "Loja",
       slug: "loja",
       role: "OWNER",

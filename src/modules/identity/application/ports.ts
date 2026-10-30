@@ -3,11 +3,22 @@ import type {
   SessionView,
   RestaurantAccess,
   LegalAcceptance,
+  EmailVerificationView,
 } from "@cardapio/contracts"
 export interface IdentityService {
-  configuration(): Promise<Result<{ signupEnabled: boolean }>>
+  configuration(): Promise<
+    Result<{
+      signupEnabled: boolean
+      turnstileSiteKey?: string
+      emailVerificationGraceSeconds?: number
+    }>
+  >
   session(): Promise<Result<SessionView>>
-  login(input: { email: string; password: string }): Promise<Result<SessionView>>
+  login(input: {
+    email: string
+    password: string
+    turnstileToken?: string
+  }): Promise<Result<SessionView>>
   register(input: {
     accountOnly?: boolean
     name: string
@@ -16,8 +27,12 @@ export interface IdentityService {
     restaurantName: string
     slug: string
     legalAcceptance: LegalAcceptance
+    turnstileToken?: string
   }): Promise<Result<SessionView>>
   logout(): Promise<Result<null>>
+  emailStatus(): Promise<Result<EmailVerificationView>>
+  sendEmailCode(): Promise<Result<{ sent: boolean; retryAt: string }>>
+  confirmEmail(code: string): Promise<Result<null>>
   changePassword(input: {
     currentPassword: string
     newPassword: string
@@ -29,6 +44,8 @@ export interface IdentityService {
     slug: string
   }): Promise<Result<{ tenantId: string; restaurantId: string }>>
   subscribeExpired(
-    listener: (reason?: "UNAUTHENTICATED" | "MFA_REQUIRED") => void,
+    listener: (
+      reason?: "UNAUTHENTICATED" | "MFA_REQUIRED" | "EMAIL_VERIFICATION_REQUIRED",
+    ) => void,
   ): () => void
 }

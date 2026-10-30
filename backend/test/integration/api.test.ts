@@ -33,7 +33,7 @@ interface Login {
 }
 let alice: Login, bob: Login
 let menu: MenuDocument
-const password = "12345678"
+const password = "M7!qR2@x"
 const registrations: string[] = []
 function value<T>(body: string): T {
   const result = JSON.parse(body) as Result<T>
@@ -79,6 +79,10 @@ async function register(label: string): Promise<Login> {
   assert.equal(response.statusCode, 201)
   const session = value<SessionView>(response.body)
   registrations.push(session.user.id)
+  await server.runtime.db.client.user.update({
+    where: { id: session.user.id },
+    data: { emailVerifiedAt: new Date() },
+  })
   const cookie = String(response.headers["set-cookie"]).split(";")[0]!
   assert.match(String(response.headers["set-cookie"]), /HttpOnly/)
   assert.match(String(response.headers["set-cookie"]), /SameSite=Lax/)
@@ -153,6 +157,10 @@ before(async () => {
   server = await createApplication(
     loadConfig({
       ...process.env,
+      MAIL_PROVIDER: "disabled",
+      TURNSTILE_SITE_KEY: "",
+      TURNSTILE_SECRET_KEY: "",
+      CLOUDFLARE_ORIGIN_SECRET: "",
       NODE_ENV: "test",
       DATABASE_URL: database,
       SIGNUP_ENABLED: "true",
@@ -704,6 +712,10 @@ test("unavailable PostgreSQL cannot initialize an alternative repository", async
   const unavailable = new Database(
     loadConfig({
       ...process.env,
+      MAIL_PROVIDER: "disabled",
+      TURNSTILE_SITE_KEY: "",
+      TURNSTILE_SECRET_KEY: "",
+      CLOUDFLARE_ORIGIN_SECRET: "",
       NODE_ENV: "test",
       DATABASE_URL: target.href,
       CORS_ORIGINS: origin,
@@ -1228,6 +1240,10 @@ test("team signup creates no tenant and still requires an owner to grant access"
   assert.equal(response.statusCode, 201)
   const session = value<SessionView>(response.body)
   registrations.push(session.user.id)
+  await server.runtime.db.client.user.update({
+    where: { id: session.user.id },
+    data: { emailVerifiedAt: new Date() },
+  })
   const cookie = String(response.headers["set-cookie"]).split(";")[0]!
   assert.equal(
     await server.runtime.db.client.membership.count({
@@ -1270,7 +1286,7 @@ test("password change revokes all sessions and logout cannot be replayed", async
       await request(
         "PUT",
         "/auth/password",
-        { currentPassword: password, newPassword: "another8" },
+        { currentPassword: password, newPassword: "Next-9!mQ" },
         bob,
       )
     ).statusCode,

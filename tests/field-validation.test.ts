@@ -38,7 +38,7 @@ describe("shared Zod input contracts", () => {
         legalAcceptance: currentLegalAcceptance,
         name: "João",
         email: " JOAO@EXEMPLO.COM ",
-        password: "12345678",
+        password: "M7!qR2@x",
         restaurantName: "Açaí 10",
         slug: "acai-10",
       }).email,
@@ -86,8 +86,8 @@ describe("shared Zod input contracts", () => {
     expect(moneyField(true, true).safeParse("").success).toBe(true)
   })
   it("never trims or truncates passwords and counts Unicode code points", () => {
-    expect(passwordField.parse(" frase  ")).toBe(" frase  ")
-    expect(passwordField.safeParse("🍕".repeat(8)).success).toBe(true)
+    expect(passwordField.parse(" Frase-9!  ")).toBe(" Frase-9!  ")
+    expect(passwordField.safeParse("🍕".repeat(8)).success).toBe(false)
     expect(passwordField.safeParse("a".repeat(129)).success).toBe(false)
     expect(passwordField.safeParse("1234567").success).toBe(false)
   })

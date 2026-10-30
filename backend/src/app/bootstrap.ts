@@ -15,6 +15,7 @@ import helmet from "@fastify/helmet"
 import { Failure } from "@cardapio/domain/failure"
 import { compose, RUNTIME } from "./composition.js"
 import type { ApiConfig } from "./config.js"
+import type { FastifyRequest } from "fastify"
 import { IdentityController } from "../modules/identity/presentation/identity.controller.js"
 import { PrivacyController } from "../modules/privacy/presentation/privacy.controller.js"
 import { MfaController } from "../modules/identity/presentation/mfa.controller.js"
@@ -26,6 +27,15 @@ import {
   HttpErrors,
   ResultInterceptor,
 } from "../shared/presentation/http.js"
+
+function isHealthProbe(request: FastifyRequest) {
+  return (
+    ["GET", "HEAD"].includes(request.method) &&
+    ["/api/v1/health/live", "/api/v1/health/ready"].includes(
+      request.routeOptions.url ?? "",
+    )
+  )
+}
 
 export async function createApplication(config: ApiConfig) {
   const runtime = await compose(config)
@@ -118,7 +128,7 @@ export async function createApplication(config: ApiConfig) {
     adapter.getInstance().addHook("onResponse", async (request, reply) => {
       releases.get(request)?.()
       releases.delete(request)
-      if (!request.url.startsWith("/api/v1/health/"))
+      if (!isHealthProbe(request))
         runtime.diagnostics.http({
           requestId: request.id,
           method: request.method,
@@ -134,9 +144,20 @@ export async function createApplication(config: ApiConfig) {
     adapter.getInstance().addHook("onRequest", async (request, reply) => {
       reply.header("Cache-Control", "no-store")
       try {
+        if (config.cloudflareOriginSecret && !isHealthProbe(request)) {
+          const secret = request.headers["x-cardapio-origin-secret"]
+          if (
+            typeof secret !== "string" ||
+            !runtime.secrets.equalHash(
+              secret,
+              runtime.secrets.hash(config.cloudflareOriginSecret),
+            )
+          )
+            throw new Failure("ACCESS_DENIED", "Acesso indisponível por este endereço.")
+        }
         const unsafe = !["GET", "HEAD", "OPTIONS"].includes(request.method)
         if (
-          !request.url.startsWith("/api/v1/health/") &&
+          !isHealthProbe(request) &&
           !request.routeOptions.url?.endsWith("/board/stream")
         ) {
           const release = capacity.enter()
@@ -170,7 +191,7 @@ export async function createApplication(config: ApiConfig) {
           !/^application\/json(?:\s*;|$)/i.test(request.headers["content-type"] ?? "")
         )
           throw new Failure("VALIDATION", "Envie os dados no formato JSON.")
-        if (request.method !== "OPTIONS" && !request.url.startsWith("/api/v1/health/"))
+        if (request.method !== "OPTIONS" && !isHealthProbe(request))
           await runtime.limiter.consume("http:" + request.ip, config.httpRateLimit, 60)
       } catch (cause) {
         const error = runtime.operation.error("http.boundary", cause)
