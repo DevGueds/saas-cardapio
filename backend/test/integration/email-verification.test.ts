@@ -114,6 +114,7 @@ before(async () => {
       SESSION_SECRET: randomBytes(32).toString("hex"),
       EMAIL_VERIFICATION_GRACE_SECONDS: 3600,
       MAIL_PROVIDER: "postal",
+      EMAIL_SEND_ENABLED: "true",
       MAIL_API_URL: `http://127.0.0.1:${(mail.address() as AddressInfo).port}`,
       MAIL_API_KEY: "test-postal-key-for-isolated-fixtures",
       MAIL_FROM: "conta@example.test",

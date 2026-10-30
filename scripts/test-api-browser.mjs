@@ -15,7 +15,7 @@ for (const suite of suites) {
   const result = spawnSync(
     process.execPath,
     [cli, "test", "--config", "playwright.api.config.ts", suite],
-    { stdio: "inherit", windowsHide: true },
+    { stdio: "inherit", windowsHide: true, env: { ...process.env, EMAIL_SEND_ENABLED: ["email-security.spec.ts", "full-flow.spec.ts", "privacy.spec.ts"].includes(suite) ? "true" : "false" } },
   )
   if (result.error) throw result.error
   if (result.status !== 0) process.exit(result.status ?? 1)

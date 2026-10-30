@@ -42,6 +42,7 @@ export class Authentication {
       email: EmailVerification
       graceSeconds: number
       autoSend: boolean
+      emailEnabled?: boolean
     },
   ) {}
   private newSession(userId: string) {
@@ -103,7 +104,7 @@ export class Authentication {
         throw error
       }
       // Delivery failure never rolls back a successfully created account.
-      if (this.security?.autoSend)
+      if (this.security?.autoSend && this.security.emailEnabled !== false)
         await this.security.email.send({ userId: user.id, sessionId: session.record.id })
       return {
         token: session.token,
@@ -112,7 +113,11 @@ export class Authentication {
           csrfToken: session.csrfToken,
           expiresAt: session.record.expiresAt.toISOString(),
           mfa: "NONE" as const,
-          emailVerification: emailState(user, this.clock.now()),
+          emailVerification: emailState(
+            user,
+            this.clock.now(),
+            this.security?.emailEnabled !== false,
+          ),
         },
       }
     })
@@ -139,7 +144,11 @@ export class Authentication {
           csrfToken: session.csrfToken,
           expiresAt: session.record.expiresAt.toISOString(),
           mfa: mfaState({ ...session.record, user, revokedAt: null }),
-          emailVerification: emailState(user, this.clock.now()),
+          emailVerification: emailState(
+            user,
+            this.clock.now(),
+            this.security?.emailEnabled !== false,
+          ),
         },
       }
     })
@@ -174,7 +183,11 @@ export class Authentication {
       csrfToken,
       expiresAt: record.expiresAt.toISOString(),
       mfa: mfaState(record),
-      emailVerification: emailState(record.user, this.clock.now()),
+      emailVerification: emailState(
+        record.user,
+        this.clock.now(),
+        this.security?.emailEnabled !== false,
+      ),
     }
   }
   logout(actor: Actor) {
@@ -188,7 +201,12 @@ export class Authentication {
       const data = validate(passwordChangeSchema, input)
       await this.limiter.consume("change-password:" + actor.userId, 5, 900)
       const session = await this.repository.sessionByActor(actor, this.clock.now())
-      if (session) assertEmailVerified(session.user, this.clock.now())
+      if (session)
+        assertEmailVerified(
+          session.user,
+          this.clock.now(),
+          this.security?.emailEnabled !== false,
+        )
       if (
         !session ||
         mfaPending(session) ||

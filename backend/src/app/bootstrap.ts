@@ -111,7 +111,9 @@ export async function createApplication(config: ApiConfig) {
       const acceptsImages =
         /^\/api\/v1\/restaurants\/[^/]+\/(settings|combos|products(?:\/[^/]+)?)$/.test(
           route.url,
-        )
+        ) ||
+        route.url === "/api/v1/me/profile" ||
+        route.url.endsWith("/sharing")
       route.bodyLimit = acceptsImages
         ? 15 * 1024 * 1024
         : route.url.endsWith("/printing/settings")

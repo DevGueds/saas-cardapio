@@ -48,7 +48,7 @@ export class PrismaIdentity implements IdentityRepository {
   constructor(private readonly db: Database) {}
   findAccount(email: string) {
     return this.db.run((client) =>
-      client.user.findUnique({ where: { email }, include: identityRelations }),
+      client.user.findUnique({ where: { email }, include: identityRelations, omit: { avatarUrl: true, phone: true } }),
     )
   }
   createAccount(
@@ -109,7 +109,7 @@ export class PrismaIdentity implements IdentityRepository {
           expiresAt: { gt: now },
           user: { active: true },
         },
-        include: { user: { include: identityRelations } },
+        include: { user: { include: identityRelations, omit: { avatarUrl: true, phone: true } } },
       }),
     )
   }
@@ -123,7 +123,7 @@ export class PrismaIdentity implements IdentityRepository {
           expiresAt: { gt: now },
           user: { active: true },
         },
-        include: { user: { include: identityRelations } },
+        include: { user: { include: identityRelations, omit: { avatarUrl: true, phone: true } } },
       }),
     )
   }

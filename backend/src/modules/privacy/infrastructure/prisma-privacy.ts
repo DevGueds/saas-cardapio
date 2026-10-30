@@ -22,7 +22,7 @@ const requestSelect = {
   resolvedAt: true,
   response: true,
 } as const
-const accountSelect = { id: true, name: true, email: true, createdAt: true } as const
+const accountSelect = { id: true, name: true, email: true, createdAt: true, phone: true, avatarUrl: true } as const
 // Convert only selected public fields; hashes, secrets and other tenants never enter the export.
 const json = (value: unknown): unknown => JSON.parse(JSON.stringify(value))
 

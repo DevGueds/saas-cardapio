@@ -150,6 +150,9 @@ export default function ApiAdminRoute() {
           Sair da conta
         </button>
       </header>
+      <Link className="secondary-button" to="/minha-conta">
+        Meu perfil e contato
+      </Link>
       {mutation.error && <ErrorNotice error={mutation.error} />}
       <div className="stores-grid">
         {data.stores.map((store) => (

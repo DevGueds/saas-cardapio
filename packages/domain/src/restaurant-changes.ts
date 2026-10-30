@@ -2,6 +2,8 @@ import { parseMoney } from "./money.js"
 import { brazilianPhone, text } from "./validation.js"
 import { parseRestaurant } from "./restaurant.js"
 import type { MenuDocument } from "./menu-document.js"
+import type { GeoPoint } from "./delivery-radius.js"
+import { parseMenuSharing } from "./menu-sharing.js"
 import {
   effectiveStoreOpen,
   nextScheduledChange,
@@ -18,6 +20,13 @@ export interface RestaurantSettingsInput {
   deliveryFee: string
   minOrder: string
   eta: string
+  location?: GeoPoint | null
+}
+export function updateMenuSharing(current: MenuDocument, input: unknown): MenuDocument {
+  return {
+    ...current,
+    restaurant: { ...current.restaurant, sharing: parseMenuSharing(input) },
+  }
 }
 export function updateRestaurant(
   current: MenuDocument,

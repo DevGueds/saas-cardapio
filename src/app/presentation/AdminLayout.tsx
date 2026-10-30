@@ -29,33 +29,35 @@ export default function AdminLayout() {
   const availability = storeAvailability(restaurant)
   const section = location.pathname.endsWith("analytics")
     ? "Dashboard"
-    : location.pathname.endsWith("hours")
-      ? "Horários da loja"
-      : location.pathname.endsWith("printing")
-        ? "Impressão e comprovantes"
-        : location.pathname.endsWith("security")
-          ? "Segurança da equipe"
-          : location.pathname.endsWith("addons")
-            ? "Adicionais"
-            : location.pathname.endsWith("appearance")
-              ? "Aparência e QR Code"
-              : location.pathname.endsWith("channels")
-                ? "Painel e notificações"
-                : location.pathname.endsWith("finance")
-                  ? "Caixa e relatórios"
-                  : location.pathname.endsWith("offers")
-                    ? "Combos e promoções"
-                    : location.pathname.endsWith("delivery")
-                      ? "Entregas e retirada"
-                      : location.pathname.endsWith("team")
-                        ? "Equipe e permissões"
-                        : location.pathname.endsWith("settings")
-                          ? "Configurações"
-                          : location.pathname.endsWith("orders")
-                            ? services.mode === "api"
-                              ? "Pedidos"
-                              : "Pedidos demonstrativos"
-                            : "Cardápio"
+    : location.pathname.endsWith("sharing")
+      ? "Compartilhar cardápio"
+      : location.pathname.endsWith("hours")
+        ? "Horários da loja"
+        : location.pathname.endsWith("printing")
+          ? "Impressão e comprovantes"
+          : location.pathname.endsWith("security")
+            ? "Segurança da equipe"
+            : location.pathname.endsWith("addons")
+              ? "Adicionais"
+              : location.pathname.endsWith("appearance")
+                ? "Aparência e QR Code"
+                : location.pathname.endsWith("channels")
+                  ? "Painel e notificações"
+                  : location.pathname.endsWith("finance")
+                    ? "Caixa e relatórios"
+                    : location.pathname.endsWith("offers")
+                      ? "Combos e promoções"
+                      : location.pathname.endsWith("delivery")
+                        ? "Entregas e retirada"
+                        : location.pathname.endsWith("team")
+                          ? "Equipe e permissões"
+                          : location.pathname.endsWith("settings")
+                            ? "Configurações"
+                            : location.pathname.endsWith("orders")
+                              ? services.mode === "api"
+                                ? "Pedidos"
+                                : "Pedidos demonstrativos"
+                              : "Cardápio"
 
   useEffect(() => {
     document.title = `${section} · ${restaurant.name} · Pede Aqui`

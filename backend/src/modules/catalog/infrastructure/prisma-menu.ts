@@ -1,5 +1,5 @@
 import { parseCommerce, parsePromotion } from "@cardapio/domain/commerce"
-import type { Prisma } from "../../../generated/prisma/client.js"
+import { Prisma } from "../../../generated/prisma/client.js"
 import { Failure } from "@cardapio/domain/failure"
 import { parseMenuDocument, type MenuDocument } from "@cardapio/domain/menu-document"
 import { normalizeName } from "@cardapio/domain/validation"
@@ -74,6 +74,15 @@ export class PrismaMenu implements MenuRepository {
           name: restaurant.name,
           description: restaurant.description,
           address: restaurant.address,
+          location:
+            restaurant.location === undefined
+              ? undefined
+              : restaurant.location === null
+                ? Prisma.DbNull
+                : (restaurant.location as unknown as Prisma.InputJsonValue),
+          sharing: restaurant.sharing
+            ? (restaurant.sharing as unknown as Prisma.InputJsonValue)
+            : undefined,
           whatsapp: restaurant.whatsapp,
           whatsappConfigured: restaurant.whatsappConfigured,
           logoUrl: restaurant.logoUrl,
@@ -112,6 +121,12 @@ export class PrismaMenu implements MenuRepository {
           update: data,
         })
       }
+      await tx.category.deleteMany({
+        where: {
+          ...scope,
+          id: { notIn: next.categories.map((category) => category.id) },
+        },
+      })
       if (next.commerce) {
         const stored = await tx.storeCommerce.findFirst({ where: scope })
         const previous = stored

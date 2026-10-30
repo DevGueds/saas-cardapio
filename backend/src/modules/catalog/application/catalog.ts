@@ -6,16 +6,21 @@ import {
   updateSettingsSchema,
   uuid,
   updateHoursSchema,
+  categorySchema,
+  updateMenuSharingSchema,
 } from "@cardapio/contracts"
 import {
   saveProduct,
   changeAvailability,
   deleteProduct,
+  saveCategory,
+  deleteCategory,
 } from "@cardapio/domain/catalog-changes"
 import {
   updateRestaurant,
   setRestaurantOpen,
   updateStoreHours,
+  updateMenuSharing,
 } from "@cardapio/domain/restaurant-changes"
 import { requireValid } from "@cardapio/domain/failure"
 import type { MenuDocument } from "@cardapio/domain/menu-document"
@@ -33,6 +38,7 @@ export class Catalog {
     private readonly operation: Operation,
     private readonly publicMenus: { publicMenu(slug: string): Promise<MenuDocument> },
     private readonly clock: Clock,
+    private readonly images?: { validate(image: string): Promise<void> },
   ) {}
   publicMenu(slug: string) {
     return this.operation.run("catalog.public-menu", async () => {
@@ -95,11 +101,44 @@ export class Catalog {
       )
     })
   }
+  category(actor: Actor, restaurantId: string, input: unknown, categoryId?: string) {
+    return this.operation.run("catalog.save-category", async () => {
+      const data = validate(categorySchema, input)
+      const id = categoryId === undefined ? this.ids.next() : validate(uuid, categoryId)
+      return this.mutate(actor, restaurantId, data.expectedRevision, (menu) => {
+        requireValid(
+          categoryId === undefined || menu.categories.some((c) => c.id === id),
+          "A categoria foi removida. Atualize o catálogo.",
+        )
+        return saveCategory(menu, data.name, id)
+      })
+    })
+  }
+  deleteCategory(actor: Actor, restaurantId: string, id: string, input: unknown) {
+    return this.operation.run("catalog.delete-category", async () => {
+      const data = validate(deleteSchema, input)
+      const categoryId = validate(uuid, id)
+      return this.mutate(actor, restaurantId, data.expectedRevision, (menu) =>
+        deleteCategory(menu, categoryId),
+      )
+    })
+  }
   open(actor: Actor, restaurantId: string, input: unknown) {
     return this.operation.run("restaurant.open", async () => {
       const data = validate(openSchema, input)
       return this.mutate(actor, restaurantId, data.expectedRevision, (menu) =>
         setRestaurantOpen(menu, data.isOpen, this.clock.now().getTime()),
+      )
+    })
+  }
+  sharing(actor: Actor, restaurantId: string, input: unknown) {
+    return this.operation.run("restaurant.sharing", async () => {
+      const { expectedRevision, ...data } = validate(updateMenuSharingSchema, input)
+      await this.access.restaurant(actor, restaurantId, "catalog:write")
+      await this.images?.validate(data.squareImage)
+      await this.images?.validate(data.landscapeImage)
+      return this.mutate(actor, restaurantId, expectedRevision, (menu) =>
+        updateMenuSharing(menu, data),
       )
     })
   }

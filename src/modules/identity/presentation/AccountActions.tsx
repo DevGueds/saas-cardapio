@@ -7,11 +7,13 @@ import { useMutation } from "../../../shared/presentation/use-mutation"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import Dialog from "../../../shared/presentation/Dialog"
 import PasswordFields from "./PasswordFields"
+import { useAccount } from "./AccountContext"
 export default function AccountActions() {
   const { auth } = useServices(),
     navigate = useNavigate(),
     mutation = useMutation()
   const [changing, setChanging] = useState(false)
+  const account = useAccount()
   async function logout() {
     if (!auth) return
     const result = await mutation.run(() => auth.logout())
@@ -33,8 +35,12 @@ export default function AccountActions() {
     <>
       <div className="account-actions">
         <Link to="/admin">Trocar de loja</Link>
+        <Link to="/minha-conta">Meu perfil e contato</Link>
         <Link to="/mfa">Proteção da minha conta</Link>
-        <Link to="/confirmar-email">Confirmar meu e-mail</Link>
+        {account?.session.emailVerification &&
+          !account.session.emailVerification.verified && (
+            <Link to="/confirmar-email">Confirmar meu e-mail</Link>
+          )}
         <Link to="/privacidade">Minha privacidade e meus dados</Link>
         <button onClick={() => setChanging(true)}>Alterar senha</button>
         <button disabled={mutation.pending} onClick={() => void logout()}>

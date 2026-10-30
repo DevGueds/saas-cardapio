@@ -4,6 +4,37 @@ import { normalizeName, text } from "./validation.js"
 import { parseProduct } from "./catalog.js"
 import type { MenuDocument } from "./menu-document.js"
 
+export function saveCategory(
+  current: MenuDocument,
+  nameInput: string,
+  id: string,
+): MenuDocument {
+  const name = text(nameInput, "name", 80, true)
+  requireValid(
+    !current.categories.some(
+      (c) => c.id !== id && normalizeName(c.name) === normalizeName(name),
+    ),
+    "Já existe uma categoria com esse nome.",
+    "name",
+  )
+  const category = { id, name, restaurantId: current.restaurant.id }
+  return {
+    ...current,
+    categories: current.categories.some((c) => c.id === id)
+      ? current.categories.map((c) => (c.id === id ? category : c))
+      : [...current.categories, category],
+  }
+}
+export function deleteCategory(current: MenuDocument, id: string): MenuDocument {
+  if (!current.categories.some((c) => c.id === id))
+    throw new Failure("NOT_FOUND", "Categoria não encontrada.")
+  requireValid(
+    !current.products.some((p) => p.categoryId === id),
+    "Mova os produtos para outra categoria antes de excluir esta.",
+  )
+  return { ...current, categories: current.categories.filter((c) => c.id !== id) }
+}
+
 export interface ProductInput {
   id?: string
   name: string

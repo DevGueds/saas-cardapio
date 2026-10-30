@@ -147,6 +147,7 @@ services:
       EVOLUTION_URL: http://evolution:8080
       EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:?Execute pnpm setup:local}
       SIGNUP_ENABLED: "true"
+      EMAIL_SEND_ENABLED: ${EMAIL_SEND_ENABLED:-false}
       MAIL_PROVIDER: ${MAIL_PROVIDER:-mailpit}
       MAIL_API_URL: ${DOCKER_MAIL_API_URL:-http://mailpit:8025}
       MAIL_API_KEY: ${MAIL_API_KEY:-}

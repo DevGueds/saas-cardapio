@@ -1,0 +1,316 @@
+.category-manager,
+.store-information__panel,
+.sharing-preview {
+  border: 1px solid var(--border, #dfe5e0);
+  border-radius: 18px;
+  background: var(--surface, #fff);
+}
+.category-manager {
+  margin: 0 0 24px;
+}
+.category-manager summary,
+.store-information summary,
+.sharing-page details > summary {
+  min-height: 52px;
+  padding: 16px 20px;
+  cursor: pointer;
+  font-weight: 650;
+}
+.category-manager summary > svg,
+.store-information summary > svg {
+  display: inline-block;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+.category-manager summary > span {
+  font-weight: 400;
+  font-size: 0.9rem;
+}
+.category-manager__body,
+.store-information__content {
+  padding: 0 20px 20px;
+}
+.category-manager ul {
+  padding: 0;
+  list-style: none;
+  margin-top: 16px;
+}
+.category-manager li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid #e5e9e6;
+}
+.category-manager li small {
+  display: block;
+  color: #59665d;
+}
+.category-manager li > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.category-manager button {
+  min-height: 44px;
+}
+.store-information {
+  width: min(1180px, calc(100% - 40px));
+  margin: 20px auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.store-information summary > span {
+  display: inline-grid;
+  vertical-align: middle;
+  max-width: calc(100% - 62px);
+}
+.store-information summary small {
+  font-weight: 400;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  color: #536259;
+  overflow-wrap: anywhere;
+}
+.store-information address {
+  font-style: normal;
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
+}
+.store-information .secondary-button {
+  margin-top: 12px;
+}
+.store-weekly-hours > div {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 12px;
+  padding: 10px 8px;
+  border-bottom: 1px solid #e5e9e6;
+}
+.store-weekly-hours .is-today {
+  background: #eff5ef;
+  font-weight: 650;
+  border-radius: 8px;
+}
+.store-weekly-hours dd {
+  text-align: right;
+  margin: 0;
+}
+.store-information .map-canvas {
+  min-height: 230px;
+}
+.sharing-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 28px;
+  align-items: start;
+}
+.sharing-link {
+  display: flex;
+  gap: 16px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+.sharing-link .field {
+  flex: 1;
+  min-width: 0;
+}
+.sharing-link input {
+  width: 100%;
+  border: 1px solid #cbd5ce;
+  border-radius: 10px;
+  padding: 12px;
+}
+.sharing-page .settings-form {
+  min-width: 0;
+}
+.sharing-page details {
+  border: 1px solid #dfe5e0;
+  border-radius: 12px;
+  margin-block: 16px;
+}
+.sharing-page details .image-picker {
+  padding: 0 16px 16px;
+}
+.sharing-page .settings-form fieldset {
+  display: grid;
+  gap: 16px;
+}
+.sharing-preview {
+  padding: 22px;
+  position: sticky;
+  top: 24px;
+  min-width: 0;
+}
+.sharing-preview h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.15rem;
+}
+.sharing-networks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 18px 0;
+}
+.sharing-networks button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #cbd5ce;
+  border-radius: 10px;
+  background: #fff;
+  color: #244437;
+}
+.sharing-networks button[aria-pressed="true"] {
+  background: #123e34;
+  color: white;
+  border-color: #123e34;
+}
+.social-preview {
+  border: 1px solid #d6ded8;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f3f5f3;
+  overflow-wrap: anywhere;
+}
+.social-preview > img,
+.social-preview__generated {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.social-preview--landscape > img,
+.social-preview--landscape .social-preview__generated {
+  aspect-ratio: 1200 / 630;
+}
+.social-preview__generated {
+  background: #123e34;
+  color: white;
+  padding: 8%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+.social-preview__generated > span {
+  font-size: 0.75rem;
+  color: #e0eae3;
+}
+.social-preview__generated > strong {
+  font-size: clamp(1.25rem, 2.5vw, 2rem);
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.social-preview__generated p {
+  font-size: 0.85rem;
+  color: #e0eae3;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+.social-preview__generated small {
+  border-radius: 24px;
+  padding: 8px 12px;
+  background: #f0bd7b;
+  color: #123e34;
+  align-self: start;
+  font-weight: 650;
+  font-size: 0.75rem;
+}
+.social-preview__text {
+  padding: 14px;
+}
+.social-preview__text h3 {
+  font-size: 1.05rem;
+  line-height: 1.4;
+  margin: 4px 0;
+}
+.social-preview__text p {
+  font-size: 0.85rem;
+  margin: 6px 0;
+  color: #43554a;
+}
+.social-preview__text > small {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: #43554a;
+}
+.social-preview__text > span {
+  font-size: 0.75rem;
+  color: #43554a;
+}
+.social-preview--whatsapp {
+  border-radius: 12px 12px 12px 0;
+  border: 8px solid #e0f2d5;
+}
+.social-preview--linkedin {
+  border-radius: 0;
+}
+.social-preview--x {
+  border-radius: 18px;
+}
+.social-preview--x .social-preview__text p,
+.social-preview--x .social-preview__text > span {
+  display: none;
+}
+.profile-page {
+  max-width: 740px;
+  padding: 28px 20px 60px;
+  margin-inline: auto;
+}
+.profile-page .settings-form {
+  margin-top: 22px;
+}
+.profile-page fieldset {
+  display: grid;
+  gap: 20px;
+}
+.profile-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: #edf3ed;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media (max-width: 850px) {
+  .sharing-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sharing-preview {
+    position: static;
+    max-width: 520px;
+    width: 100%;
+  }
+}
+@media (max-width: 500px) {
+  .sharing-link,
+  .category-manager li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .store-information {
+    width: calc(100% - 24px);
+  }
+  .sharing-preview {
+    padding: 16px;
+  }
+  .store-weekly-hours > div {
+    font-size: 0.85rem;
+  }
+}

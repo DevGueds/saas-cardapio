@@ -65,10 +65,17 @@
 	}
 
 	handle {
+		@menu path /menu/*
+		header @menu Cache-Control "no-store"
+		request_header @menu -If-None-Match
+		request_header @menu -If-Modified-Since
 		@worker path /notifications-sw.js /manifest.webmanifest
 		header @worker Cache-Control "no-cache"
 		root * /srv
 		try_files {path} /index.html
+		templates {
+			mime text/html
+		}
 		file_server
 	}
 }

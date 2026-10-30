@@ -129,7 +129,7 @@ function figmaSiteConfiguration(config: FigmaSiteConfiguration): Plugin {
   const bodyEnd = config.customScripts?.bodyEnd ?? ""
   const robotsTxt =
     config.robots?.index === false
-      ? "User-agent: facebookexternalhit\nUser-agent: WhatsApp\nUser-agent: Twitterbot\nAllow: /$\nAllow: /login$\nAllow: /menu/\nAllow: /privacidade$\nAllow: /brand/\nDisallow: /\n\nUser-agent: *\nDisallow: /\n"
+      ? "User-agent: facebookexternalhit\nUser-agent: WhatsApp\nUser-agent: Twitterbot\nAllow: /$\nAllow: /login$\nAllow: /menu/\nAllow: /privacidade$\nAllow: /brand/\nAllow: /api/v1/public/restaurants/\nDisallow: /\n\nUser-agent: *\nDisallow: /\n"
       : ""
 
   return {

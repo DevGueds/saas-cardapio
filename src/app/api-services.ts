@@ -19,6 +19,7 @@ import { ApiClient } from "../shared/infrastructure/api-client"
 import { browserIds, consoleDiagnostics } from "../shared/infrastructure/browser-services"
 import { BrowserImageReader } from "../shared/infrastructure/browser-image-reader"
 import { HttpIdentity } from "../modules/identity/infrastructure/http-identity"
+import { HttpProfile } from "../modules/identity/infrastructure/http-profile"
 import { HttpCatalog } from "../modules/catalog/infrastructure/http-catalog"
 import { MenuRefresh } from "../modules/catalog/infrastructure/menu-refresh"
 import { HttpCheckout } from "../modules/checkout/infrastructure/http-checkout"
@@ -47,6 +48,7 @@ export function apiServices(): ApplicationServices {
     receiptOutput: new BrowserReceiptOutputRenderer(executor),
     drafts,
     auth,
+    profile: new HttpProfile(client),
     team: new HttpTeam(client),
     security: new HttpSecurity(client),
     commerce,

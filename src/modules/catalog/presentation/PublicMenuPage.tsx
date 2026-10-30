@@ -9,6 +9,7 @@ import { discoverProducts, type DiscoveryFilter } from "../application/menu-disc
 import { promotionActive } from "@cardapio/domain/quote"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import PublicProductCard from "./PublicProductCard"
+import StoreInformation from "./StoreInformation"
 import AddonChoice from "../../commerce/presentation/AddonChoice"
 import { defaultAppearance } from "@cardapio/domain/menu-options"
 import { notifySuccess } from "../../../shared/presentation/notify"
@@ -231,6 +232,7 @@ export default function PublicMenuPage() {
             </div>
           </div>
         </section>
+        <StoreInformation store={store} now={now} />
         {!store.isOpen && (
           <div className="store-closed-banner" role="alert">
             <Clock3 size={23} aria-hidden="true" />

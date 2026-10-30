@@ -42,12 +42,15 @@ import { Turnstile } from "../modules/identity/infrastructure/turnstile.js"
 import { Authorization } from "../modules/identity/application/authorization.js"
 import { Tenancy } from "../modules/identity/application/tenancy.js"
 import { PrismaIdentity } from "../modules/identity/infrastructure/prisma-identity.js"
+import { Profile } from "../modules/identity/application/profile.js"
+import { PrismaProfile } from "../modules/identity/infrastructure/prisma-profile.js"
 import { PrismaAccess } from "../modules/identity/infrastructure/prisma-access.js"
 import { Mfa } from "../modules/identity/application/mfa.js"
 import { PrismaMfa } from "../modules/identity/infrastructure/prisma-mfa.js"
 import { Totp } from "../modules/identity/infrastructure/totp.js"
 import { Catalog } from "../modules/catalog/application/catalog.js"
 import { PrismaMenu } from "../modules/catalog/infrastructure/prisma-menu.js"
+import { SocialImages } from "../modules/catalog/infrastructure/social-images.js"
 import { Orders } from "../modules/orders/application/orders.js"
 import { PrismaOrders } from "../modules/orders/infrastructure/prisma-orders.js"
 
@@ -75,7 +78,12 @@ export async function compose(config: ApiConfig) {
     const limiter = new RedisLimiter(redis, secrets)
     const identity = new PrismaIdentity(db),
       memberships = new PrismaAccess(db)
-    const access = new Authorization(identity, memberships, clock)
+    const access = new Authorization(
+      identity,
+      memberships,
+      clock,
+      config.emailSendEnabled,
+    )
     const passwords = await ArgonPasswords.create()
     const emailVerification = new EmailVerification(
       identity,
@@ -85,8 +93,10 @@ export async function compose(config: ApiConfig) {
       clock,
       limiter,
       operation,
+      config.emailSendEnabled,
     )
     const menus = new CachedMenu(new PrismaMenu(db), redis)
+    const socialImages = new SocialImages()
     const cipher = new SubscriptionCipher(config.secret),
       whatsapp = new EvolutionWhatsapp(config.evolutionUrl, config.evolutionKey),
       push = new WebPushSender(
@@ -102,6 +112,18 @@ export async function compose(config: ApiConfig) {
       operation,
     )
     return {
+      profile: new Profile(
+        new PrismaProfile(db),
+        identity,
+        access,
+        passwords,
+        clock,
+        limiter,
+        operation,
+        config.emailGraceSeconds,
+        socialImages,
+      ),
+      socialImages,
       analytics: new Analytics(
         new PrismaAnalytics(db),
         access,
@@ -187,6 +209,7 @@ export async function compose(config: ApiConfig) {
           email: emailVerification,
           graceSeconds: config.emailGraceSeconds,
           autoSend: config.mail.provider !== "disabled",
+          emailEnabled: config.emailSendEnabled,
         },
       ),
       tenancy: new Tenancy(memberships, access, ids, operation),
@@ -211,7 +234,7 @@ export async function compose(config: ApiConfig) {
         operation,
       ),
       commerce: new CommerceManagement(menus, access, operation),
-      catalog: new Catalog(menus, access, ids, operation, menus, clock),
+      catalog: new Catalog(menus, access, ids, operation, menus, clock, socialImages),
       orders: new Orders(
         new PrismaOrders(db),
         menus,

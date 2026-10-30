@@ -25,6 +25,7 @@ import { browserPrivacyNotice } from "../privacy"
 import type { DraftManager } from "../../shared/application/drafts"
 import { useState } from "react"
 import type { IdentityService } from "../../modules/identity/application/ports"
+import type { ProfileService } from "../../modules/identity/application/profile"
 import type { OrdersService } from "../../modules/orders/application/ports"
 import { createContext, useContext, type ReactNode } from "react"
 
@@ -51,6 +52,7 @@ export interface ApplicationServices {
   drafts?: DraftManager
   mode?: "demo" | "api"
   auth?: IdentityService
+  profile?: ProfileService
   team?: TeamService
   security?: SecurityService
   payments?: PaymentsService
@@ -68,9 +70,10 @@ export interface ApplicationServices {
   ): Promise<Result<Quote>>
   tracking?(slug: string, id: string, token: string): Promise<Result<TrackingView>>
   menu: Pick<LoadMenu, "execute" | "subscribe"> & { loadAdmin?: LoadMenu["execute"] }
-  catalog: Pick<CatalogCommands, "save" | "setAvailability" | "delete">
+  catalog: Pick<CatalogCommands, "save" | "setAvailability" | "delete"> &
+    Partial<Pick<CatalogCommands, "saveCategory" | "deleteCategory">>
   restaurant: Pick<RestaurantCommands, "update" | "setOpen"> &
-    Partial<Pick<RestaurantCommands, "hours">>
+    Partial<Pick<RestaurantCommands, "hours" | "sharing">>
   checkout: Pick<PrepareOrder, "execute"> & {
     reset?(restaurantId: string): void
     hasPending?(restaurantId: string): boolean

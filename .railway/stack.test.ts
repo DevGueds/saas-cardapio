@@ -31,6 +31,18 @@ const definition = createStack(parameters)
 const resources = definition.resources!.flat() as ResourceNode[]
 const services = resources.filter((r): r is ServiceNode => r.type === "service")
 const get = (name: string) => services.find((s) => s.name === name)!
+test("optional Postal stays independent of API health and authentication and email defaults to off", () => {
+  const optional = createStack({ ...parameters, postalProvisioned: true }).resources!.flat() as ResourceNode[]
+  assert.equal(optional.filter((r) => r.type === "service").length, 10)
+  assert.equal(optional.filter((r) => r.type === "volume").length, 5)
+  for (const name of ["api", "api-replica"]) {
+    const api = optional.find((r) => r.type === "service" && r.name === name) as ServiceNode
+    assert.deepEqual(api.variables?.EMAIL_SEND_ENABLED, { type: "literal", value: "false" })
+    for (const value of Object.values(api.variables ?? {})) if (value.type === "reference") assert.ok(!value.resource.includes("postal"))
+  }
+  const postal = optional.find((r) => r.type === "service" && r.name === "postal") as ServiceNode
+  assert.deepEqual(postal.variables?.POSTAL_DELIVERY_ENABLED, { type: "literal", value: "false" })
+})
 test("stack covers Compose services and persistent volumes without generated domains or cloud IDs", () => {
   assert.deepEqual(
     services.map((s) => s.name).sort(),

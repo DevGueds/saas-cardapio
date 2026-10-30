@@ -21,6 +21,7 @@ export class SystemController {
       ok: true,
       value: {
         signupEnabled: this.app.config.signupEnabled,
+        emailSendEnabled: this.app.config.emailSendEnabled,
         mapTileUrl: this.app.config.mapTileUrl,
         turnstileSiteKey: this.app.config.turnstileSiteKey || undefined,
         emailVerificationGraceSeconds: this.app.config.emailGraceSeconds,

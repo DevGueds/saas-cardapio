@@ -23,6 +23,7 @@ export class HttpIdentity implements IdentityService {
       "/configuration",
       z.strictObject({
         signupEnabled: z.boolean(),
+        emailSendEnabled: z.boolean().optional(),
         mapTileUrl: z.string().optional(),
         turnstileSiteKey: z.string().optional(),
         emailVerificationGraceSeconds: z.number().int().positive().optional(),

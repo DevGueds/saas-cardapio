@@ -11,12 +11,14 @@ export * from "./menu-options.js"
 export * from "./engagement.js"
 export * from "./security.js"
 export * from "./email-verification.js"
+export * from "./profile.js"
 export * from "./printing.js"
 export * from "./privacy.js"
 export * from "./store-hours.js"
 export * from "./analytics.js"
 import { legalAcceptanceSchema } from "./privacy.js"
 import { emailVerificationSchema } from "./email-verification.js"
+import { geoPointSchema } from "./delivery-radius.js"
 import { addonSelectionsSchema } from "./menu-options.js"
 import {
   checkoutOptionsSchema,
@@ -114,6 +116,10 @@ export const availabilitySchema = z.strictObject({
   available: z.boolean(),
 })
 export const deleteSchema = z.strictObject({ expectedRevision: revision })
+export const categorySchema = z.strictObject({
+  expectedRevision: revision,
+  name: textField(80, true),
+})
 export const openSchema = z.strictObject({
   expectedRevision: revision,
   isOpen: z.boolean(),
@@ -128,6 +134,17 @@ export const settingsSchema = z.strictObject({
   deliveryFee: moneyText,
   minOrder: moneyText,
   eta: textField(80, true),
+  location: geoPointSchema.nullable().optional(),
+})
+export const menuSharingSchema = z.strictObject({
+  title: textField(100),
+  description: textField(240),
+  format: z.enum(["SQUARE", "LANDSCAPE"]),
+  squareImage: imageField,
+  landscapeImage: imageField,
+})
+export const updateMenuSharingSchema = menuSharingSchema.extend({
+  expectedRevision: revision,
 })
 export const updateSettingsSchema = settingsSchema.extend({ expectedRevision: revision })
 export const cartSchema = z.strictObject({

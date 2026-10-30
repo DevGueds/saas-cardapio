@@ -9,6 +9,7 @@ export interface IdentityService {
   configuration(): Promise<
     Result<{
       signupEnabled: boolean
+      emailSendEnabled?: boolean
       turnstileSiteKey?: string
       emailVerificationGraceSeconds?: number
     }>

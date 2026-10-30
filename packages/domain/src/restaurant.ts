@@ -1,5 +1,7 @@
 import { assertCents, type Cents } from "./money.js"
 import { parseStoreHours, type StoreHours } from "./store-hours.js"
+import { parseGeoPoint, type GeoPoint } from "./delivery-radius.js"
+import { parseMenuSharing, type MenuSharing } from "./menu-sharing.js"
 
 import {
   boolean,
@@ -27,6 +29,8 @@ export type Restaurant = Readonly<{
   isOpen: boolean
   eta: string
   hours?: StoreHours
+  location?: GeoPoint | null
+  sharing?: MenuSharing
 }>
 
 export function parseRestaurant(input: unknown): Restaurant {
@@ -57,6 +61,12 @@ export function parseRestaurant(input: unknown): Restaurant {
     deliveryFee: data.deliveryFee,
     minOrder: data.minOrder,
     address: text(data.address, "address", 500),
+    ...(data.location === undefined
+      ? {}
+      : { location: data.location === null ? null : parseGeoPoint(data.location) }),
+    ...(data.sharing === undefined || data.sharing === null
+      ? {}
+      : { sharing: parseMenuSharing(data.sharing) }),
 
     isOpen: boolean(data.isOpen, "isOpen"),
     eta: text(data.eta, "eta", 80, true),

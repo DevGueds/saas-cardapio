@@ -39,6 +39,13 @@ export const router = createBrowserRouter(
         },
         { path: "/login", Component: LoginPage },
         {
+          path: "/minha-conta",
+          lazy: async () => ({
+            Component: (await import("../modules/identity/presentation/ProfilePage"))
+              .default,
+          }),
+        },
+        {
           path: "/confirmar-email",
           lazy: async () => ({
             Component: (
@@ -66,6 +73,14 @@ export const router = createBrowserRouter(
           path: "/admin",
           Component: AdminRoute,
           children: [
+            {
+              path: "sharing",
+              lazy: async () => ({
+                Component: (
+                  await import("../modules/restaurant/presentation/SharingPage")
+                ).default,
+              }),
+            },
             {
               path: "hours",
               lazy: async () => ({
