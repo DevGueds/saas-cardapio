@@ -19,6 +19,7 @@ RUN --mount=type=cache,id=cardapio-pnpm,target=/root/.local/share/pnpm/store pnp
 FROM node:24-bookworm-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5 AS api
 ENV NODE_ENV=production
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
 COPY --from=api-package --chown=node:node /opt/api ./
 RUN mkdir -p /app/logs && chown node:node /app/logs
 USER node
@@ -30,7 +31,7 @@ ARG PUBLIC_SITE_URL
 ENV VITE_PUBLIC_SITE_URL=${PUBLIC_SITE_URL}
 ENV VITE_APP_MODE=api
 ENV VITE_API_BASE_URL=/api/v1
-RUN pnpm build:api
+RUN pnpm build:api && node scripts/prepare-menu-shell.mjs
 
 FROM caddy:2-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f AS web
 # High ports do not require file capabilities; keep cap_drop ALL + no-new-privileges.

@@ -31,6 +31,8 @@ No Compose, a API utiliza `http://mailpit:8025`. O modo Mailpit é recusado em p
 
 ## Produção: Postal autohospedado
 
+O envio agora depende da chave global `EMAIL_SEND_ENABLED`, cujo padrão é `false`. Com emails desligados, nenhuma mensagem é enviada e a confirmação é dispensada, inclusive para contas com prazo vencido. Veja a operação e as limitações da instalação opcional na [Railway](postal-railway.md).
+
 O [Postal](https://docs.postalserver.io/) é uma plataforma open-source de entrega de e-mail. O adaptador usa sua [API oficial](https://docs.postalserver.io/developer/api/) sem SDK ou assinatura de um serviço de envio. A hospedagem, o domínio e a operação ainda têm custo.
 
 1. Instale o Postal numa máquina apropriada seguindo a [instalação oficial](https://docs.postalserver.io/getting-started/installation/). O projeto recomenda servidor dedicado, ao menos 2 CPUs, 4 GB de RAM e 25 GB de disco. Confirme a liberação de saída na porta 25 e configure PTR/reverse DNS no provedor.

@@ -16,6 +16,7 @@ const volumeRoles = [
   "redis-data",
   "evolution-database",
   "evolution-sessions",
+  "postal-data",
 ] as const
 type VolumeRole = (typeof volumeRoles)[number]
 
@@ -25,6 +26,8 @@ export interface StackParameters {
   publicOrigin: string
   contact: string
   signupEnabled: boolean
+  emailSendEnabled?: boolean
+  postalProvisioned?: boolean
   secrets: {
     postgres: string
     app: string
@@ -53,6 +56,8 @@ export function validateParameters(value: unknown): StackParameters {
     !/^[\w.-]+\/[\w.-]+$/.test(p.repository) ||
     !/^[\w./-]+$/.test(p.branch) ||
     typeof p.signupEnabled !== "boolean" ||
+    (p.emailSendEnabled !== undefined && typeof p.emailSendEnabled !== "boolean") ||
+    (p.postalProvisioned !== undefined && typeof p.postalProvisioned !== "boolean") ||
     !/^mailto:[^\s@]+@[^\s@]+$/.test(p.contact) ||
     !p.secrets ||
     ![

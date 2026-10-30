@@ -1,6 +1,7 @@
 import { menuSchema } from "@cardapio/contracts"
 import type { MenuDocument } from "../application/menu-document"
 import type { HoursInput } from "@cardapio/domain/store-hours"
+import type { MenuSharing } from "@cardapio/domain/menu-sharing"
 import type { ApiClient } from "../../../shared/infrastructure/api-client"
 import type { SaveProductInput } from "../application/catalog-commands"
 import type { RestaurantSettingsInput } from "../../restaurant/application/restaurant-commands"
@@ -76,6 +77,24 @@ export class HttpCatalog {
       expectedRevision,
     })
   }
+  saveCategory(
+    restaurantId: string,
+    expectedRevision: number,
+    name: string,
+    id?: string,
+  ) {
+    return this.mutate(
+      restaurantId,
+      id ? `categories/${encodeURIComponent(id)}` : "categories",
+      id ? "PUT" : "POST",
+      { expectedRevision, name },
+    )
+  }
+  deleteCategory(restaurantId: string, expectedRevision: number, id: string) {
+    return this.mutate(restaurantId, `categories/${encodeURIComponent(id)}`, "DELETE", {
+      expectedRevision,
+    })
+  }
   update(id: string, expectedRevision: number, input: RestaurantSettingsInput) {
     const {
       name,
@@ -87,6 +106,7 @@ export class HttpCatalog {
       deliveryFee,
       minOrder,
       eta,
+      location,
     } = input
     return this.mutate(id, "settings", "PUT", {
       name,
@@ -98,11 +118,15 @@ export class HttpCatalog {
       deliveryFee,
       minOrder,
       eta,
+      location,
       expectedRevision,
     })
   }
   setOpen(id: string, expectedRevision: number, isOpen: boolean) {
     return this.mutate(id, "open", "PUT", { expectedRevision, isOpen })
+  }
+  sharing(id: string, expectedRevision: number, input: MenuSharing) {
+    return this.mutate(id, "sharing", "PUT", { ...input, expectedRevision })
   }
   hours(id: string, expectedRevision: number, schedule: HoursInput) {
     return this.mutate(id, "hours", "PUT", { expectedRevision, schedule })

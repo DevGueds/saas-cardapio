@@ -27,6 +27,7 @@ export default function LoginPage() {
     [siteKey, setSiteKey] = useState("")
   const [graceSeconds, setGraceSeconds] = useState(604800),
     [configAttempt, setConfigAttempt] = useState(0)
+  const [emailEnabled, setEmailEnabled] = useState(false)
   const [turnstileToken, setTurnstileToken] = useState(""),
     [challengeAttempt, setChallengeAttempt] = useState(0)
   const mutation = useMutation()
@@ -37,6 +38,7 @@ export default function LoginPage() {
         if (!active) return
         if (result.ok) {
           setSignupEnabled(result.value.signupEnabled)
+          setEmailEnabled(result.value.emailSendEnabled ?? true)
           setSiteKey(result.value.turnstileSiteKey ?? "")
           setGraceSeconds(result.value.emailVerificationGraceSeconds ?? 604800)
           setConfigured(true)
@@ -86,7 +88,10 @@ export default function LoginPage() {
         navigate("/mfa", { replace: true })
         return
       }
-      if (signup || result.value.emailVerification?.required) {
+      if (
+        (signup && result.value.emailVerification) ||
+        result.value.emailVerification?.required
+      ) {
         navigate("/confirmar-email", { replace: true })
         return
       }
@@ -240,7 +245,7 @@ export default function LoginPage() {
                   <LegalLinks center={false} />
                 </div>
               )}
-              {signup && (
+              {signup && emailEnabled && (
                 <p className="field-help">
                   Você poderá usar sua conta por{" "}
                   {graceSeconds >= 86400

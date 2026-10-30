@@ -63,6 +63,7 @@ for (const [key, value] of Object.entries({
   DOCKER_CORS_ORIGINS: ["http://localhost:8080", "http://127.0.0.1:8080"].join(","),
   WEB_BIND_ADDRESS: "127.0.0.1",
   MAIL_PROVIDER: "mailpit",
+  EMAIL_SEND_ENABLED: "false",
   MAIL_API_URL: "http://127.0.0.1:8025",
   MAIL_FROM: "conta@localhost.invalid",
   EMAIL_VERIFICATION_GRACE_SECONDS: "604800",

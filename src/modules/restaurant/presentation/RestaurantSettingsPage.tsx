@@ -23,6 +23,7 @@ import { moneyInput } from "../../../shared/domain/money"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 
 import ImagePicker from "../../../shared/presentation/ImagePicker"
+import LocationPicker from "../../../app/presentation/LocationPicker"
 
 import { useMutation } from "../../../shared/presentation/use-mutation"
 
@@ -45,6 +46,7 @@ export default function RestaurantSettingsPage() {
       description: menu.restaurant.description,
       whatsapp: formatField(menu.restaurant.whatsapp, "phone"),
       address: menu.restaurant.address,
+      location: menu.restaurant.location ?? null,
       deliveryFee: moneyInput(menu.restaurant.deliveryFee),
       minOrder: moneyInput(menu.restaurant.minOrder),
       eta: menu.restaurant.eta,
@@ -116,7 +118,7 @@ export default function RestaurantSettingsPage() {
   }
 
   const field = (
-    key: keyof RestaurantSettingsInput,
+    key: Exclude<keyof RestaurantSettingsInput, "location">,
     label: string,
     max: number,
     required = false,
@@ -227,6 +229,25 @@ export default function RestaurantSettingsPage() {
                 500,
                 false,
                 "Rua, número, bairro e cidade",
+              )}
+              <LocationPicker
+                title="Localização do estabelecimento"
+                help="Marque a entrada da loja para seus clientes encontrarem o estabelecimento. O endereço e o mapa aparecerão no cardápio."
+                value={draft.value.location ?? null}
+                onChange={(location) => {
+                  setSaved(false)
+                  draft.set((current) => ({ ...current, location }))
+                }}
+                disabled={blocked}
+              />
+              {draft.value.location && (
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => draft.set((current) => ({ ...current, location: null }))}
+                >
+                  Remover localização do mapa
+                </button>
               )}
             </FormSection>
             <FormSection

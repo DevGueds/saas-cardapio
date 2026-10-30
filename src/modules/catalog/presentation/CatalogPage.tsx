@@ -34,6 +34,7 @@ import type { Product } from "../domain/catalog"
 import ProductForm from "./ProductForm"
 
 import ProductList from "./ProductList"
+import CategoryManager from "./CategoryManager"
 
 export default function CatalogPage() {
   const { menu, loading, error: loadError, reload } = useMenu()
@@ -45,7 +46,8 @@ export default function CatalogPage() {
 
   const [search, setSearch] = useState("")
 
-  const [categoryId, setCategoryId] = useState("")
+  const [selectedCategoryId, setCategoryId] = useState("")
+  const categoryId = menu.categories.some((category) => category.id === selectedCategoryId) ? selectedCategoryId : ""
 
   const [view, setView] = useState<"grid" | "table">("grid")
 
@@ -160,6 +162,7 @@ export default function CatalogPage() {
           <Plus size={19} aria-hidden="true" /> Novo produto
         </button>
       </PageHeading>
+      <CategoryManager disabled={blocked} />
       <div className="catalog-counts" aria-label="Resumo do catálogo">
         <div>
           <span className="stat-icon">

@@ -12,6 +12,7 @@ import {
   type ServiceRole,
   type StackParameters,
 } from "./parameters.ts"
+import { postalResources } from "./postal.ts"
 
 /** No remote mutation and no secret generation during plan/evaluation. */
 export function createStack(input: StackParameters) {
@@ -60,6 +61,7 @@ export function createStack(input: StackParameters) {
             "/vite.config.ts",
             "/tsconfig*.json",
             "/railway/web/**",
+            "/scripts/prepare-menu-shell.mjs",
           ]
         : path.includes("/evolution/")
           ? ["/railway/evolution/**", "/docker/provider-log-gate.cjs"]
@@ -211,6 +213,7 @@ export function createStack(input: StackParameters) {
     CORS_ORIGINS:
       p.publicOrigin || "https://${{" + serviceName("web") + ".RAILWAY_PUBLIC_DOMAIN}}",
     SIGNUP_ENABLED: String(p.signupEnabled),
+    EMAIL_SEND_ENABLED: String(p.emailSendEnabled ?? false),
     DOCS_ENABLED: "false",
     VAPID_PUBLIC_KEY: secret("vapidPublic"),
     VAPID_PRIVATE_KEY: secret("vapidPrivate"),
@@ -274,6 +277,7 @@ export function createStack(input: StackParameters) {
       redisData,
       evolutionData,
       evolutionSessions,
+      ...(p.postalProvisioned ? postalResources(p.repository, p.branch, p.emailSendEnabled, p.deployment?.volumes?.["postal-data"]) : []),
     ],
   })
 }

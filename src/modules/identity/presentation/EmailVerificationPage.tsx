@@ -29,6 +29,8 @@ export default function EmailVerificationPage() {
     if (!session.ok) return session
     if (["ENROLL", "VERIFY"].includes(session.value.mfa ?? ""))
       return { ok: true as const, value: { mfa: true, verification: null } }
+    if (!session.value.emailVerification)
+      return { ok: true as const, value: { mfa: false, verification: null } }
     const status = await auth.emailStatus()
     if (!status.ok) return status
     return { ok: true as const, value: { mfa: false, verification: status.value } }
@@ -66,6 +68,8 @@ export default function EmailVerificationPage() {
     return <Navigate to="/login" replace />
   if (resource.data?.mfa || mutation.error?.code === "MFA_REQUIRED")
     return <Navigate to="/mfa" replace />
+  if (resource.data && !resource.data.mfa && !resource.data.verification)
+    return <Navigate to={destination} replace />
   async function send() {
     if (!auth) return
     const result = await mutation.run(() => auth.sendEmailCode())

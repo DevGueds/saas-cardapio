@@ -9,6 +9,7 @@ import {
   Radio,
   Printer,
   CalendarClock,
+  Share2,
 } from "lucide-react"
 import { useServices } from "./ServicesProvider"
 import AccountActions from "../../modules/identity/presentation/AccountActions"
@@ -114,6 +115,14 @@ export default function AdminNavigation({ onNavigate }: { onNavigate?: () => voi
         </NavLink>
         {(!account || can(account.restaurant.role, "catalog:write")) && (
           <>
+            <NavLink
+              to={`/admin/sharing${query}`}
+              onClick={onNavigate}
+              className={({ isActive }) => (isActive ? "is-active" : "")}
+            >
+              <Share2 size={20} aria-hidden="true" />
+              <span>Compartilhar cardápio</span>
+            </NavLink>
             {api && (
               <NavLink
                 to={`/admin/channels${query}`}

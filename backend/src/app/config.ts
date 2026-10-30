@@ -42,6 +42,7 @@ const schema = z.object({
   CORS_ORIGINS: z.string().min(1),
   SIGNUP_ENABLED: z.enum(["true", "false"]).default("false"),
   DOCS_ENABLED: z.enum(["true", "false"]).default("false"),
+  EMAIL_SEND_ENABLED: z.enum(["true", "false"]).default("false"),
   EMAIL_VERIFICATION_GRACE_SECONDS: z.coerce
     .number()
     .int()
@@ -90,7 +91,8 @@ export function loadConfig(input: Record<string, unknown>) {
         ))
     )
       throw new Error()
-    if (env.MAIL_PROVIDER !== "disabled") {
+    if (env.EMAIL_SEND_ENABLED === "true") {
+      if (env.MAIL_PROVIDER === "disabled") throw new Error()
       const mail = new URL(env.MAIL_API_URL)
       if (
         mail.username ||
@@ -217,9 +219,10 @@ export function loadConfig(input: Record<string, unknown>) {
     )
   }
   return {
+    emailSendEnabled: env.EMAIL_SEND_ENABLED === "true",
     emailGraceSeconds: env.EMAIL_VERIFICATION_GRACE_SECONDS,
     mail: {
-      provider: env.MAIL_PROVIDER,
+      provider: env.EMAIL_SEND_ENABLED === "true" ? env.MAIL_PROVIDER : "disabled",
       url: env.MAIL_API_URL.replace(/\/$/, ""),
       key: env.MAIL_API_KEY,
       from: env.MAIL_FROM,
@@ -260,7 +263,9 @@ export function loadConfig(input: Record<string, unknown>) {
     origins,
     signupEnabled:
       env.SIGNUP_ENABLED === "true" &&
-      (env.NODE_ENV !== "production" || env.MAIL_PROVIDER === "postal"),
+      (env.EMAIL_SEND_ENABLED === "false" ||
+        env.NODE_ENV !== "production" ||
+        env.MAIL_PROVIDER === "postal"),
     docsEnabled: env.DOCS_ENABLED === "true",
     secureCookies,
     cookieName: secureCookies ? "__Host-cardapio_session" : "cardapio_session",

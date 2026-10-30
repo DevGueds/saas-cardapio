@@ -37,6 +37,15 @@ export class IdentityController {
     })
     return { ok: true, value: resolved.value.session }
   }
+  @Get("me/profile") profile(@Req() request: SessionRequest) {
+    return this.app.profile.read(authenticated(request).actor)
+  }
+  @Put("me/profile") updateProfile(
+    @Req() request: SessionRequest,
+    @Body() input: unknown,
+  ) {
+    return this.app.profile.update(authenticated(request).actor, input)
+  }
   @Public() @Post("auth/register-account") registerAccount(
     @Body() input: unknown,
     @Req() req: SessionRequest,

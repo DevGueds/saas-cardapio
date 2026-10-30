@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { uuid } from "./common.js"
-import { currentPasswordField, emailField, personNameField, textField } from "./fields.js"
+import { currentPasswordField, emailField, personNameField, textField, optionalPhoneField, imageField } from "./fields.js"
 
 export const LEGAL_VERSION = "2026-10-29.2"
 export const privacyController = {
@@ -55,6 +55,8 @@ export const privacyAccountSchema = z.strictObject({
   name: personNameField,
   email: emailField,
   createdAt: z.iso.datetime(),
+  phone: optionalPhoneField.optional(),
+  avatarUrl: imageField.optional(),
 })
 export const privacyProfileSchema = z.strictObject({
   account: privacyAccountSchema,

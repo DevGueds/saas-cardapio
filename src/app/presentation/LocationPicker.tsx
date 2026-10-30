@@ -13,12 +13,14 @@ function LocationPicker({
   onChange,
   disabled = false,
   title,
+  help,
 }: {
   value: GeoPoint | null
   center?: GeoPoint | null
   onChange(value: GeoPoint | null): void
   disabled?: boolean
   title: string
+  help?: string
 }) {
   const { deviceLocation } = useServices(),
     [coordinates, setCoordinates] = useState({
@@ -89,8 +91,8 @@ function LocationPicker({
     <fieldset className="location-picker" disabled={disabled}>
       <legend>{title}</legend>
       <p className="field-help">
-        Marque a entrada do endereço. O frete será calculado pela distância em linha reta
-        entre este ponto e a loja.
+        {help ??
+          "Marque a entrada do endereço. O frete será calculado pela distância em linha reta entre este ponto e a loja."}
       </p>
       {deviceLocation && (
         <>

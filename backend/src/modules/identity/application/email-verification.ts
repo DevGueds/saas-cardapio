@@ -22,8 +22,14 @@ export class EmailVerification {
     private readonly clock: Clock,
     private readonly limiter: RequestLimiter,
     private readonly operation: Operation,
+    private readonly enabled = true,
   ) {}
   private async account(actor: Actor) {
+    if (!this.enabled)
+      throw new Failure(
+        "CAPABILITY_UNAVAILABLE",
+        "A confirmação por e-mail está desativada neste ambiente.",
+      )
     const record = await this.identities.sessionByActor(actor, this.clock.now())
     if (!record)
       throw new Failure("UNAUTHENTICATED", "Sua sessão expirou. Entre novamente.")

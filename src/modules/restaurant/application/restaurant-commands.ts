@@ -5,9 +5,11 @@ import {
   updateRestaurant,
   setRestaurantOpen,
   updateStoreHours,
+  updateMenuSharing,
   type RestaurantSettingsInput,
 } from "@cardapio/domain/restaurant-changes"
 import type { HoursInput } from "@cardapio/domain/store-hours"
+import type { MenuSharing } from "@cardapio/domain/menu-sharing"
 export type { RestaurantSettingsInput } from "@cardapio/domain/restaurant-changes"
 export class RestaurantCommands {
   constructor(
@@ -32,6 +34,16 @@ export class RestaurantCommands {
         restaurantId,
         expectedRevision,
         setRestaurantOpen(await this.repository.load(restaurantId), isOpen),
+      )
+    })
+  }
+  sharing(restaurantId: string, expectedRevision: number, input: MenuSharing) {
+    return this.executor.run("restaurant", "sharing", async () => {
+      this.access.assertAdmin()
+      return this.repository.commit(
+        restaurantId,
+        expectedRevision,
+        updateMenuSharing(await this.repository.load(restaurantId), input),
       )
     })
   }

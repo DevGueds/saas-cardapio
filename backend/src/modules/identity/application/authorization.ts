@@ -12,6 +12,7 @@ export class Authorization implements AccessPolicy {
     private readonly identities: IdentityRepository,
     private readonly access: AccessRepository,
     private readonly clock: Clock,
+    private readonly emailEnabled = true,
   ) {}
   async session(actor: Actor) {
     const session =
@@ -23,7 +24,7 @@ export class Authorization implements AccessPolicy {
         "MFA_REQUIRED",
         "Confirme a verificação em duas etapas para continuar.",
       )
-    assertEmailVerified(session.user, this.clock.now())
+    assertEmailVerified(session.user, this.clock.now(), this.emailEnabled)
   }
   async restaurant(actor: Actor, restaurantId: string, permission: Permission) {
     return (await this.grant(actor, restaurantId, permission)).scope

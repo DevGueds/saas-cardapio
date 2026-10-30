@@ -14,6 +14,7 @@ const env = {
   DATABASE_TLS: "false",
   SESSION_SECRET: "a".repeat(64),
   CORS_ORIGINS: "http://localhost:8443",
+  EMAIL_SEND_ENABLED: "true",
 }
 
 test("configuration rejects partial Turnstile, unsafe email transports and missing production mail", () => {
@@ -43,7 +44,11 @@ test("configuration rejects partial Turnstile, unsafe email transports and missi
     DATABASE_TLS: "true",
     SIGNUP_ENABLED: "true",
   }
-  assert.equal(loadConfig(production).signupEnabled, false)
+  assert.throws(() => loadConfig(production), Failure)
+  assert.equal(
+    loadConfig({ ...production, EMAIL_SEND_ENABLED: "false" }).signupEnabled,
+    true,
+  )
   assert.throws(
     () =>
       loadConfig({

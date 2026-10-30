@@ -1,5 +1,7 @@
 # Deploy completo na Railway
 
+O [Postal opcional](postal-railway.md) possui MariaDB e volume separados. Ele não integra as dependências de saúde ou autenticação do app. Mantenha `EMAIL_SEND_ENABLED=false` enquanto não houver domínio e entrega de emails operante. As novas configurações de conta e cardápio estão descritas em [perfil e apresentação pública](account-and-menu-settings.md).
+
 Configuração revisada em 29/10/2026. O repositório atual usa PostgreSQL 18.6 para o aplicativo e PostgreSQL 15 para o Evolution, não MySQL. A definição [.railway/railway.ts](../.railway/railway.ts) cobre os serviços do `compose.yaml`, com imagens fixadas, dados persistentes e rede privada.
 
 ## Formato atual

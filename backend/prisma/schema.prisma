@@ -30,6 +30,8 @@ enum OrderStatus {
 model User {
   id             String          @id @db.Uuid
   name           String          @db.VarChar(120)
+  phone          String          @default("") @db.VarChar(30)
+  avatarUrl      String          @default("") @db.Text
   email          String          @unique @db.VarChar(254)
   passwordHash   String          @db.VarChar(255)
   active         Boolean         @default(true)
@@ -183,6 +185,8 @@ model Restaurant {
   eta                String              @db.VarChar(80)
   isOpen             Boolean             @default(false)
   hours              Json?
+  location           Json?
+  sharing            Json?
   revision           Int                 @default(0)
   createdAt          DateTime            @default(now()) @db.Timestamptz(3)
   categories         Category[]
