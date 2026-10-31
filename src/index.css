@@ -13,6 +13,7 @@
 @import "./modules/restaurant/presentation/store-hours.css";
 @import "./modules/restaurant/presentation/store-details.css";
 @import "./modules/catalog/presentation/menu-discovery.css";
+@import "./modules/catalog/presentation/menu-navigation.css";
 @import "./modules/analytics/presentation/analytics.css";
 @import "./modules/demo-orders/presentation/demo-orders.css";
 

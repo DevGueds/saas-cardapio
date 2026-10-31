@@ -529,6 +529,7 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
   await page.goto(`/admin/addons?restaurant=${id}`)
   await page.getByRole("button", { name: "Novo grupo", exact: true }).click()
   await page.getByLabel("Nome do grupo", { exact: true }).fill("Turbine seu lanche")
+  await page.getByLabel("O cliente precisa escolher uma opção", { exact: true }).check()
   await page.getByLabel("Quantidade mínima", { exact: true }).fill("1")
   await page.getByLabel("Nome da opção 1", { exact: true }).fill("Queijo extra")
   await page.getByLabel("Preço da opção 1 (R$)", { exact: true }).fill("2,50")

@@ -5,7 +5,10 @@ import type { AccessRepository, FirstStore } from "../application/ports.js"
 import { createFirstStore, restaurantDefaults } from "./prisma-identity.js"
 
 export class PrismaAccess implements AccessRepository {
-  constructor(private readonly db: Database) {}
+  constructor(
+    private readonly db: Database,
+    private readonly emailEnabled = true,
+  ) {}
   membership(actor: Actor, tenantId: string) {
     return this.db.run(
       async (client) =>
@@ -111,7 +114,7 @@ export class PrismaAccess implements AccessRepository {
       })
       if (!user?.active)
         throw new Failure("NOT_FOUND", "Conta indisponível para associação.")
-      if (!user.emailVerifiedAt)
+      if (this.emailEnabled && !user.emailVerifiedAt)
         throw new Failure(
           "VALIDATION",
           "A pessoa precisa confirmar o e-mail antes de entrar na equipe.",

@@ -101,6 +101,7 @@ export const memberSchema = z.strictObject({ email, role: roleSchema.exclude(["O
 export const moneyText = moneyField()
 const image = imageField
 export const productSchema = z.strictObject({
+  addonGroupIds: z.array(uuid).max(100).optional(),
   name,
   description: textField(2000),
   price: moneyField(true),

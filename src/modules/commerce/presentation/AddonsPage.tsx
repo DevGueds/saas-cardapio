@@ -62,6 +62,15 @@ export default function AddonsPage() {
               <p>
                 {g.min} a {g.max} escolhas · {g.productIds.length} produtos
               </p>
+              <p className="addon-associations">
+                <strong>Aparece em:</strong>{" "}
+                {g.productIds.length
+                  ? menu.products
+                      .filter((product) => g.productIds.includes(product.id))
+                      .map((product) => product.name)
+                      .join(", ")
+                  : "Nenhum produto. Edite para escolher onde oferecer."}
+              </p>
               <ul className="addon-summary">
                 {g.options.map((o) => (
                   <li key={o.id}>

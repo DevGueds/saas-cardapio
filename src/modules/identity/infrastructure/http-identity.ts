@@ -21,7 +21,7 @@ export class HttpIdentity implements IdentityService {
   configuration() {
     return this.client.request(
       "/configuration",
-      z.strictObject({
+      z.object({
         signupEnabled: z.boolean(),
         emailSendEnabled: z.boolean().optional(),
         mapTileUrl: z.string().optional(),

@@ -380,6 +380,18 @@
   .admin-breadcrumb {
     font-size: 0.8125rem;
     min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+  .admin-breadcrumb strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .admin-topbar__status {
+    flex-shrink: 0;
+    gap: 0.65rem;
   }
   .store-control {
     gap: 0.4rem;

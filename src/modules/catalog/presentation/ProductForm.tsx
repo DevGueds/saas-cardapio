@@ -23,6 +23,7 @@ import ImagePicker from "../../../shared/presentation/ImagePicker"
 import { useMutation } from "../../../shared/presentation/use-mutation"
 
 import type { Product } from "../domain/catalog"
+import { ToggleField } from "../../../shared/presentation/Fields"
 const priceSchema = moneyField(true)
 
 export default function ProductForm({
@@ -53,6 +54,10 @@ export default function ProductForm({
       available: product?.available ?? true,
       popular: product?.popular ?? false,
       imageRemoved: false,
+      addonGroupIds:
+        menu.commerce?.addonGroups
+          ?.filter((group) => product && group.productIds.includes(product.id))
+          .map((group) => group.id) ?? [],
     },
     productDraftSchema.parse,
   )
@@ -115,6 +120,12 @@ export default function ProductForm({
         imageUrl,
         available,
         popular,
+        addonGroupIds:
+          draft.value.addonGroupIds ??
+          menu.commerce?.addonGroups
+            ?.filter((group) => product && group.productIds.includes(product.id))
+            .map((group) => group.id) ??
+          [],
       }),
     )
 
@@ -234,6 +245,42 @@ export default function ProductForm({
             Textos e opções são preservados. Fotos novas precisam ser selecionadas
             novamente após recarregar.
           </p>
+          <details className="product-addon-links">
+            <summary>Adicionais deste produto</summary>
+            <p className="field-help">
+              Marque apenas os grupos que o cliente poderá escolher neste produto.
+              Desmarcar aqui não altera os outros produtos.
+            </p>
+            {menu.commerce?.addonGroups?.length ? (
+              menu.commerce.addonGroups.map((group) => {
+                const selected =
+                  draft.value.addonGroupIds ??
+                  menu.commerce?.addonGroups
+                    ?.filter((entry) => product && entry.productIds.includes(product.id))
+                    .map((entry) => entry.id) ??
+                  []
+                return (
+                  <ToggleField
+                    key={group.id}
+                    label={`${group.name}${group.active ? "" : " (pausado)"}`}
+                    checked={selected.includes(group.id)}
+                    onChange={(checked) =>
+                      field("addonGroupIds")(
+                        checked
+                          ? [...selected, group.id]
+                          : selected.filter((id) => id !== group.id),
+                      )
+                    }
+                  />
+                )
+              })
+            ) : (
+              <p className="field-help">
+                Crie grupos em “Adicionais e extras” e depois vincule os que combinam com
+                este produto.
+              </p>
+            )}
+          </details>
           <div className="product-options">
             <h3>Como aparece no cardápio</h3>
             <label className="check-field">

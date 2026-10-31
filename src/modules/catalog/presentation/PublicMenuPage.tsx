@@ -10,6 +10,7 @@ import { promotionActive } from "@cardapio/domain/quote"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import PublicProductCard from "./PublicProductCard"
 import StoreInformation from "./StoreInformation"
+import { categoryAnchor, useCategoryNavigation } from "./use-category-navigation"
 import AddonChoice from "../../commerce/presentation/AddonChoice"
 import { defaultAppearance } from "@cardapio/domain/menu-options"
 import { notifySuccess } from "../../../shared/presentation/notify"
@@ -72,7 +73,6 @@ export default function PublicMenuPage() {
   const [customizing, setCustomizing] = useState<string | null>(null)
   const selectedProduct = products.find((p) => p.id === customizing)
 
-  const [selection, setSelection] = useState("$popular")
   const [discovery, setDiscovery] = useState<DiscoveryFilter>("NONE")
   const [now, setNow] = useState(Date.now)
   const loadRanking = useCallback(
@@ -94,38 +94,35 @@ export default function PublicMenuPage() {
 
   const displayCategories = useMemo(
     () =>
-      products.some((product) => product.popular)
-        ? [
-            { id: "$popular", name: "Destaques da loja" },
-            ...categories,
-            { id: "$all", name: "Todos" },
-          ]
-        : [...categories, { id: "$all", name: "Todos" }],
+      categories.filter((category) =>
+        products.some((product) => product.categoryId === category.id),
+      ),
     [categories, products],
   )
 
-  const activeCategory = displayCategories.some((category) => category.id === selection)
-    ? selection
-    : displayCategories[0]?.id
+  const grouped = discovery === "NONE" && !search.trim()
+  const categoryNavigation = useCategoryNavigation(
+    displayCategories.map((category) => category.id),
+    grouped,
+  )
 
   const visibleProducts = useMemo(
     () =>
       discoverProducts(
         menu,
-        activeCategory,
+        "$all",
         search,
         discovery,
         ranking.data?.productIds ?? [],
         now,
       ),
-    [menu, search, activeCategory, discovery, ranking.data, now],
+    [menu, search, discovery, ranking.data, now],
   )
   const hasPromotions =
     menu.commerce?.promotions.some((p) => promotionActive(p, now)) ?? false
   const hasCombos = menu.commerce?.combos.some((c) => c.active) ?? false
   function chooseFilter(filter: DiscoveryFilter) {
     setDiscovery(filter)
-    setSelection("$all")
   }
   const customizable = useMemo(
     () =>
@@ -138,15 +135,18 @@ export default function PublicMenuPage() {
   )
 
   function selectCategory(id: string) {
-    setSelection(id)
     setSearch("")
-
-    document.getElementById("cardapio")?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      block: "start",
-    })
+    setDiscovery("NONE")
+    const anchor = id === "$all" ? "cardapio" : categoryAnchor(id)
+    window.history.replaceState(window.history.state, "", "#" + anchor)
+    window.requestAnimationFrame(() =>
+      document.getElementById(anchor)?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      }),
+    )
   }
 
   return (
@@ -306,21 +306,42 @@ export default function PublicMenuPage() {
                 </button>
               )}
             </div>
-            <nav className="category-nav" aria-label="Categorias do cardápio">
-              {displayCategories.map((category) => (
-                <button
-                  className={activeCategory === category.id && !search ? "is-active" : ""}
-                  aria-pressed={activeCategory === category.id && !search}
-                  type="button"
-                  key={category.id}
-                  onClick={() => selectCategory(category.id)}
-                >
-                  {category.id === "$popular" && <Flame size={17} aria-hidden="true" />}
-                  {category.name}
-                </button>
-              ))}
-            </nav>
           </div>
+          <nav
+            ref={categoryNavigation.navigation}
+            className="category-nav"
+            aria-label="Categorias do cardápio"
+          >
+            <a
+              href="#cardapio"
+              onClick={(event) => {
+                event.preventDefault()
+                selectCategory("$all")
+              }}
+            >
+              Todos
+            </a>
+            {displayCategories.map((category) => (
+              <a
+                href={`#${categoryAnchor(category.id)}`}
+                className={
+                  categoryNavigation.active === category.id && grouped ? "is-active" : ""
+                }
+                aria-current={
+                  categoryNavigation.active === category.id && grouped
+                    ? "location"
+                    : undefined
+                }
+                key={category.id}
+                onClick={(event) => {
+                  event.preventDefault()
+                  selectCategory(category.id)
+                }}
+              >
+                {category.name}
+              </a>
+            ))}
+          </nav>
           {(discovery === "NONE" || discovery === "PROMOTIONS") && (
             <PublicOffers
               controller={controller}
@@ -346,9 +367,7 @@ export default function PublicMenuPage() {
                         ? "Promoções e ofertas"
                         : search
                           ? `Resultados para “${search}”`
-                          : displayCategories.find(
-                              (category) => category.id === activeCategory,
-                            )?.name || "Cardápio"}
+                          : "Cardápio"}
                 </h2>
               </div>
               <p>
@@ -373,25 +392,53 @@ export default function PublicMenuPage() {
               </p>
             )}
             {visibleProducts.length ? (
-              <div className="product-grid">
-                {visibleProducts.map((product) => (
-                  <FeatureBoundary
-                    key={product.id}
-                    label={`Produto ${product.name}`}
-                    resetKeys={[product]}
-                  >
-                    <PublicProductCard
-                      product={product}
-                      quantity={controller.quantity(product.id)}
-                      disabled={loading || !!loadError}
-                      onCustomize={
-                        customizable.has(product.id) ? setCustomizing : undefined
-                      }
-                      onQuantityChange={controller.updateQuantity}
-                    />
-                  </FeatureBoundary>
-                ))}
-              </div>
+              (grouped
+                ? displayCategories.map((category) => ({
+                    ...category,
+                    products: visibleProducts.filter(
+                      (product) => product.categoryId === category.id,
+                    ),
+                  }))
+                : [{ id: "$results", name: "", products: visibleProducts }]
+              ).map((category) => (
+                <section
+                  className="menu-category"
+                  key={category.id}
+                  id={grouped ? categoryAnchor(category.id) : undefined}
+                  aria-labelledby={
+                    grouped ? `title-${categoryAnchor(category.id)}` : undefined
+                  }
+                >
+                  {grouped && (
+                    <div className="section-heading">
+                      <h3 id={`title-${categoryAnchor(category.id)}`}>{category.name}</h3>
+                      <span>
+                        {category.products.length}{" "}
+                        {category.products.length === 1 ? "item" : "itens"}
+                      </span>
+                    </div>
+                  )}
+                  <div className="product-grid">
+                    {category.products.map((product) => (
+                      <FeatureBoundary
+                        key={product.id}
+                        label={`Produto ${product.name}`}
+                        resetKeys={[product]}
+                      >
+                        <PublicProductCard
+                          product={product}
+                          quantity={controller.quantity(product.id)}
+                          disabled={loading || !!loadError}
+                          onCustomize={
+                            customizable.has(product.id) ? setCustomizing : undefined
+                          }
+                          onQuantityChange={controller.updateQuantity}
+                        />
+                      </FeatureBoundary>
+                    ))}
+                  </div>
+                </section>
+              ))
             ) : discovery === "BEST_SELLERS" &&
               (ranking.loading || ranking.error) ? null : (
               <div className="empty-search">
@@ -466,8 +513,8 @@ export default function PublicMenuPage() {
             product={selectedProduct}
             disabled={loading || !!loadError || controller.cart.lines.length >= 100}
             onClose={() => setCustomizing(null)}
-            onAdd={(addons) => {
-              controller.addProduct(selectedProduct, addons)
+            onAdd={(addons, quantity) => {
+              controller.addProduct(selectedProduct, addons, quantity)
               notifySuccess(`${selectedProduct.name} adicionado ao carrinho.`)
               setCustomizing(null)
             }}
