@@ -36,6 +36,7 @@ export function deleteCategory(current: MenuDocument, id: string): MenuDocument 
 }
 
 export interface ProductInput {
+  addonGroupIds?: string[]
   id?: string
   name: string
   description: string
@@ -83,8 +84,31 @@ export function saveProduct(
     },
     restaurantId,
   )
+  const groups = current.commerce?.addonGroups ?? []
+  if (input.addonGroupIds !== undefined)
+    requireValid(
+      Array.isArray(input.addonGroupIds) &&
+        input.addonGroupIds.length <= 100 &&
+        new Set(input.addonGroupIds).size === input.addonGroupIds.length &&
+        input.addonGroupIds.every((id) => groups.some((group) => group.id === id)),
+      "Escolha somente grupos de adicionais existentes.",
+      "addonGroupIds",
+    )
   return {
     ...current,
+    ...(input.addonGroupIds !== undefined && current.commerce
+      ? {
+          commerce: {
+            ...current.commerce,
+            addonGroups: groups.map((group) => ({
+              ...group,
+              productIds: input.addonGroupIds!.includes(group.id)
+                ? [...group.productIds.filter((id) => id !== product.id), product.id]
+                : group.productIds.filter((id) => id !== product.id),
+            })),
+          },
+        }
+      : {}),
     categories,
     products: input.id
       ? current.products.map((item) => (item.id === input.id ? product : item))

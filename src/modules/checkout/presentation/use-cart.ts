@@ -107,10 +107,14 @@ export function useCart(menu: MenuDocument) {
       }
     })
   }
-  function addProduct(product: Product, addons: Readonly<Record<string, number>>) {
+  function addProduct(
+    product: Product,
+    addons: Readonly<Record<string, number>>,
+    quantity = 1,
+  ) {
     const line: CartLine = {
       productId: product.id,
-      quantity: 1,
+      quantity,
       unitPrice: product.price,
       note: "",
       addons,
@@ -123,7 +127,9 @@ export function useCart(menu: MenuDocument) {
         ...current,
         lines: existing
           ? current.lines.map((l) =>
-              lineKey(l) === key ? { ...l, quantity: Math.min(999, l.quantity + 1) } : l,
+              lineKey(l) === key
+                ? { ...l, quantity: Math.min(999, l.quantity + quantity) }
+                : l,
             )
           : current.lines.length < 100
             ? [...current.lines, priced]

@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest"
 import { saveAddon, saveAppearance } from "@cardapio/domain/commerce-changes"
 import { parseCommerce } from "@cardapio/domain/commerce"
 import { priceLine, lineKey, quoteOrder } from "@cardapio/domain/quote"
-import { deleteProduct } from "@cardapio/domain/catalog-changes"
+import { deleteProduct, saveProduct } from "@cardapio/domain/catalog-changes"
+import { moneyInput } from "@cardapio/domain/money"
 import { sampleMenu } from "./helpers"
 const original = sampleMenu(),
   product = original.products[0]!
@@ -27,6 +28,34 @@ const line = {
   addons: { cheese: 1, bacon: 1 },
 }
 describe("product extras", () => {
+  it("product editing links only selected groups and never changes another product's associations", () => {
+    const other = original.products.find((p) => p.id !== product.id)!
+    const input = { ...other, price: moneyInput(other.price), addonGroupIds: [group.id] }
+    const linked = saveProduct(menu, input, () => "unused")
+    expect(linked.commerce!.addonGroups![0]!.productIds).toEqual([product.id, other.id])
+    const unlinked = saveProduct(
+      linked,
+      { ...product, price: moneyInput(product.price), addonGroupIds: [] },
+      () => "unused",
+    )
+    expect(unlinked.commerce!.addonGroups![0]!.productIds).toEqual([other.id])
+    expect(() => priceLine(unlinked, line)).toThrow(/não pertence/)
+    expect(priceLine(unlinked, { ...line, productId: other.id }).unitPrice).toBe(
+      other.price + 30,
+    )
+    const unchanged = saveProduct(
+      linked,
+      { ...product, price: moneyInput(product.price) },
+      () => "unused",
+    )
+    expect(unchanged.commerce!.addonGroups![0]!.productIds).toEqual([
+      product.id,
+      other.id,
+    ])
+    expect(() =>
+      saveProduct(menu, { ...input, addonGroupIds: ["foreign"] }, () => "unused"),
+    ).toThrow()
+  })
   it("calculates exact integer prices and preserves named selections in order snapshots", () => {
     const priced = priceLine(menu, line)
     expect(priced.unitPrice).toBe(product.price + 30)

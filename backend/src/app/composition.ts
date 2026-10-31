@@ -77,7 +77,7 @@ export async function compose(config: ApiConfig) {
     const secrets = new NodeSecrets(config.secret)
     const limiter = new RedisLimiter(redis, secrets)
     const identity = new PrismaIdentity(db),
-      memberships = new PrismaAccess(db)
+      memberships = new PrismaAccess(db, config.emailSendEnabled)
     const access = new Authorization(
       identity,
       memberships,

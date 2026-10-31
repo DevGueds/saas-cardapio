@@ -1,7 +1,8 @@
 import { useState } from "react"
-import { Minus, Plus } from "lucide-react"
+import { Minus, Plus, Check } from "lucide-react"
 import { priceLine } from "@cardapio/domain/quote"
 import type { Product } from "@cardapio/domain/catalog"
+import type { AddonGroup } from "@cardapio/domain/menu-options"
 import { formatMoney } from "@cardapio/domain/money"
 import { addonSelectionsSchema } from "@cardapio/contracts"
 import { useMenu } from "../../../app/presentation/MenuScope"
@@ -9,6 +10,8 @@ import { useServices } from "../../../app/presentation/ServicesProvider"
 import { useDraft } from "../../../shared/presentation/DraftsProvider"
 import DraftNotice from "../../../shared/presentation/DraftNotice"
 import Dialog from "../../../shared/presentation/Dialog"
+import ValidatedInput from "../../../shared/presentation/form-validation/ValidatedInput"
+
 export default function AddonChoice({
   product,
   disabled,
@@ -18,97 +21,187 @@ export default function AddonChoice({
   product: Product
   disabled: boolean
   onClose(): void
-  onAdd(selections: Record<string, number>): void
+  onAdd(selections: Record<string, number>, quantity: number): void
 }) {
   const { menu } = useMenu(),
     { mode } = useServices(),
-    [issue, setIssue] = useState("")
+    [issue, setIssue] = useState(""),
+    [quantity, setQuantity] = useState(1)
   const draft = useDraft(
     `${mode ?? "demo"}:customer:${menu.restaurant.id}:addons-${product.id}`,
     {} as Record<string, number>,
     addonSelectionsSchema.parse,
   )
   const groups = (menu.commerce?.addonGroups ?? []).filter(
-    (g) => g.active && g.productIds.includes(product.id),
+    (group) => group.active && group.productIds.includes(product.id),
   )
-  let price: number | null = null,
-    incomplete = ""
+  let valid = false
   try {
-    price = priceLine(menu, {
+    priceLine(menu, {
       productId: product.id,
       addons: draft.value,
-      quantity: 1,
+      quantity,
       unitPrice: product.price,
       note: "",
-    }).unitPrice
+    })
+    valid = true
   } catch {
-    incomplete =
-      "Revise as quantidades e a disponibilidade dos adicionais para continuar."
+    /* Keep all choices visible while required groups are incomplete. */
   }
-  const change = (id: string, qty: number) =>
+  const extra = groups.reduce(
+    (sum, group) =>
+      sum +
+      group.options.reduce(
+        (value, option) => value + option.price * (draft.value[option.id] ?? 0),
+        0,
+      ),
+    0,
+  )
+  const total = (product.price + extra) * quantity
+  const missing = groups.find(
+    (group) =>
+      group.options.reduce((sum, option) => sum + (draft.value[option.id] ?? 0), 0) <
+      group.min,
+  )
+  function change(id: string, nextQuantity: number, singleGroup?: AddonGroup) {
+    setIssue("")
     draft.set((old) => {
       const next = { ...old }
-      if (qty > 0) next[id] = qty
+      if (singleGroup) for (const option of singleGroup.options) delete next[option.id]
+      if (nextQuantity > 0) next[id] = nextQuantity
       else delete next[id]
       return next
     })
+  }
   return (
     <Dialog
       title={`Personalizar ${product.name}`}
       onClose={onClose}
-      className="combo-choice-dialog"
+      className="product-choice-dialog"
     >
-      <div className="combo-choice">
+      <div className="product-choice">
         <DraftNotice draft={draft} />
-        <p>{product.description}</p>
-        {groups.map((g) => {
-          const count = g.options.reduce((s, o) => s + (draft.value[o.id] ?? 0), 0)
+        <div className="product-choice__intro">
+          {product.imageUrl && <img src={product.imageUrl} alt="" />}
+          <p>{product.description}</p>
+          <strong>{formatMoney(product.price)}</strong>
+        </div>
+        {groups.map((group) => {
+          const count = group.options.reduce(
+              (sum, option) => sum + (draft.value[option.id] ?? 0),
+              0,
+            ),
+            complete = count >= group.min && count <= group.max
+          const help =
+            group.min === group.max
+              ? `Escolha ${group.max === 1 ? "1 opção" : `${group.max} opções`}`
+              : group.min
+                ? `Escolha de ${group.min} a ${group.max}`
+                : `Escolha até ${group.max}`
           return (
-            <fieldset className="combo-options" key={g.id}>
+            <fieldset className="addon-choice-group" key={group.id}>
               <legend>
-                {g.name}
+                <span>
+                  <strong>{group.name}</strong>
+                  <span
+                    className={`addon-choice-badge ${group.min ? "addon-choice-badge--required" : ""} ${complete && count ? "addon-choice-badge--complete" : ""}`}
+                  >
+                    {complete && count ? (
+                      <>
+                        <Check size={12} aria-hidden="true" /> Pronto
+                      </>
+                    ) : group.min ? (
+                      "Obrigatório"
+                    ) : (
+                      "Opcional"
+                    )}
+                  </span>
+                </span>
                 <small>
-                  {g.min ? `Obrigatório · mínimo ${g.min}` : "Opcional"} · máximo {g.max}{" "}
-                  · {count} selecionados
+                  {help} · {count}/{group.max} selecionados
                 </small>
               </legend>
-              {g.options.map((o) => {
-                const qty = draft.value[o.id] ?? 0
+              {group.max === 1 && group.min === 0 && (
+                <label className="addon-choice-option">
+                  <span>Sem adicional</span>
+                  <ValidatedInput
+                    type="radio"
+                    name={`addon-${group.id}`}
+                    checked={count === 0}
+                    disabled={disabled}
+                    onChange={() => change("", 0, group)}
+                  />
+                </label>
+              )}
+              {group.options.map((option) => {
+                const selected = draft.value[option.id] ?? 0
+                const description = (
+                  <span>
+                    <strong>{option.name}</strong>
+                    <small>
+                      {option.available
+                        ? option.price
+                          ? `+ ${formatMoney(option.price)}`
+                          : "Sem custo"
+                        : "Esgotado"}
+                    </small>
+                  </span>
+                )
+                if (group.max === 1 || option.maxQuantity === 1)
+                  return (
+                    <label className="addon-choice-option" key={option.id}>
+                      {description}
+                      <ValidatedInput
+                        type={group.max === 1 ? "radio" : "checkbox"}
+                        name={
+                          group.max === 1 ? `addon-${group.id}` : `addon-${option.id}`
+                        }
+                        aria-label={option.name}
+                        checked={selected > 0}
+                        disabled={
+                          disabled ||
+                          (!option.available && selected === 0) ||
+                          (group.max > 1 && count >= group.max && selected === 0)
+                        }
+                        onChange={(event) =>
+                          change(
+                            option.id,
+                            event.target.checked ? 1 : 0,
+                            group.max === 1 ? group : undefined,
+                          )
+                        }
+                      />
+                    </label>
+                  )
                 return (
-                  <div className="addon-row" key={o.id}>
-                    <div>
-                      <strong>{o.name}</strong>
-                      <p>
-                        {o.price ? `+ ${formatMoney(o.price)}` : "Grátis"}
-                        {!o.available && " · Esgotado"}
-                      </p>
-                    </div>
+                  <div className="addon-choice-option" key={option.id}>
+                    {description}
                     <div
                       className="inline-stepper"
                       role="group"
-                      aria-label={`Quantidade de ${o.name}`}
+                      aria-label={`Quantidade de ${option.name}`}
                     >
                       <button
                         type="button"
-                        aria-label={`Remover ${o.name}`}
-                        disabled={disabled || qty === 0}
-                        onClick={() => change(o.id, qty - 1)}
+                        aria-label={`Remover ${option.name}`}
+                        disabled={disabled || selected === 0}
+                        onClick={() => change(option.id, selected - 1)}
                       >
-                        <Minus size={16} />
+                        <Minus size={16} aria-hidden="true" />
                       </button>
-                      <span aria-live="polite">{qty}</span>
+                      <span aria-live="polite">{selected}</span>
                       <button
                         type="button"
-                        aria-label={`Adicionar ${o.name}`}
+                        aria-label={`Adicionar ${option.name}`}
                         disabled={
                           disabled ||
-                          !o.available ||
-                          qty >= o.maxQuantity ||
-                          count >= g.max
+                          !option.available ||
+                          selected >= option.maxQuantity ||
+                          count >= group.max
                         }
-                        onClick={() => change(o.id, qty + 1)}
+                        onClick={() => change(option.id, selected + 1)}
                       >
-                        <Plus size={16} />
+                        <Plus size={16} aria-hidden="true" />
                       </button>
                     </div>
                   </div>
@@ -117,32 +210,56 @@ export default function AddonChoice({
             </fieldset>
           )
         })}
-        <p className="field-help">O valor dos adicionais é por unidade do produto.</p>
-        {(incomplete || issue) && <p role="status">{issue || incomplete}</p>}
-        <div className="combo-choice-footer">
-          <strong>
-            {price === null
-              ? `A partir de ${formatMoney(product.price)}`
-              : formatMoney(price)}
-          </strong>
+        <p className="product-choice__notice">
+          As escolhas e o valor dos adicionais valem para cada unidade deste produto.
+        </p>
+        <button type="button" className="text-button" onClick={() => draft.set({})}>
+          Limpar escolhas
+        </button>
+        <footer className="product-choice__footer">
+          {(missing || !valid || issue) && (
+            <p className="product-choice__notice" role="status">
+              {issue ||
+                (missing
+                  ? `Escolha as opções de “${missing.name}” para continuar.`
+                  : "As opções mudaram. Limpe as escolhas e revise os adicionais.")}
+            </p>
+          )}
+          <div className="inline-stepper" role="group" aria-label="Quantidade do produto">
+            <button
+              type="button"
+              aria-label="Diminuir quantidade do produto"
+              disabled={disabled || quantity <= 1}
+              onClick={() => setQuantity((value) => value - 1)}
+            >
+              <Minus size={17} aria-hidden="true" />
+            </button>
+            <span aria-live="polite">{quantity}</span>
+            <button
+              type="button"
+              aria-label="Aumentar quantidade do produto"
+              disabled={disabled || quantity >= 999}
+              onClick={() => setQuantity((value) => value + 1)}
+            >
+              <Plus size={17} aria-hidden="true" />
+            </button>
+          </div>
           <button
             className="primary-button"
-            disabled={disabled || price === null || !!draft.issue}
+            disabled={disabled || !valid || !!draft.issue}
             onClick={() => {
               try {
-                onAdd(draft.value)
+                onAdd(draft.value, quantity)
                 draft.clear()
               } catch {
                 setIssue("O cardápio mudou. Feche e escolha os adicionais novamente.")
               }
             }}
           >
-            Adicionar ao carrinho
+            <span>Adicionar ao carrinho</span>
+            <strong aria-hidden="true">{formatMoney(total)}</strong>
           </button>
-        </div>
-        <button type="button" className="text-button" onClick={() => draft.set({})}>
-          Limpar escolhas
-        </button>
+        </footer>
       </div>
     </Dialog>
   )

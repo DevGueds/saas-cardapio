@@ -16,7 +16,7 @@ O cardápio mostra “Onde estamos”, com endereço, mapa carregado somente ap�
 
 ## Convite de compartilhamento
 
-“Compartilhar cardápio” permite definir título, mensagem e formato preferido, copiar o link e alternar prévias de WhatsApp, Facebook, LinkedIn e X. A interface usa termos comuns. Prévias são ilustrativas; plataformas podem cortar ou abreviar conteúdo e manter cache próprio. O Instagram tem instrução específica para link na bio/stories.
+“Compartilhar cardápio” permite definir título, mensagem e formato preferido, copiar o link e alternar prévias de WhatsApp, Facebook, LinkedIn e X. A interface usa termos comuns. Prévias são ilustrativas; plataformas podem cortar ou abreviar conteúdo e manter cache próprio.
 
 - Formato padrão: PNG de **600×600** gerado por loja.
 - Alternativa: PNG em paisagem de **1200×630**.
@@ -28,3 +28,13 @@ O cardápio mostra “Onde estamos”, com endereço, mapa carregado somente ap�
 - O shell para Caddy é preparado por `scripts/prepare-menu-shell.mjs` nos builds Docker/Railway/Render. O servidor Vite de desenvolvimento não faz essa injeção de HTML; valide essa camada com `node scripts/test-social-shell.mjs` após um build.
 
 As colunas novas são opcionais e preservam dados existentes. A migration `20261030150000_profile_and_menu_sharing` precisa ser aplicada pelo serviço de migrations antes das novas APIs. Réplicas não executam DDL ao iniciar.
+
+## Navegação e adicionais
+
+O cardápio completo mostra cada produto uma vez, agrupado pela categoria. Os atalhos são links para seções do HTML, sem ocultar os demais produtos. A categoria ativa acompanha a rolagem e links com `#categoria-<id>` abrem a seção correspondente. Busca e filtros rápidos continuam disponíveis; selecionar uma categoria limpa esses filtros e volta ao cardápio completo.
+
+“Editar produto → Adicionais deste produto” permite vincular ou remover grupos sem alterar os vínculos de outros produtos. A mesma associação pode ser gerenciada pelo grupo em “Adicionais e extras”, onde os nomes dos produtos vinculados ficam visíveis. A atualização é atômica com a edição do produto, exige revisão atual e valida que os grupos pertencem ao cardápio.
+
+Na personalização, cada produto mostra somente seus grupos ativos. Escolhas únicas usam botões de seleção, múltiplas escolhas simples usam caixas de seleção e opções repetíveis usam controles de quantidade. Grupos obrigatórios indicam o que falta; preço e quantidade do produto são atualizados antes de adicionar ao carrinho. O servidor recalcula preços e limites ao receber o pedido.
+
+Em horários, abertura e fechamento ficam lado a lado. Faixas adicionais começam vazias, evitando sugerir horários que possam sobrepor os já cadastrados.

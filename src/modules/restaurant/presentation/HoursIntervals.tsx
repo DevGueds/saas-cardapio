@@ -92,8 +92,8 @@ export default function HoursIntervals({
               onChange([
                 ...value,
                 {
-                  opensAt: value.length ? "12:00" : "18:00",
-                  closesAt: value.length ? "14:00" : "23:00",
+                  opensAt: value.length ? "" : "18:00",
+                  closesAt: value.length ? "" : "23:00",
                 },
               ])
             }

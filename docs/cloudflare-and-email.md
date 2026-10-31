@@ -9,13 +9,13 @@ A implementação usa as orientações das skills locais `security-audit` (revis
 - Cadastro e troca de senha usam a mesma política no navegador e na API: de 8 a 128 pontos Unicode, sem cortar, normalizar ou remover espaços. Aceitam força média ou maior; login continua aceitando senhas antigas.
 - A indicação de força é uma estimativa local conservadora, não uma previsão de tempo de quebra. Rejeita senhas comuns, sequências curtas e repetições; incentiva diversidade ou frases longas. A confirmação é obrigatória na interface. O servidor valida a força mesmo em chamadas diretas.
 - Contas novas recebem 7 dias corridos (`EMAIL_VERIFICATION_GRACE_SECONDS=604800`, de 1 hora a 30 dias). A migration concede 7 dias a contas existentes a partir da aplicação; alterar a variável não altera prazos já gravados.
-- O cadastro tenta enviar automaticamente um código sem desfazer a conta se o provedor falhar. O titular também pode solicitar o envio na tela `/confirmar-email`.
+- Com `EMAIL_SEND_ENABLED=true`, o cadastro tenta enviar automaticamente um código sem desfazer a conta se o provedor falhar. O titular também pode solicitar o envio na tela `/confirmar-email`. Com `false`, não há envio nem exigência de confirmação em nenhum desses fluxos.
 - Código aleatório criptográfico de 6 números, válido por 10 minutos, vinculado ao usuário por HMAC-SHA256 com o segredo do servidor. O banco armazena somente esse hash. O código circula em claro apenas no transporte protegido e na mensagem de e-mail.
 - Até 5 tentativas por código; até 10 confirmações a cada 15 minutos por conta; até 5 solicitações de envio por hora, contando o cadastro e os envios recusados. Há intervalo de 60 segundos entre códigos emitidos. Reenvio invalida o anterior. Tentativas e consumo são transacionais com bloqueio por usuário, compartilhados entre réplicas.
-- Após o prazo, a API e os casos de uso administrativos recusam acesso com `EMAIL_VERIFICATION_REQUIRED`. O titular ainda consegue entrar, cumprir MFA, confirmar e-mail e sair. Confirmar restaura o acesso sem apagar dados. O cardápio e os pedidos públicos continuam disponíveis para os clientes.
-- Uma associação nova à equipe exige e-mail já confirmado, mesmo durante o período inicial. Isso impede que alguém cadastre um e-mail de outra pessoa e receba os acessos destinados a ela. Atualize os vínculos existentes de acordo com a política de implantação.
+- Com envio ativado, após o prazo a API e os casos de uso administrativos recusam acesso com `EMAIL_VERIFICATION_REQUIRED`. O titular ainda consegue entrar, cumprir MFA, confirmar e-mail e sair. Confirmar restaura o acesso sem apagar dados. O cardápio e os pedidos públicos continuam disponíveis para os clientes.
+- Com envio ativado, uma associação nova à equipe exige e-mail já confirmado, mesmo durante o período inicial. Isso impede que alguém cadastre um e-mail de outra pessoa e receba os acessos destinados a ela. Com envio desligado, a associação dispensa confirmação e continua exigindo autorização do proprietário.
 - A confirmação cria um evento `EMAIL_VERIFIED` na mesma transação, com identificador do titular e data, sem código ou hash na auditoria.
-- Não há recuperação de senha ou alteração de e-mail neste fluxo; o código comprova posse do endereço cadastrado. Senha esquecida e troca de endereço exigem um fluxo próprio com reautenticação, auditoria e revogação de sessões.
+- Não há recuperação de senha por email neste fluxo. A alteração de endereço está disponível em “Meu perfil e contato”, exige a senha atual, revoga outras sessões e invalida códigos antigos; veja [perfil e configurações](account-and-menu-settings.md).
 
 ## Desenvolvimento: Mailpit
 
@@ -27,7 +27,7 @@ MAIL_API_URL=http://127.0.0.1:8025
 MAIL_FROM=conta@localhost.invalid
 ```
 
-No Compose, a API utiliza `http://mailpit:8025`. O modo Mailpit é recusado em produção; o modo `disabled` é apropriado para testes que não exercitam envio. Em produção, o cadastro só é liberado quando `SIGNUP_ENABLED=true` e o Postal está configurado; enquanto isso o restante do app continua disponível.
+No Compose, a API utiliza `http://mailpit:8025`. O modo Mailpit é recusado em produção; o modo `disabled` é apropriado para testes que não exercitam envio. Em produção, o cadastro é liberado por `SIGNUP_ENABLED=true`. Credenciais do Postal são exigidas somente quando `EMAIL_SEND_ENABLED=true`.
 
 ## Produção: Postal autohospedado
 

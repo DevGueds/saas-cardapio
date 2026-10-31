@@ -10,4 +10,5 @@ export const productDraftSchema = z.strictObject({
   available: z.boolean(),
   popular: z.boolean(),
   imageRemoved: z.boolean(),
+  addonGroupIds: z.array(z.string().max(100)).max(100).optional(),
 })

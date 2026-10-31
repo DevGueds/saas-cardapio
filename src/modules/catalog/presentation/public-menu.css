@@ -241,7 +241,7 @@
   border-bottom: 1px solid var(--line);
   scrollbar-width: thin;
 }
-.category-nav button {
+.category-nav :is(a, button) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -256,10 +256,10 @@
   font-size: 0.875rem;
   font-weight: 600;
 }
-.category-nav button:hover {
+.category-nav :is(a, button):hover {
   background: #edf2e3;
 }
-.category-nav button.is-active {
+.category-nav :is(a, button).is-active {
   background: var(--brand);
   border-color: var(--brand);
   color: #fff;
@@ -652,7 +652,7 @@
     padding-top: 1.25rem;
     gap: 1rem;
   }
-  .category-nav button {
+  .category-nav :is(a, button) {
     font-size: 0.8125rem;
     padding: 0.6rem 0.9rem;
   }

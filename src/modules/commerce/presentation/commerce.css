@@ -852,4 +852,7 @@
   .postal-search > button {
     align-self: flex-start;
   }
+  .delivery-settings > .form-actions {
+    position: static;
+  }
 }

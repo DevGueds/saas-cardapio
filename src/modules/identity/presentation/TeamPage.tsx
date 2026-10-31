@@ -97,8 +97,7 @@ export default function TeamPage() {
                 <Link to="/login?equipe=1" target="_blank" rel="noopener noreferrer">
                   o cadastro de equipe (nova aba)
                 </Link>
-                . Peça à pessoa para confirmar o e-mail na própria conta antes de
-                associá-lo aqui.
+                . Depois do cadastro, informe aqui o mesmo e-mail usado na conta.
               </p>
               <fieldset disabled={loading || mutation.pending}>
                 <InputField

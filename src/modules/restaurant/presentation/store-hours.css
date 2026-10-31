@@ -62,7 +62,7 @@
 }
 .hours-timezone {
   max-width: 26rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
 }
 .hours-timezone small {
   color: var(--muted);
@@ -75,8 +75,8 @@
 .hours-day-row {
   display: grid;
   grid-template-columns: 10rem minmax(0, 1fr);
-  gap: 1.5rem;
-  padding: 1.25rem 0;
+  gap: 1rem;
+  padding: 0.9rem 0;
   border-top: 1px solid var(--line);
 }
 .hours-day-row > strong {
@@ -90,7 +90,9 @@
 }
 .hours-interval {
   display: grid;
-  grid-template-columns: minmax(0, 9rem) auto minmax(0, 9rem) 44px;
+  grid-template-columns: minmax(0, 9rem) 1.6rem minmax(0, 9rem) 44px;
+  width: min(100%, 24rem);
+  justify-content: start;
   gap: 0.65rem;
   align-items: end;
 }

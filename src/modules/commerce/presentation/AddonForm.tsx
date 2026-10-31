@@ -121,17 +121,29 @@ export default function AddonForm({
             maxLength={80}
             onChange={(e) => field("name", e.target.value)}
           />
+          <ToggleField
+            label="O cliente precisa escolher uma opção"
+            checked={Number(v.min) > 0}
+            onChange={(required) => field("min", required ? "1" : "0")}
+          />
+          <p className="field-help">
+            {Number(v.min) > 0
+              ? "Obrigatório: o cliente precisa escolher antes de adicionar ao carrinho."
+              : "Opcional: o cliente pode pedir o produto sem estes adicionais."}
+          </p>
           <div className="form-row">
-            <InputField
-              label="Quantidade mínima"
-              type="number"
-              required
-              min={0}
-              max={20}
-              value={v.min}
-              help="Zero torna o grupo opcional."
-              onChange={(e) => field("min", e.target.value)}
-            />
+            {Number(v.min) > 0 && (
+              <InputField
+                label="Quantidade mínima"
+                type="number"
+                required
+                min={1}
+                max={20}
+                value={v.min}
+                help="Quantas escolhas são obrigatórias por produto."
+                onChange={(e) => field("min", e.target.value)}
+              />
+            )}
             <InputField
               label="Quantidade máxima"
               type="number"
@@ -139,6 +151,7 @@ export default function AddonForm({
               min={1}
               max={20}
               value={v.max}
+              help="Total de escolhas permitido por produto."
               onChange={(e) => field("max", e.target.value)}
             />
           </div>
@@ -176,6 +189,7 @@ export default function AddonForm({
                       min={1}
                       max={20}
                       value={o.maxQuantity}
+                      help="Quantas vezes esta opção pode ser escolhida."
                       onChange={(e) => change({ ...o, maxQuantity: e.target.value })}
                     />
                   </div>

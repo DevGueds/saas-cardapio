@@ -153,6 +153,50 @@ test("email-off never queues a challenge, permits overdue accounts and keeps pas
     401,
   )
 })
+test("email-off permits an unverified account to join the team without changing owner protections", async () => {
+  const registered = await request("POST", "/auth/register-account", {
+    name: "Pessoa da Cozinha",
+    email: `kitchen-settings-${suffix}@example.test`,
+    password,
+    legalAcceptance: currentLegalAcceptance,
+  })
+  const session = value<SessionView>(registered)
+  users.push(session.user.id)
+  const path = `/tenants/${alice.store.tenantId}/members`
+  assert.equal(
+    (
+      await request(
+        "POST",
+        path,
+        { email: `kitchen-settings-${suffix}@example.test`, role: "KITCHEN" },
+        alice,
+      )
+    ).statusCode,
+    201,
+  )
+  const cookie = String(registered.headers["set-cookie"]).split(";")[0]!
+  const access = await server.app.inject({
+    method: "GET",
+    url: "/api/v1/me/restaurants",
+    headers: { cookie },
+  })
+  assert.equal(value<RestaurantAccess[]>(access)[0]?.id, alice.store.id)
+  assert.equal(
+    (await request("POST", path, { email: alice.email, role: "KITCHEN" }, alice))
+      .statusCode,
+    403,
+  )
+  assert.equal(
+    (
+      await server.runtime.db.client.user.findUniqueOrThrow({
+        where: { id: session.user.id },
+        select: { emailVerifiedAt: true },
+      })
+    ).emailVerifiedAt,
+    null,
+  )
+})
+
 test("category CRUD persists, enforces revisions and tenants, and refuses deleting categories with products", async () => {
   const path = `/restaurants/${alice.store.id}/categories`
   assert.equal(
