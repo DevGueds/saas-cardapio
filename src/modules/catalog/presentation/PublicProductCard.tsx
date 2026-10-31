@@ -47,10 +47,10 @@ function PublicProductCard({
               className="add-button"
               disabled={disabled}
               onClick={() => onCustomize(product.id)}
-              aria-label={`Personalizar ${product.name}`}
+              aria-label={`Adicionar ${product.name}`}
             >
               <Plus size={17} />
-              <span>Personalizar{quantity ? ` (${quantity})` : ""}</span>
+              <span>Adicionar{quantity ? ` (${quantity})` : ""}</span>
             </button>
           ) : quantity === 0 ? (
             <button

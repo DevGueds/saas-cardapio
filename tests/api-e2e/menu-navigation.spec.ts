@@ -149,7 +149,7 @@ test("category anchors, isolated extras, product associations and responsive man
     "aria-current",
     "location",
   )
-  await page.getByRole("button", { name: "Personalizar Lanches 1", exact: true }).click()
+  await page.getByRole("button", { name: "Adicionar Lanches 1", exact: true }).click()
   const dialog = page.getByRole("dialog")
   await expect(dialog.getByText("Escolha seu molho", { exact: true })).toBeVisible()
   await expect(dialog.getByText("Gelo da bebida", { exact: true })).toHaveCount(0)
@@ -175,7 +175,7 @@ test("category anchors, isolated extras, product associations and responsive man
     .locator(".product-card")
     .filter({ has: page.getByRole("heading", { name: "Lanches 2", exact: true }) })
   await expect(otherCard.getByRole("button", { name: /Personalizar/ })).toHaveCount(0)
-  await page.getByRole("button", { name: "Personalizar Bebidas 1", exact: true }).click()
+  await page.getByRole("button", { name: "Adicionar Bebidas 1", exact: true }).click()
   await expect(dialog.getByText("Escolha seu molho", { exact: true })).toHaveCount(0)
   await dialog.getByRole("button", { name: "Adicionar Gelo extra", exact: true }).click()
   await expect(
@@ -208,10 +208,10 @@ test("category anchors, isolated extras, product associations and responsive man
   })
   await page.goto(`/menu/${slug}`)
   await expect(
-    page.getByRole("button", { name: "Personalizar Lanches 1", exact: true }),
+    page.getByRole("button", { name: "Adicionar Lanches 1", exact: true }),
   ).toHaveCount(0)
   await expect(
-    page.getByRole("button", { name: "Personalizar Lanches 2", exact: true }),
+    page.getByRole("button", { name: "Adicionar Lanches 2", exact: true }),
   ).toHaveCount(1)
   await page.getByLabel("Buscar no cardápio").fill("Sobremesas")
   await expect(page.locator(".product-card")).toHaveCount(4)
