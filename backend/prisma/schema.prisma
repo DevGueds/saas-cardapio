@@ -211,10 +211,12 @@ model Category {
   restaurant     Restaurant @relation(fields: [tenantId, restaurantId], references: [tenantId, id], onDelete: Restrict)
   name           String     @db.VarChar(80)
   normalizedName String     @db.VarChar(80)
+  position       Int        @default(0)
   products       Product[]
 
   @@unique([tenantId, restaurantId, id])
   @@unique([tenantId, restaurantId, normalizedName])
+  @@index([tenantId, restaurantId, position])
 }
 
 model Product {

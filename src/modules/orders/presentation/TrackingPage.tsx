@@ -1,49 +1,41 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect } from "react"
 import { Link, useLocation, useParams } from "react-router"
 import { CheckCircle2, Clock3, CookingPot, Bike, ShoppingBag, Store } from "lucide-react"
-import type { TrackingView, AppError } from "@cardapio/contracts"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import { formatMoney } from "@cardapio/domain/money"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import { orderTime, shortOrder } from "./order-labels"
 import CustomerNotifications from "../../engagement/presentation/CustomerNotifications"
 import FeatureBoundary from "../../../shared/presentation/FeatureBoundary"
+import { canRefreshConnection } from "../../../shared/browser-connectivity"
+import { useResource } from "../../../shared/presentation/use-resource"
 export default function TrackingPage() {
   const { slug = "", orderId = "" } = useParams(),
     location = useLocation(),
     { tracking } = useServices(),
     token = location.hash.slice(1)
-  const [data, setData] = useState<TrackingView | null>(null),
-    [error, setError] = useState<AppError | null>(null),
-    [retry, setRetry] = useState(0),
-    [updated, setUpdated] = useState<string | null>(null)
+  const load = useCallback(async () => {
+    if (!tracking) return { ok: true as const, value: null }
+    const result = await tracking(slug, orderId, token)
+    return result.ok
+      ? {
+          ok: true as const,
+          value: {
+            order: result.value,
+            updated: new Date().toLocaleTimeString("pt-BR"),
+          },
+        }
+      : result
+  }, [slug, orderId, token, tracking])
+  const { data: resource, error, reload, loading } = useResource(load)
+  const data = resource?.order
+  const updated = resource?.updated
   useEffect(() => {
-    let active = true,
-      running = false
-    const refresh = async () => {
-      if (!tracking || running) return
-      running = true
-      const result = await tracking(slug, orderId, token)
-      running = false
-      if (!active) return
-      if (result.ok) {
-        setData(result.value)
-        setError(null)
-        setUpdated(new Date().toLocaleTimeString("pt-BR"))
-      } else setError(result.error)
-    }
-    void refresh()
     const interval = setInterval(() => {
-        if (!document.hidden) void refresh()
-      }, 15000),
-      focus = () => void refresh()
-    window.addEventListener("focus", focus)
-    return () => {
-      active = false
-      clearInterval(interval)
-      window.removeEventListener("focus", focus)
-    }
-  }, [slug, orderId, token, tracking, retry])
+      if (tracking && canRefreshConnection()) void reload({ dedupe: true })
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [tracking, reload])
   const pickup = data?.fulfillment?.mode === "PICKUP"
   const stages = [
     {
@@ -102,7 +94,7 @@ export default function TrackingPage() {
             Acompanhamento disponível apenas para pedidos registrados na loja conectada.
           </p>
         )}
-        {error && <ErrorNotice error={error} onRetry={() => setRetry((v) => v + 1)} />}
+        {error && <ErrorNotice error={error} onRetry={() => void reload()} />}
         {!data && tracking && !error && <p role="status">Buscando seu pedido…</p>}
         {data && (
           <>
@@ -195,7 +187,11 @@ export default function TrackingPage() {
               Atualizado às {updated}. Consulta a cada 15 segundos. As etapas são
               informadas pela loja; este acompanhamento não confirma pagamento.
             </p>
-            <button className="text-button" onClick={() => setRetry((v) => v + 1)}>
+            <button
+              className="text-button"
+              disabled={loading}
+              onClick={() => void reload()}
+            >
               Atualizar acompanhamento
             </button>
             <FeatureBoundary label="Notificações do pedido">

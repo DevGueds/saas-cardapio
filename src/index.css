@@ -2,6 +2,7 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 @import "./shared/presentation/styles/base.css";
+@import "./shared/presentation/styles/connection.css";
 @import "./shared/presentation/styles/brand.css";
 @import "./shared/presentation/styles/legal.css";
 @import "./modules/catalog/presentation/public-menu.css";
@@ -14,6 +15,7 @@
 @import "./modules/restaurant/presentation/store-details.css";
 @import "./modules/catalog/presentation/menu-discovery.css";
 @import "./modules/catalog/presentation/menu-navigation.css";
+@import "./modules/catalog/presentation/category-ordering.css";
 @import "./modules/analytics/presentation/analytics.css";
 @import "./modules/demo-orders/presentation/demo-orders.css";
 

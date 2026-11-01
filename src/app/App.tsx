@@ -1,5 +1,6 @@
 import { RouterProvider } from "react-router"
 import Notifications from "../shared/presentation/Notifications"
+import ConnectionNotice from "../shared/presentation/ConnectionNotice"
 
 import AppErrorBoundary from "../shared/presentation/AppErrorBoundary"
 
@@ -13,6 +14,7 @@ export default function App() {
   return (
     <ServicesProvider services={services}>
       <AppErrorBoundary report={services.reportUnexpected}>
+        {services.mode === "api" && <ConnectionNotice />}
         <RouterProvider router={router} />
         <Notifications />
       </AppErrorBoundary>

@@ -1,37 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import type { AppError, OrderView } from "@cardapio/contracts"
+import { useCallback, useEffect, useState } from "react"
 import { useServices } from "../../../app/presentation/ServicesProvider"
+import { canRefreshConnection } from "../../../shared/browser-connectivity"
+import { useResource } from "../../../shared/presentation/use-resource"
 export function useOrders(restaurantId: string) {
   const { orders } = useServices()
   const [pages, setPages] = useState<(string | undefined)[]>([undefined])
   const cursor = pages.at(-1)
-  const [data, setData] = useState<{
-    items: OrderView[]
-    nextCursor: string | null
-  } | null>(null)
-  const [error, setError] = useState<AppError | null>(null),
-    [loading, setLoading] = useState(false)
-  const generation = useRef({ value: 0 })
-  const reload = useCallback(async () => {
-    if (!orders) return
-    const request = ++generation.current.value
-    setLoading(true)
-    const result = await orders.list(restaurantId, cursor)
-    if (generation.current.value !== request) return
-    if (result.ok) {
-      setData(result.value)
-      setError(null)
-    } else setError(result.error)
-    setLoading(false)
-  }, [orders, restaurantId, cursor])
+  const load = useCallback(
+    () =>
+      orders
+        ? orders.list(restaurantId, cursor)
+        : Promise.resolve({ ok: true as const, value: null }),
+    [orders, restaurantId, cursor],
+  )
+  const { data, error, loading, reload } = useResource(load)
   useEffect(() => {
-    const sequence = generation.current
-    void reload()
-    const interval = setInterval(() => void reload(), 15000)
-    return () => {
-      sequence.value++
-      clearInterval(interval)
-    }
+    const interval = setInterval(() => {
+      if (canRefreshConnection()) void reload({ dedupe: true })
+    }, 15000)
+    return () => clearInterval(interval)
   }, [reload])
   return {
     data,
@@ -41,13 +28,11 @@ export function useOrders(restaurantId: string) {
     page: pages.length,
     next: () => {
       if (data?.nextCursor) {
-        setData(null)
         setPages([...pages, data.nextCursor])
       }
     },
     previous: () => {
       if (pages.length > 1) {
-        setData(null)
         setPages(pages.slice(0, -1))
       }
     },

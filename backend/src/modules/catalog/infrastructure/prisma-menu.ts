@@ -16,7 +16,7 @@ export async function readMenu(
     where: { id: scope.restaurantId, tenantId: scope.tenantId, tenant: { active: true } },
     include: {
       commerce: true,
-      categories: { orderBy: { name: "asc" } },
+      categories: { orderBy: [{ position: "asc" }, { name: "asc" }, { id: "asc" }] },
       products: { orderBy: { name: "asc" } },
     },
   })
@@ -102,12 +102,21 @@ export class PrismaMenu implements MenuRepository {
           "CONFLICT",
           "Outra pessoa alterou a loja. Atualize os dados antes de salvar.",
         )
-      for (const category of next.categories) {
+      for (const [position, category] of next.categories.entries()) {
         // Compound identifiers prevent a record from another restaurant being updated.
         await tx.category.upsert({
           where: { tenantId_restaurantId_id: { ...scope, id: category.id } },
-          create: { ...scope, ...category, normalizedName: normalizeName(category.name) },
-          update: { name: category.name, normalizedName: normalizeName(category.name) },
+          create: {
+            ...scope,
+            ...category,
+            normalizedName: normalizeName(category.name),
+            position,
+          },
+          update: {
+            name: category.name,
+            normalizedName: normalizeName(category.name),
+            position,
+          },
         })
       }
       await tx.product.deleteMany({

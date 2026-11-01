@@ -14,27 +14,22 @@ it("best sellers uses the actual ranking rather than manual featured flags", () 
   ).toEqual(rank)
   expect(discoverProducts(menu, "$all", "", "BEST_SELLERS", [], Date.now())).toEqual([])
 })
-it("cheapest ordering is numerical, keeps category selection and combines with search", () => {
+it("default ordering is numerical, keeps category selection and combines with search", () => {
   const menu = sampleMenu(),
-    result = discoverProducts(menu, "$all", "", "CHEAPEST", [], Date.now())
+    result = discoverProducts(menu, "$all", "", "NONE", [], Date.now())
   expect(result.map((p) => p.price)).toEqual(
     [...result.map((p) => p.price)].sort((a, b) => a - b),
   )
   const category = menu.categories[0]!
   expect(
-    discoverProducts(menu, category.id, "", "CHEAPEST", [], Date.now()).every(
+    discoverProducts(menu, category.id, "", "NONE", [], Date.now()).every(
       (p) => p.categoryId === category.id,
     ),
   ).toBe(true)
   expect(
-    discoverProducts(
-      menu,
-      "$all",
-      menu.products[0]!.name,
-      "CHEAPEST",
-      [],
-      Date.now(),
-    ).some((p) => p.id === menu.products[0]!.id),
+    discoverProducts(menu, "$all", menu.products[0]!.name, "NONE", [], Date.now()).some(
+      (p) => p.id === menu.products[0]!.id,
+    ),
   ).toBe(true)
 })
 it("promotion filtering respects start, end and usage limits without inventing discounted unit prices", () => {

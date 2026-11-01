@@ -121,6 +121,10 @@ export const categorySchema = z.strictObject({
   expectedRevision: revision,
   name: textField(80, true),
 })
+export const categoryOrderSchema = z.strictObject({
+  expectedRevision: revision,
+  categoryIds: z.array(uuid).max(1000),
+})
 export const openSchema = z.strictObject({
   expectedRevision: revision,
   isOpen: z.boolean(),

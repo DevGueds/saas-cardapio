@@ -59,6 +59,13 @@ export class CatalogController {
       .type("image/png")
       .send(image)
   }
+  @Put("restaurants/:restaurantId/categories/order") reorderCategories(
+    @Req() request: SessionRequest,
+    @Param("restaurantId") id: string,
+    @Body() data: unknown,
+  ) {
+    return this.app.catalog.reorderCategories(authenticated(request).actor, id, data)
+  }
   @Post("restaurants/:restaurantId/categories") createCategory(
     @Req() request: SessionRequest,
     @Param("restaurantId") id: string,

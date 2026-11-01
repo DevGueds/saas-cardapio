@@ -3,6 +3,8 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -13,7 +15,8 @@ import type { MenuDocument } from "../../modules/catalog/application/menu-docume
 import type { AppError } from "../../shared/application/result"
 
 import ErrorNotice from "../../shared/presentation/ErrorNotice"
-import { applyStoreHours } from "@cardapio/domain/restaurant-changes"
+import { effectiveStoreOpen } from "@cardapio/domain/store-hours"
+import { subscribeConnectionRecovery } from "../../shared/browser-connectivity"
 
 import { useServices } from "./ServicesProvider"
 
@@ -21,6 +24,7 @@ interface MenuContextValue {
   menu: MenuDocument
   error: AppError | null
   loading: boolean
+  refreshing: boolean
   reload(): Promise<MenuDocument | null>
 }
 
@@ -45,35 +49,57 @@ export default function MenuScope({
   const [now, setNow] = useState(Date.now)
 
   const generation = useRef({ value: 0 })
-
-  const reload = useCallback(async () => {
-    const request = ++generation.current.value
-
-    setLoading(true)
-
-    const result = await (adminRestaurantId && services.menu.loadAdmin
-      ? services.menu.loadAdmin(adminRestaurantId)
-      : services.menu.execute(slug))
-
-    if (request !== generation.current.value) return null
-
-    if (result.ok) {
-      setMenu(result.value)
-      setError(null)
-    } else setError(result.error)
-
-    setLoading(false)
-
-    return result.ok ? result.value : null
-  }, [services, slug, adminRestaurantId])
-
-  useEffect(() => {
+  const load = useCallback(
+    () =>
+      adminRestaurantId && services.menu.loadAdmin
+        ? services.menu.loadAdmin(adminRestaurantId)
+        : services.menu.execute(slug),
+    [services, slug, adminRestaurantId],
+  )
+  const active = useRef<typeof load | null>(null)
+  const pending = useRef<{
+    source: typeof load
+    request: number
+    promise: Promise<MenuDocument | null>
+  } | null>(null)
+  useLayoutEffect(() => {
     const sequence = generation.current
-    void reload()
+    active.current = load
     return () => {
       sequence.value++
+      active.current = null
     }
+  }, [load])
+
+  const reload = useCallback((): Promise<MenuDocument | null> => {
+    if (active.current !== load) return Promise.resolve(null)
+    if (
+      pending.current?.source === load &&
+      pending.current.request === generation.current.value
+    )
+      return pending.current.promise
+    const request = ++generation.current.value
+    setLoading(true)
+    const promise = (async () => {
+      const result = await load()
+      if (request !== generation.current.value || active.current !== load) return null
+      if (result.ok) {
+        setMenu(result.value)
+        setError(null)
+      } else setError(result.error)
+      setLoading(false)
+      return result.ok ? result.value : null
+    })().finally(() => {
+      if (pending.current?.request === request) pending.current = null
+    })
+    pending.current = { source: load, request, promise }
+    return promise
+  }, [load])
+
+  useEffect(() => {
+    void reload()
   }, [reload])
+  useEffect(() => subscribeConnectionRecovery(() => void reload()), [reload])
 
   const restaurantId = menu?.restaurant.id
   const scheduled = menu?.restaurant.hours?.enabled
@@ -104,7 +130,28 @@ export default function MenuScope({
     [services, restaurantId, reload],
   )
 
-  if (!menu)
+  const isOpen = menu ? effectiveStoreOpen(menu.restaurant, now) : false
+  const effectiveMenu = useMemo(
+    () =>
+      menu &&
+      (menu.restaurant.isOpen === isOpen
+        ? menu
+        : { ...menu, restaurant: { ...menu.restaurant, isOpen } }),
+    [menu, isOpen],
+  )
+  const context = useMemo(
+    () =>
+      effectiveMenu && {
+        menu: effectiveMenu,
+        error,
+        loading: false,
+        refreshing: loading,
+        reload,
+      },
+    [effectiveMenu, error, loading, reload],
+  )
+
+  if (!menu || !context)
     return (
       <main className="state-page">
         {error ? (
@@ -116,14 +163,7 @@ export default function MenuScope({
     )
 
   return (
-    <MenuContext.Provider
-      value={{
-        menu: applyStoreHours(menu, Math.max(now, Date.now())),
-        error,
-        loading,
-        reload,
-      }}
-    >
+    <MenuContext.Provider value={context}>
       {error && (
         <div className="global-error">
           <ErrorNotice error={error} onRetry={() => void reload()} />

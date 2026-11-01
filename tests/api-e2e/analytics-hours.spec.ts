@@ -204,7 +204,10 @@ test("filters, sales analytics and automatic hours work with real orders on mobi
     "Pizza Mais Vendida",
     "Suco de Laranja",
   ])
-  await customer.getByRole("button", { name: "Menores preços", exact: true }).click()
+  await customer.getByRole("button", { name: "Limpar filtros", exact: true }).click()
+  await expect(
+    customer.getByRole("button", { name: "Menores preços", exact: true }),
+  ).toHaveCount(0)
   await expect(customer.locator(".product-grid .product-card h3")).toHaveText([
     "Suco de Laranja",
     "Pizza Mais Vendida",

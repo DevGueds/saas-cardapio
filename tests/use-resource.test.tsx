@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
-import { it, expect, vi } from "vitest"
+import { afterEach, it, expect, vi } from "vitest"
 import type { Result } from "@cardapio/contracts"
 import { useResource } from "../src/shared/presentation/use-resource"
 const success = (value: string): Result<string> => ({ ok: true, value })
@@ -12,6 +12,9 @@ const failed: Result<string> = {
     diagnosticId: "test",
   },
 }
+afterEach(() => {
+  vi.useRealTimers()
+})
 it("hides the previous restaurant immediately and ignores its late replies and reload callbacks", async () => {
   let resolveFirst!: (value: Result<string>) => void,
     resolveSecond!: (value: Result<string>) => void
@@ -82,4 +85,76 @@ it("discards requests after unmount and makes saved reload callbacks inactive", 
     await reload()
   })
   expect(load).toHaveBeenCalledOnce()
+})
+
+it("recovers a failed first load on reconnect and deduplicates overlapping refreshes", async () => {
+  vi.useFakeTimers()
+  const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false)
+  vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible")
+  let resolve!: (value: Result<string>) => void
+  const load = vi
+    .fn()
+    .mockResolvedValueOnce(failed)
+    .mockImplementation(
+      () =>
+        new Promise<Result<string>>((done) => {
+          resolve = done
+        }),
+    )
+  const { result } = renderHook(() => useResource<string>(load))
+  await act(async () => {})
+  expect(result.current.error?.code).toBe("STORAGE_UNAVAILABLE")
+  await act(async () => {
+    online.mockReturnValue(true)
+    window.dispatchEvent(new Event("online"))
+    window.dispatchEvent(new Event("focus"))
+    document.dispatchEvent(new Event("visibilitychange"))
+    await vi.advanceTimersByTimeAsync(250)
+  })
+  expect(load).toHaveBeenCalledTimes(2)
+  expect(result.current.loading).toBe(true)
+  expect(result.current.error?.code).toBe("STORAGE_UNAVAILABLE")
+  let first!: Promise<void>
+  let second!: Promise<void>
+  act(() => {
+    first = result.current.reload({ dedupe: true })
+    second = result.current.reload({ dedupe: true })
+  })
+  expect(first).toBe(second)
+  expect(load).toHaveBeenCalledTimes(2)
+  await act(async () => {
+    resolve(success("Reconectado"))
+    await first
+  })
+  expect(result.current.data).toBe("Reconectado")
+  expect(result.current.error).toBeNull()
+  expect(result.current.loading).toBe(false)
+})
+
+it("starts a fresh explicit reload after a write instead of joining an older background read", async () => {
+  let resolveOld!: (value: Result<string>) => void
+  const load = vi
+    .fn()
+    .mockResolvedValueOnce(success("Antes"))
+    .mockImplementationOnce(
+      () =>
+        new Promise<Result<string>>((resolve) => {
+          resolveOld = resolve
+        }),
+    )
+    .mockResolvedValueOnce(success("Depois da gravação"))
+  const { result } = renderHook(() => useResource<string>(load))
+  await waitFor(() => expect(result.current.data).toBe("Antes"))
+  let old!: Promise<void>
+  act(() => {
+    old = result.current.reload({ dedupe: true })
+  })
+  await act(async () => result.current.reload())
+  expect(result.current.data).toBe("Depois da gravação")
+  await act(async () => {
+    resolveOld(success("Leitura antiga"))
+    await old
+  })
+  expect(result.current.data).toBe("Depois da gravação")
+  expect(load).toHaveBeenCalledTimes(3)
 })

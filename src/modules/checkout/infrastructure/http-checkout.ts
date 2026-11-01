@@ -1,4 +1,4 @@
-import type { DraftManager } from "../../../shared/application/drafts"
+import { DRAFT_TTL, type DraftManager } from "../../../shared/application/drafts"
 import type { ContentFingerprint, IdGenerator } from "../../../shared/application/ports"
 import { z } from "zod"
 import { preparedOrderSchema } from "@cardapio/contracts"
@@ -88,7 +88,9 @@ export class HttpCheckout {
           )
       }
       const attempt = parsed.success ? parsed.data : { signature, key: this.ids.next() }
-      if (!this.drafts.set(draftKey, attempt))
+      // A response may be lost after the order was committed. Keep its identity
+      // through a later visit, using the same retention as order tracking links.
+      if (!this.drafts.set(draftKey, attempt, 30 * DRAFT_TTL))
         throw new Failure(
           "STORAGE_UNAVAILABLE",
           "Não foi possível preservar a tentativa do pedido. Habilite o armazenamento do navegador e tente novamente.",
@@ -98,11 +100,11 @@ export class HttpCheckout {
         preparedOrderSchema,
         { method: "POST", body, idempotencyKey: attempt.key },
       )
+      // A retry can be rate-limited after an earlier request committed. Only
+      // definitive rejections release the identity; 429 keeps recovery possible.
       if (
         !sent.ok &&
-        ["VALIDATION", "CONFLICT", "NOT_FOUND", "RATE_LIMITED", "ACCESS_DENIED"].includes(
-          sent.error.code,
-        )
+        ["VALIDATION", "CONFLICT", "NOT_FOUND", "ACCESS_DENIED"].includes(sent.error.code)
       )
         this.reset(id)
       return sent

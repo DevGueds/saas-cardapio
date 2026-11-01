@@ -10,6 +10,10 @@ import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import { useMutation } from "../../../shared/presentation/use-mutation"
 import type { EngagementService } from "../application/ports"
 import PushButton from "./PushButton"
+import {
+  canRefreshConnection,
+  subscribeConnectionRecovery,
+} from "../../../shared/browser-connectivity"
 function InboxBell({ service, id }: { service: EngagementService; id: string }) {
   const [inbox, setInbox] = useState<Inbox | null>(null),
     [error, setError] = useState<AppError | null>(null),
@@ -21,7 +25,7 @@ function InboxBell({ service, id }: { service: EngagementService; id: string }) 
       running = false,
       seen: Set<string> | null = null
     const refresh = async () => {
-      if (running || document.hidden) return
+      if (running || !canRefreshConnection()) return
       running = true
       const result = await service.inbox(id)
       running = false
@@ -50,12 +54,11 @@ function InboxBell({ service, id }: { service: EngagementService; id: string }) 
     }
     void refresh()
     const timer = setInterval(() => void refresh(), 8000),
-      focus = () => void refresh()
-    window.addEventListener("focus", focus)
+      unsubscribe = subscribeConnectionRecovery(() => void refresh())
     return () => {
       active = false
       clearInterval(timer)
-      window.removeEventListener("focus", focus)
+      unsubscribe()
     }
   }, [service, id, retry])
   return (

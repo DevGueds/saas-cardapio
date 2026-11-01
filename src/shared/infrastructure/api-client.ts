@@ -2,16 +2,20 @@ import { z, type ZodType } from "zod"
 import { errorSchema, type Result } from "@cardapio/contracts"
 import { Failure } from "../domain/failure"
 import type { Executor } from "../application/execute"
+import { ResilientHttp } from "./resilient-http"
 export class ApiClient {
   private csrf = ""
+  private readonly expiredResponses = new WeakSet<object>()
   private readonly expired = new Set<
     (reason?: "UNAUTHENTICATED" | "MFA_REQUIRED" | "EMAIL_VERIFICATION_REQUIRED") => void
   >()
   constructor(
     private readonly base: unknown,
     private readonly executor: Executor,
+    private readonly transport = new ResilientHttp(),
   ) {}
   setCsrf(value: string) {
+    if (this.csrf !== value) this.transport.invalidateReads()
     this.csrf = value
   }
   subscribeExpired(
@@ -61,47 +65,29 @@ export class ApiClient {
       body?: unknown
       idempotencyKey?: string
       trackingToken?: string
+      signal?: AbortSignal
     } = {},
   ): Promise<Result<T>> {
     const outcome = await this.executor.run("http", "request", async () => {
       const url = this.endpoint(path)
-      let response: Response
-      try {
-        response = await fetch(url, {
-          method: options.method ?? "GET",
-          credentials: "include",
-          cache: "no-store",
-          redirect: "error",
-          signal: AbortSignal.timeout(15000),
-          headers: {
-            ...(options.method && options.method !== "GET"
-              ? { "Content-Type": "application/json" }
-              : {}),
-            ...(options.trackingToken ? { "X-Order-Token": options.trackingToken } : {}),
-            ...(this.csrf ? { "X-CSRF-Token": this.csrf } : {}),
-            ...(options.idempotencyKey
-              ? { "Idempotency-Key": options.idempotencyKey }
-              : {}),
-          },
+      const response = await this.transport.request(url, {
+        method: options.method ?? "GET",
+        signal: options.signal,
+        headers: {
           ...(options.method && options.method !== "GET"
-            ? { body: JSON.stringify(options.body ?? {}) }
+            ? { "Content-Type": "application/json" }
             : {}),
-        })
-      } catch {
-        throw new Failure(
-          "STORAGE_UNAVAILABLE",
-          "Não foi possível conectar à loja. Confira sua conexão e tente novamente; seus dados foram preservados.",
-        )
-      }
-      let body: unknown
-      try {
-        body = await response.json()
-      } catch {
-        throw new Failure(
-          "CORRUPT_DATA",
-          "A API retornou uma resposta inválida. Tente novamente em instantes.",
-        )
-      }
+          ...(options.trackingToken ? { "X-Order-Token": options.trackingToken } : {}),
+          ...(this.csrf ? { "X-CSRF-Token": this.csrf } : {}),
+          ...(options.idempotencyKey
+            ? { "Idempotency-Key": options.idempotencyKey }
+            : {}),
+        },
+        ...(options.method && options.method !== "GET"
+          ? { body: JSON.stringify(options.body ?? {}) }
+          : {}),
+      })
+      const body = response.body
       const result = z
         .discriminatedUnion("ok", [
           z.strictObject({ ok: z.literal(true), value: schema }),
@@ -118,9 +104,11 @@ export class ApiClient {
         (result.data.error.code === "UNAUTHENTICATED" ||
           result.data.error.code === "MFA_REQUIRED" ||
           result.data.error.code === "EMAIL_VERIFICATION_REQUIRED") &&
-        path !== "/auth/login"
+        path !== "/auth/login" &&
+        !this.expiredResponses.has(response)
       ) {
-        if (result.data.error.code === "UNAUTHENTICATED") this.csrf = ""
+        this.expiredResponses.add(response)
+        if (result.data.error.code === "UNAUTHENTICATED") this.setCsrf("")
         const reason = result.data.error.code
         this.expired.forEach((listener) => listener(reason))
       }
