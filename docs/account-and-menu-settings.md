@@ -31,6 +31,12 @@ As colunas novas são opcionais e preservam dados existentes. A migration `20261
 
 ## Navegação e adicionais
 
+Em “Gestão do Cardápio → Categorias do cardápio”, arraste o ícone de pontos para organizar as categorias. Mouse, toque e teclado oferecem prévia imediata; setas permitem mover sem arrastar. “Salvar ordem” publica a mudança e “Desfazer ordem” restaura a ordem gravada. Se a conexão falhar, a prévia permanece disponível para revisão e nova tentativa. Novas categorias são adicionadas ao final e renomear preserva a posição.
+
+A ordem publicada vale também para os atalhos do cardápio digital. Dentro de cada categoria, os produtos aparecem do menor para o maior preço, com desempate por nome e identificador. O botão “Menores preços” foi removido; o ranking de mais vendidos continua usando a ordem das vendas.
+
+A migration `20261101090000_category_order` adiciona a posição e conserva a ordem alfabética das categorias já existentes. Aplique pelo serviço de migrations antes de atualizar as APIs.
+
 O cardápio completo mostra cada produto uma vez, agrupado pela categoria. Os atalhos são links para seções do HTML, sem ocultar os demais produtos. A categoria ativa acompanha a rolagem e links com `#categoria-<id>` abrem a seção correspondente. Busca e filtros rápidos continuam disponíveis; selecionar uma categoria limpa esses filtros e volta ao cardápio completo.
 
 “Editar produto → Adicionais deste produto” permite vincular ou remover grupos sem alterar os vínculos de outros produtos. A mesma associação pode ser gerenciada pelo grupo em “Adicionais e extras”, onde os nomes dos produtos vinculados ficam visíveis. A atualização é atômica com a edição do produto, exige revisão atual e valida que os grupos pertencem ao cardápio.

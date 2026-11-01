@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from "react"
-import { Plus, Pencil, Trash2, Tags } from "lucide-react"
+import { useCallback, useState, type FormEvent } from "react"
+import { Plus, Tags } from "lucide-react"
 import { useMenu } from "../../../app/presentation/MenuScope"
 import { useServices } from "../../../app/presentation/ServicesProvider"
+import CategoryOrdering from "./CategoryOrdering"
+import type { Category } from "@cardapio/domain/catalog"
 import Dialog from "../../../shared/presentation/Dialog"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import ValidatedForm from "../../../shared/presentation/form-validation/ValidatedForm"
@@ -23,6 +25,21 @@ export default function CategoryManager({ disabled }: { disabled: boolean }) {
     name: string
     revision: number
   } | null>(null)
+  const clearError = mutation.clearError
+  const editCategory = useCallback(
+    (category: Category) => {
+      clearError()
+      setEditor({ ...category, revision: menu.revision })
+    },
+    [clearError, menu.revision],
+  )
+  const removeCategory = useCallback(
+    (category: Category) => {
+      clearError()
+      setRemoving({ ...category, revision: menu.revision })
+    },
+    [clearError, menu.revision],
+  )
   if (!catalog.saveCategory || !catalog.deleteCategory) return null
   async function save(event: FormEvent) {
     event.preventDefault()
@@ -78,48 +95,11 @@ export default function CategoryManager({ disabled }: { disabled: boolean }) {
           {menu.categories.length === 0 && (
             <p>Nenhuma categoria criada. Comece pela primeira.</p>
           )}
-          <ul>
-            {menu.categories.map((category) => {
-              const count = menu.products.filter(
-                (p) => p.categoryId === category.id,
-              ).length
-              return (
-                <li key={category.id}>
-                  <div>
-                    <strong>{category.name}</strong>
-                    <small>
-                      {count} {count === 1 ? "produto" : "produtos"}
-                    </small>
-                  </div>
-                  <div>
-                    <button
-                      className="text-button"
-                      disabled={disabled}
-                      aria-label={`Editar categoria ${category.name}`}
-                      onClick={() => {
-                        mutation.clearError()
-                        setEditor({ ...category, revision: menu.revision })
-                      }}
-                    >
-                      <Pencil size={17} aria-hidden="true" /> Editar
-                    </button>
-                    <button
-                      className="text-button"
-                      disabled={disabled || count > 0}
-                      aria-label={`Excluir categoria ${category.name}`}
-                      title={count ? "Mova os produtos antes de excluir" : undefined}
-                      onClick={() => {
-                        mutation.clearError()
-                        setRemoving({ ...category, revision: menu.revision })
-                      }}
-                    >
-                      <Trash2 size={17} aria-hidden="true" /> Excluir
-                    </button>
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+          <CategoryOrdering
+            disabled={disabled || mutation.pending}
+            onEdit={editCategory}
+            onDelete={removeCategory}
+          />
         </div>
       </details>
       {editor && (

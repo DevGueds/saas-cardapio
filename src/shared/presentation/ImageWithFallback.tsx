@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { UtensilsCrossed } from "lucide-react"
+import { subscribeConnectionRecovery } from "../browser-connectivity"
 
 export default function ImageWithFallback({
   src,
@@ -11,6 +12,10 @@ export default function ImageWithFallback({
   className?: string
 }) {
   const [failedSource, setFailedSource] = useState<string | null>(null)
+  useEffect(() => {
+    if (!src || failedSource !== src) return
+    return subscribeConnectionRecovery(() => setFailedSource(null))
+  }, [src, failedSource])
   if (!src || failedSource === src)
     return (
       <span
@@ -27,6 +32,7 @@ export default function ImageWithFallback({
       alt={alt}
       className={className}
       loading="lazy"
+      decoding="async"
       onError={() => setFailedSource(src)}
     />
   )

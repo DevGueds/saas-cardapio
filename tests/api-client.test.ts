@@ -37,7 +37,9 @@ describe("HTTP adapters fail closed", () => {
       expect(listener).toHaveBeenCalledExactlyOnceWith(menu)
       expect(otherStore).not.toHaveBeenCalled()
       window.dispatchEvent(new Event("focus"))
-      expect(listener).toHaveBeenLastCalledWith()
+      // MenuScope coalesces focus/online recovery; the invalidation channel
+      // must not start a second request for the same browser event.
+      expect(listener).toHaveBeenCalledExactlyOnceWith(menu)
       stop()
       listener.mockClear()
       refresh.changed(menu.restaurant.id, menu)
@@ -64,7 +66,9 @@ describe("HTTP adapters fail closed", () => {
     const fetcher = vi
       .fn()
       .mockRejectedValueOnce(new Error("private payload"))
-      .mockResolvedValueOnce(response({ ok: true, value: { unexpected: true } }))
+      .mockRejectedValueOnce(new Error("private payload"))
+      .mockRejectedValueOnce(new Error("private payload"))
+      .mockImplementation(async () => response({ ok: true, value: { unexpected: true } }))
     vi.stubGlobal("fetch", fetcher)
     const client = new ApiClient("http://localhost:3001/api/v1", executor())
     const offline = await client.request(
@@ -114,6 +118,8 @@ describe("HTTP adapters fail closed", () => {
     const fetcher = vi
       .fn()
       .mockRejectedValueOnce(new Error("offline"))
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockRejectedValueOnce(new Error("offline"))
       .mockImplementation(async () => response(result))
     vi.stubGlobal("fetch", fetcher)
     vi.stubGlobal("crypto", {
@@ -149,8 +155,11 @@ describe("HTTP adapters fail closed", () => {
     ).execute("store-a", 1, cart, details)
     await checkout.execute("store-b", 1, { ...cart, restaurantId: "store-b" }, details)
     const headers = fetcher.mock.calls.map((call) => call[1].headers)
-    expect(headers[0]["Idempotency-Key"]).toBe(headers[1]["Idempotency-Key"])
-    expect(headers[1]["Idempotency-Key"]).not.toBe(headers[2]["Idempotency-Key"])
+    expect(headers).toHaveLength(5)
+    expect(
+      new Set(headers.slice(0, 4).map((header) => header["Idempotency-Key"])).size,
+    ).toBe(1)
+    expect(headers[0]["Idempotency-Key"]).not.toBe(headers[4]["Idempotency-Key"])
     vi.unstubAllGlobals()
   })
   it("recovers a pending receipt independently of cart validity and rejects corrupt attempts", async () => {

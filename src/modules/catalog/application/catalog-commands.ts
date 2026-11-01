@@ -6,6 +6,7 @@ import {
   deleteProduct,
   saveCategory,
   deleteCategory,
+  reorderCategories,
   type ProductInput,
 } from "@cardapio/domain/catalog-changes"
 import type { MenuRepository } from "./ports"
@@ -35,6 +36,20 @@ export class CatalogCommands {
         restaurantId,
         expectedRevision,
         saveCategory(current, name, id ?? this.ids.next()),
+      )
+    })
+  }
+  reorderCategories(
+    restaurantId: string,
+    expectedRevision: number,
+    ids: readonly string[],
+  ) {
+    return this.executor.run("catalog", "reorder-categories", async () => {
+      this.access.assertAdmin()
+      return this.repository.commit(
+        restaurantId,
+        expectedRevision,
+        reorderCategories(await this.repository.load(restaurantId), ids),
       )
     })
   }

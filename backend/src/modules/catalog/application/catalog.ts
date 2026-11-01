@@ -7,6 +7,7 @@ import {
   uuid,
   updateHoursSchema,
   categorySchema,
+  categoryOrderSchema,
   updateMenuSharingSchema,
 } from "@cardapio/contracts"
 import {
@@ -15,6 +16,7 @@ import {
   deleteProduct,
   saveCategory,
   deleteCategory,
+  reorderCategories,
 } from "@cardapio/domain/catalog-changes"
 import {
   updateRestaurant,
@@ -112,6 +114,14 @@ export class Catalog {
         )
         return saveCategory(menu, data.name, id)
       })
+    })
+  }
+  reorderCategories(actor: Actor, restaurantId: string, input: unknown) {
+    return this.operation.run("catalog.reorder-categories", async () => {
+      const data = validate(categoryOrderSchema, input)
+      return this.mutate(actor, restaurantId, data.expectedRevision, (menu) =>
+        reorderCategories(menu, data.categoryIds),
+      )
     })
   }
   deleteCategory(actor: Actor, restaurantId: string, id: string, input: unknown) {

@@ -35,6 +35,24 @@ export function deleteCategory(current: MenuDocument, id: string): MenuDocument 
   return { ...current, categories: current.categories.filter((c) => c.id !== id) }
 }
 
+export function reorderCategories(
+  current: MenuDocument,
+  ids: readonly string[],
+): MenuDocument {
+  const categories = new Map(
+    current.categories.map((category) => [category.id, category]),
+  )
+  requireValid(
+    Array.isArray(ids) &&
+      ids.length === categories.size &&
+      new Set(ids).size === ids.length &&
+      ids.every((id) => categories.has(id)),
+    "A lista de categorias mudou. Atualize os dados e revise a ordem.",
+    "categoryIds",
+  )
+  return { ...current, categories: ids.map((id) => categories.get(id)!) }
+}
+
 export interface ProductInput {
   addonGroupIds?: string[]
   id?: string

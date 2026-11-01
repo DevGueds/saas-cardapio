@@ -1,5 +1,7 @@
 # Resiliência, operação e capacidade
 
+A proteção do navegador, incluindo redes móveis fracas, recuperação de conexão e testes de concorrência, está em [Conexão e desempenho no navegador](client-resilience.md).
+
 ## Proteções reutilizáveis
 
 - `Bulkhead`: limita trabalho ativo sem fila ilimitada. HTTP: 128 requisições ativas por réplica por padrão; Argon2: 4 operações por réplica; consulta externa: 4. Saturação devolve erro controlado, sem executar trabalho em outra fonte.

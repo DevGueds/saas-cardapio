@@ -21,6 +21,7 @@ import { useMenu } from "../../../app/presentation/MenuScope"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import { useAccount } from "../../identity/presentation/AccountContext"
 import { useResource } from "../../../shared/presentation/use-resource"
+import { canRefreshConnection } from "../../../shared/browser-connectivity"
 import { useMutation } from "../../../shared/presentation/use-mutation"
 import PageHeading from "../../../shared/presentation/PageHeading"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
@@ -61,7 +62,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (!allowed) return
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") void reloadAnalytics()
+      if (canRefreshConnection()) void reloadAnalytics({ dedupe: true })
     }, 60000)
     return () => window.clearInterval(timer)
   }, [allowed, reloadAnalytics])

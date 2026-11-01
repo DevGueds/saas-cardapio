@@ -289,7 +289,7 @@ test("cadastro, catálogo, configurações, pedido real e troca de loja funciona
   await page.getByRole("button", { name: "Cancelar pedido", exact: true }).click()
   await page.getByRole("button", { name: "Confirmar cancelamento", exact: true }).click()
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
-    "Não foi possível conectar",
+    "Não foi possível confirmar a conexão",
   )
   await expect(page.getByRole("dialog")).toContainText("Cliente Açaí")
   await page.unroute("**/orders/*/status")
@@ -613,7 +613,7 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
   const boardContext = await browser.newContext(),
     board = await boardContext.newPage()
   await board.goto((await link.getAttribute("href"))!)
-  await expect(board.getByRole("status")).toContainText(/ao vivo/i)
+  await expect(board.locator(".board-connection")).toContainText(/ao vivo/i)
   const customerContext = await browser.newContext({
     baseURL: origin,
     viewport: { width: 320, height: 740 },
@@ -621,7 +621,11 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
   const customer = await customerContext.newPage()
   await customer.goto(`/menu/${slug}`)
   await expect(customer.locator(".menu-theme--compact.menu-color--plum")).toBeVisible()
-  await customer.getByRole("button", { name: /Personalizar/ }).click()
+  await expect(customer.locator(".product-card")).toHaveCount(1)
+  await customer.locator(".product-card").scrollIntoViewIfNeeded()
+  await customer
+    .getByRole("button", { name: "Adicionar Burger da casa", exact: true })
+    .click()
   await expect(
     customer.getByRole("button", { name: "Adicionar ao carrinho", exact: true }),
   ).toBeDisabled()
@@ -629,7 +633,9 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
     .getByRole("button", { name: "Adicionar Queijo extra", exact: true })
     .click()
   await customer.reload()
-  await customer.getByRole("button", { name: /Personalizar/ }).click()
+  await customer
+    .getByRole("button", { name: "Adicionar Burger da casa", exact: true })
+    .click()
   await expect(
     customer.getByRole("group", { name: "Quantidade de Queijo extra" }),
   ).toContainText("1")
@@ -677,7 +683,9 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
     timeout: 25000,
   })
   await boardContext.setOffline(false)
-  await expect(board.getByRole("status")).toContainText(/ao vivo/i, { timeout: 15000 })
+  await expect(board.locator(".board-connection")).toContainText(/ao vivo/i, {
+    timeout: 15000,
+  })
   await page
     .getByRole("link", { name: "Painel ao vivo e mensagens", exact: true })
     .click()
@@ -685,7 +693,7 @@ test("adicionais, modelos, QR com logo e painel público ao vivo funcionam de po
     .getByRole("button", { name: "Gerar novo link e invalidar o anterior", exact: true })
     .click()
   await page.getByRole("button", { name: "Confirmar alteração", exact: true }).click()
-  await expect(board.getByRole("status")).toContainText(/expirado|desativado/, {
+  await expect(board.locator(".board-connection")).toContainText(/expirado|desativado/, {
     timeout: 15000,
   })
   await boardContext.close()
@@ -697,7 +705,9 @@ test("API indisponível não cria demonstração nem libera administração", as
 }) => {
   await page.route("**/api/v1/**", (route) => route.abort())
   await page.goto("/menu/loja-inexistente")
-  await expect(page.getByRole("alert")).toContainText("Não foi possível conectar")
+  await expect(page.getByRole("alert")).toContainText(
+    "Não foi possível confirmar a conexão",
+  )
   expect(await page.evaluate(() => localStorage.length)).toBe(0)
   await page.goto("/admin")
   await expect(
@@ -866,7 +876,9 @@ test("combos, cupons, bairros, rascunhos e acompanhamento funcionam no celular",
     .getByRole("button", { name: "Enviar pedido para a loja", exact: true })
     .click()
   await expect(
-    customer.getByRole("alert").filter({ hasText: "Não foi possível conectar" }),
+    customer
+      .getByRole("alert")
+      .filter({ hasText: "Não foi possível confirmar a conexão" }),
   ).toBeVisible()
   await customer.unroute("**/public/restaurants/*/orders")
   await page.getByRole("switch", { name: "Loja aberta" }).click()

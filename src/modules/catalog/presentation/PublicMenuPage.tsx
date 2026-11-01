@@ -4,6 +4,7 @@ import PublicOffers from "../../commerce/presentation/PublicOffers"
 import RecentOrders from "../../checkout/presentation/RecentOrders"
 import { useSearchParams } from "react-router"
 import { useResource } from "../../../shared/presentation/use-resource"
+import { canRefreshConnection } from "../../../shared/browser-connectivity"
 import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import { discoverProducts, type DiscoveryFilter } from "../application/menu-discovery"
 import { promotionActive } from "@cardapio/domain/quote"
@@ -24,7 +25,6 @@ import {
   Clock3,
   Flame,
   TicketPercent,
-  ArrowDownWideNarrow,
   MapPin,
   MessageCircle,
   Search,
@@ -87,18 +87,15 @@ export default function PublicMenuPage() {
   useEffect(() => {
     const timer = window.setInterval(() => {
       setNow(Date.now())
-      if (analytics && document.visibilityState === "visible") void reloadRanking()
+      if (analytics && canRefreshConnection()) void reloadRanking({ dedupe: true })
     }, 60000)
     return () => window.clearInterval(timer)
   }, [analytics, reloadRanking])
 
-  const displayCategories = useMemo(
-    () =>
-      categories.filter((category) =>
-        products.some((product) => product.categoryId === category.id),
-      ),
-    [categories, products],
-  )
+  const displayCategories = useMemo(() => {
+    const populated = new Set(products.map((product) => product.categoryId))
+    return categories.filter((category) => populated.has(category.id))
+  }, [categories, products])
 
   const grouped = discovery === "NONE" && !search.trim()
   const categoryNavigation = useCategoryNavigation(
@@ -121,6 +118,19 @@ export default function PublicMenuPage() {
   const hasPromotions =
     menu.commerce?.promotions.some((p) => promotionActive(p, now)) ?? false
   const hasCombos = menu.commerce?.combos.some((c) => c.active) ?? false
+  const sections = useMemo(() => {
+    if (!grouped) return [{ id: "$results", name: "", products: visibleProducts }]
+    const byCategory = new Map<string, typeof visibleProducts>()
+    for (const product of visibleProducts) {
+      const bucket = byCategory.get(product.categoryId)
+      if (bucket) bucket.push(product)
+      else byCategory.set(product.categoryId, [product])
+    }
+    return displayCategories.map((category) => ({
+      ...category,
+      products: byCategory.get(category.id) ?? [],
+    }))
+  }, [grouped, visibleProducts, displayCategories])
   function chooseFilter(filter: DiscoveryFilter) {
     setDiscovery(filter)
   }
@@ -287,15 +297,6 @@ export default function PublicMenuPage() {
                 <TicketPercent size={18} aria-hidden="true" />
                 Promoções
               </button>
-              <button
-                type="button"
-                className={`discovery-filter ${discovery === "CHEAPEST" ? "is-active" : ""}`}
-                aria-pressed={discovery === "CHEAPEST"}
-                onClick={() => chooseFilter("CHEAPEST")}
-              >
-                <ArrowDownWideNarrow size={18} aria-hidden="true" />
-                Menores preços
-              </button>
               {discovery !== "NONE" && (
                 <button
                   type="button"
@@ -361,13 +362,11 @@ export default function PublicMenuPage() {
                 <h2 id="category-title">
                   {discovery === "BEST_SELLERS"
                     ? "Mais vendidos"
-                    : discovery === "CHEAPEST"
-                      ? "Do menor para o maior preço"
-                      : discovery === "PROMOTIONS"
-                        ? "Promoções e ofertas"
-                        : search
-                          ? `Resultados para “${search}”`
-                          : "Cardápio"}
+                    : discovery === "PROMOTIONS"
+                      ? "Promoções e ofertas"
+                      : search
+                        ? `Resultados para “${search}”`
+                        : "Cardápio"}
                 </h2>
               </div>
               <p>
@@ -392,15 +391,7 @@ export default function PublicMenuPage() {
               </p>
             )}
             {visibleProducts.length ? (
-              (grouped
-                ? displayCategories.map((category) => ({
-                    ...category,
-                    products: visibleProducts.filter(
-                      (product) => product.categoryId === category.id,
-                    ),
-                  }))
-                : [{ id: "$results", name: "", products: visibleProducts }]
-              ).map((category) => (
+              sections.map((category) => (
                 <section
                   className="menu-category"
                   key={category.id}

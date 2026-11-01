@@ -71,7 +71,9 @@ export interface ApplicationServices {
   tracking?(slug: string, id: string, token: string): Promise<Result<TrackingView>>
   menu: Pick<LoadMenu, "execute" | "subscribe"> & { loadAdmin?: LoadMenu["execute"] }
   catalog: Pick<CatalogCommands, "save" | "setAvailability" | "delete"> &
-    Partial<Pick<CatalogCommands, "saveCategory" | "deleteCategory">>
+    Partial<
+      Pick<CatalogCommands, "saveCategory" | "deleteCategory" | "reorderCategories">
+    >
   restaurant: Pick<RestaurantCommands, "update" | "setOpen"> &
     Partial<Pick<RestaurantCommands, "hours" | "sharing">>
   checkout: Pick<PrepareOrder, "execute"> & {

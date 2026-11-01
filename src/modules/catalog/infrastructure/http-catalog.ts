@@ -90,6 +90,16 @@ export class HttpCatalog {
       { expectedRevision, name },
     )
   }
+  reorderCategories(
+    restaurantId: string,
+    expectedRevision: number,
+    categoryIds: readonly string[],
+  ) {
+    return this.mutate(restaurantId, "categories/order", "PUT", {
+      expectedRevision,
+      categoryIds,
+    })
+  }
   deleteCategory(restaurantId: string, expectedRevision: number, id: string) {
     return this.mutate(restaurantId, `categories/${encodeURIComponent(id)}`, "DELETE", {
       expectedRevision,

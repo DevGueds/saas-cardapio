@@ -1,4 +1,5 @@
 import type { MenuDocument } from "../application/menu-document"
+import { canRefreshConnection } from "../../../shared/browser-connectivity"
 type Listener = (menu?: MenuDocument) => void
 export class MenuRefresh {
   private readonly listeners = new Map<string, Set<Listener>>()
@@ -10,15 +11,17 @@ export class MenuRefresh {
       typeof BroadcastChannel !== "undefined"
         ? new BroadcastChannel(`cardapio:api:${id}`)
         : null
-    const onFocus = () => listener()
+    const onFocus = () => {
+      if (canRefreshConnection()) listener()
+    }
     const timer = window.setInterval(onFocus, 20000)
-    window.addEventListener("focus", onFocus)
+    // MenuScope handles coalesced focus/online recovery, including an initial
+    // failed load before a restaurant subscription can exist.
     if (channel) channel.onmessage = onFocus
     return () => {
       group.delete(listener)
       if (!group.size) this.listeners.delete(id)
       window.clearInterval(timer)
-      window.removeEventListener("focus", onFocus)
       channel?.close()
     }
   }

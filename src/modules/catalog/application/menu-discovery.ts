@@ -1,7 +1,7 @@
 import type { MenuDocument } from "@cardapio/domain/menu-document"
 import { normalizeName } from "@cardapio/domain/validation"
 import { promotionActive } from "@cardapio/domain/quote"
-export type DiscoveryFilter = "NONE" | "BEST_SELLERS" | "PROMOTIONS" | "CHEAPEST"
+export type DiscoveryFilter = "NONE" | "BEST_SELLERS" | "PROMOTIONS"
 export function discoverProducts(
   menu: MenuDocument,
   selection: string | undefined,
@@ -10,27 +10,26 @@ export function discoverProducts(
   ranking: readonly string[],
   now: number,
 ) {
+  const query = normalizeName(search)
+  const ranks = new Map(ranking.map((id, index) => [id, index]))
   const hasPromotions =
     menu.commerce?.promotions.some((p) => promotionActive(p, now)) ?? false
   const products = menu.products.filter((product) => {
     if (
-      search.trim()
-        ? !normalizeName(`${product.name} ${product.description}`).includes(
-            normalizeName(search),
-          )
+      query
+        ? !normalizeName(`${product.name} ${product.description}`).includes(query)
         : selection === "$popular"
           ? !product.popular
           : selection !== "$all" && product.categoryId !== selection
     )
       return false
-    if (filter === "BEST_SELLERS")
-      return product.available && ranking.includes(product.id)
+    if (filter === "BEST_SELLERS") return product.available && ranks.has(product.id)
     if (filter === "PROMOTIONS") return product.available && hasPromotions
     return true
   })
   if (filter === "BEST_SELLERS")
-    products.sort((a, b) => ranking.indexOf(a.id) - ranking.indexOf(b.id))
-  if (filter === "CHEAPEST")
+    products.sort((a, b) => ranks.get(a.id)! - ranks.get(b.id)!)
+  else
     products.sort(
       (a, b) =>
         a.price - b.price ||

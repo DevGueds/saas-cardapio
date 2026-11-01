@@ -291,6 +291,104 @@ test("category CRUD persists, enforces revisions and tenants, and refuses deleti
     0,
   )
 })
+test("category order persists atomically, preserves products and rejects foreign, incomplete or stale lists", async () => {
+  const base = `/restaurants/${alice.store.id}`
+  for (const name of ["Lanches", "Bebidas", "Sobremesas"])
+    menu = value<MenuDocument>(
+      await request(
+        "POST",
+        base + "/categories",
+        { expectedRevision: menu.revision, name },
+        alice,
+      ),
+    )
+  menu = value<MenuDocument>(
+    await request(
+      "POST",
+      base + "/products",
+      {
+        expectedRevision: menu.revision,
+        name: "Lanche da casa",
+        description: "",
+        price: "12,50",
+        imageUrl: "",
+        categoryId: menu.categories[0]!.id,
+        available: true,
+        popular: false,
+      },
+      alice,
+    ),
+  )
+  const ids = menu.categories.map((category) => category.id).reverse(),
+    products = menu.products
+  assert.equal(
+    (
+      await request(
+        "PUT",
+        base + "/categories/order",
+        { expectedRevision: menu.revision, categoryIds: ids },
+        bob,
+      )
+    ).statusCode,
+    404,
+  )
+  for (const invalid of [
+    ids.slice(1),
+    [...ids, ids[0]!],
+    [randomUUID(), ...ids.slice(1)],
+  ])
+    assert.equal(
+      (
+        await request(
+          "PUT",
+          base + "/categories/order",
+          { expectedRevision: menu.revision, categoryIds: invalid },
+          alice,
+        )
+      ).statusCode,
+      422,
+    )
+  assert.equal(
+    (
+      await request(
+        "PUT",
+        base + "/categories/order",
+        { expectedRevision: menu.revision - 1, categoryIds: ids },
+        alice,
+      )
+    ).statusCode,
+    409,
+  )
+  menu = value<MenuDocument>(
+    await request(
+      "PUT",
+      base + "/categories/order",
+      { expectedRevision: menu.revision, categoryIds: ids },
+      alice,
+    ),
+  )
+  assert.deepEqual(
+    menu.categories.map((category) => category.id),
+    ids,
+  )
+  assert.deepEqual(menu.products, products)
+  const reloaded = value<MenuDocument>(
+    await request("GET", base + "/menu", undefined, alice),
+  )
+  assert.deepEqual(
+    reloaded.categories.map((category) => category.id),
+    ids,
+  )
+  assert.deepEqual(reloaded.products, products)
+  const publicMenu = value<MenuDocument>(
+    await request("GET", `/public/restaurants/alice-settings-${suffix}/menu`),
+  )
+  assert.deepEqual(
+    publicMenu.categories.map((category) => category.id),
+    ids,
+  )
+})
+
 test("address, map and weekly hours persist and clear independently of delivery settings", async () => {
   const settings = {
     name: menu.restaurant.name,
