@@ -12,6 +12,7 @@ import Dialog from "../../shared/presentation/Dialog"
 import { useMenu } from "./MenuScope"
 import { useServices } from "./ServicesProvider"
 import AdminNavigation from "./AdminNavigation"
+import AdminBottomNavigation from "./AdminBottomNavigation"
 import LegalLinks from "../../shared/presentation/legal/LegalLinks"
 import { storeAvailability } from "@cardapio/domain/store-hours"
 
@@ -169,6 +170,7 @@ export default function AdminLayout() {
           </span>
         </footer>
       </div>
+      <AdminBottomNavigation onMore={() => setSidebarOpen(true)} expanded={sidebarOpen} />
       {confirmClosing && (
         <Dialog
           title="Fechar a loja para novos pedidos?"

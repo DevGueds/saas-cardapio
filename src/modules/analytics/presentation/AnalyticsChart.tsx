@@ -1,14 +1,13 @@
-import { useState } from "react"
+import { memo, useMemo, useState } from "react"
 import type { AnalyticsReport } from "@cardapio/contracts"
 import { formatMoney } from "@cardapio/domain/money"
-export default function AnalyticsChart({
-  series,
-}: {
-  series: AnalyticsReport["series"]
-}) {
+function AnalyticsChart({ series }: { series: AnalyticsReport["series"] }) {
   const [metric, setMetric] = useState<"revenue" | "orders">("revenue"),
     [active, setActive] = useState<number | null>(null)
-  const maximum = Math.max(1, ...series.map((value) => value[metric])),
+  const maximum = useMemo(
+      () => Math.max(1, ...series.map((value) => value[metric])),
+      [series, metric],
+    ),
     selected = active === null ? null : series[active]
   const format = (value: number) =>
     metric === "revenue" ? formatMoney(value) : `${value} pedidos`
@@ -117,3 +116,4 @@ export default function AnalyticsChart({
     </section>
   )
 }
+export default memo(AnalyticsChart)

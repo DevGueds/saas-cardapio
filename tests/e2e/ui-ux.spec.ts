@@ -181,12 +181,12 @@ for (const width of [320, 390, 768]) {
     await page.goto("/admin/delivery")
     await page.getByRole("button", { name: "Abrir menu", exact: true }).click()
     const dialog = page.getByRole("dialog", { name: "Navegação da loja" })
-    await expect(dialog).toHaveCSS("background-color", "rgb(18, 62, 52)")
-    await expect(dialog).toHaveCSS("color", "rgb(244, 247, 239)")
+    await expect(dialog).toHaveCSS("background-color", "rgb(255, 255, 255)")
+    await expect(dialog).toHaveCSS("color", "rgb(37, 37, 45)")
     const bounds = await dialog.boundingBox()
     expect(bounds!.x).toBe(0)
     expect(bounds!.y).toBe(0)
-    expect(bounds!.width).toBeLessThanOrEqual(320)
+    expect(bounds!.width).toBeLessThanOrEqual(Math.min(340, width - 16))
     expect(bounds!.height).toBe(844)
     const contrasts = await dialog.evaluate((root) => {
       function rgb(value: string) {

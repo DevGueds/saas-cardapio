@@ -2,6 +2,7 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 @import "./shared/presentation/styles/base.css";
+@import "./shared/presentation/styles/design-tokens.css";
 @import "./shared/presentation/styles/connection.css";
 @import "./shared/presentation/styles/brand.css";
 @import "./shared/presentation/styles/legal.css";
@@ -28,3 +29,4 @@
 @import "./modules/commerce/presentation/menu-options.css";
 @import "./modules/payments/presentation/payments.css";
 @import "./modules/engagement/presentation/engagement.css";
+@import "./shared/presentation/styles/redesign-components.css";
