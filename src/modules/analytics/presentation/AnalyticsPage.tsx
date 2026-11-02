@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link } from "react-router"
 import {
   ArrowUpRight,
@@ -29,6 +29,7 @@ import ValidatedInput from "../../../shared/presentation/form-validation/Validat
 import AnalyticsMetric from "./AnalyticsMetric"
 import AnalyticsChart from "./AnalyticsChart"
 import AnalyticsRankings from "./AnalyticsRankings"
+import StoreOverview from "./StoreOverview"
 const periods: [AnalyticsQuery["period"], string][] = [
   ["DAY", "Dia"],
   ["WEEK", "Semana"],
@@ -68,6 +69,17 @@ export default function AnalyticsPage() {
   }, [allowed, reloadAnalytics])
   const current = report?.current,
     previous = report?.previous
+  const busyHours = useMemo(() => {
+    const counts = new Map(
+      report?.busyHours.map((hour) => [hour.hour, hour.orders]) ?? [],
+    )
+    const maximum = Math.max(1, ...counts.values())
+    return Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      count: counts.get(hour) ?? 0,
+      maximum,
+    }))
+  }, [report?.busyHours])
   const average = (sales: number, orders: number) =>
     orders ? Math.round(sales / orders) : 0
   return (
@@ -107,6 +119,7 @@ export default function AnalyticsPage() {
           </button>
         )}
       </PageHeading>
+      {!allowed && <StoreOverview />}
       {!allowed ? (
         <section className="analytics-connect">
           <ChartColumnIncreasing size={42} aria-hidden="true" />
@@ -244,38 +257,40 @@ export default function AnalyticsPage() {
                   os resultados após receber seus primeiros pedidos.
                 </p>
               )}
-              <AnalyticsChart series={report.series} />
-              <div className="analytics-operational">
-                <article>
-                  <strong>{pct(current.cancelled, current.orders)}</strong>
-                  <span>Taxa de cancelamento</span>
-                  <small>
-                    {current.cancelled} de {current.orders} pedidos recebidos
-                  </small>
-                </article>
-                <article>
-                  <strong>{pct(current.repeatCustomers, current.customers)}</strong>
-                  <span>Clientes com recompra</span>
-                  <small>
-                    {current.repeatCustomers} compraram ao menos duas vezes no período
-                  </small>
-                </article>
-                <article>
-                  <Clock3 size={18} aria-hidden="true" />
-                  <strong>{minutes(current.avgPreparationMinutes)}</strong>
-                  <span>Tempo até ficar pronto ou sair</span>
-                  <small>
-                    {current.preparationSamples} pedidos com etapas registradas
-                  </small>
-                </article>
-                <article>
-                  <Bike size={18} aria-hidden="true" />
-                  <strong>{minutes(current.avgDeliveryMinutes)}</strong>
-                  <span>Tempo médio de entrega</span>
-                  <small>
-                    {current.deliverySamples} entregas com saída e conclusão registradas
-                  </small>
-                </article>
+              <div className="analytics-bento-main">
+                <AnalyticsChart series={report.series} />
+                <div className="analytics-operational">
+                  <article>
+                    <strong>{pct(current.cancelled, current.orders)}</strong>
+                    <span>Taxa de cancelamento</span>
+                    <small>
+                      {current.cancelled} de {current.orders} pedidos recebidos
+                    </small>
+                  </article>
+                  <article>
+                    <strong>{pct(current.repeatCustomers, current.customers)}</strong>
+                    <span>Clientes com recompra</span>
+                    <small>
+                      {current.repeatCustomers} compraram ao menos duas vezes no período
+                    </small>
+                  </article>
+                  <article>
+                    <Clock3 size={18} aria-hidden="true" />
+                    <strong>{minutes(current.avgPreparationMinutes)}</strong>
+                    <span>Tempo até ficar pronto ou sair</span>
+                    <small>
+                      {current.preparationSamples} pedidos com etapas registradas
+                    </small>
+                  </article>
+                  <article>
+                    <Bike size={18} aria-hidden="true" />
+                    <strong>{minutes(current.avgDeliveryMinutes)}</strong>
+                    <span>Tempo médio de entrega</span>
+                    <small>
+                      {current.deliverySamples} entregas com saída e conclusão registradas
+                    </small>
+                  </article>
+                </div>
               </div>
               <AnalyticsRankings report={report} />
               <div className="analytics-insight-grid">
@@ -287,22 +302,19 @@ export default function AnalyticsPage() {
                     </div>
                   </header>
                   <div className="analytics-hour-heatmap">
-                    {Array.from({ length: 24 }, (_, hour) => {
-                      const count =
-                          report.busyHours.find((h) => h.hour === hour)?.orders ?? 0,
-                        max = Math.max(1, ...report.busyHours.map((h) => h.orders))
+                    {busyHours.map(({ hour, count, maximum: max }) => {
                       return (
                         <div
                           key={hour}
                           title={`${hour}h: ${count} pedidos`}
                           style={{
                             backgroundColor: !count
-                              ? "#f3f7f1"
+                              ? "var(--wash)"
                               : count / max >= 0.75
-                                ? "#1f6349"
+                                ? "var(--brand-dark)"
                                 : count / max >= 0.5
-                                  ? "#23785b"
-                                  : "#d9e9cf",
+                                  ? "var(--brand)"
+                                  : "var(--accent)",
                             color: count / max >= 0.5 ? "white" : "var(--forest)",
                           }}
                         >

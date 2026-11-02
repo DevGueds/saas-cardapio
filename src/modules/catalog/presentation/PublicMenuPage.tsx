@@ -15,7 +15,7 @@ import { categoryAnchor, useCategoryNavigation } from "./use-category-navigation
 import AddonChoice from "../../commerce/presentation/AddonChoice"
 import { defaultAppearance } from "@cardapio/domain/menu-options"
 import { notifySuccess } from "../../../shared/presentation/notify"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 
 import { Link } from "react-router"
 import {
@@ -70,6 +70,7 @@ export default function PublicMenuPage() {
     })
 
   const [search, setSearch] = useState("")
+  const deferredSearch = useDeferredValue(search)
   const [customizing, setCustomizing] = useState<string | null>(null)
   const selectedProduct = products.find((p) => p.id === customizing)
 
@@ -97,7 +98,7 @@ export default function PublicMenuPage() {
     return categories.filter((category) => populated.has(category.id))
   }, [categories, products])
 
-  const grouped = discovery === "NONE" && !search.trim()
+  const grouped = discovery === "NONE" && !deferredSearch.trim()
   const categoryNavigation = useCategoryNavigation(
     displayCategories.map((category) => category.id),
     grouped,
@@ -108,12 +109,12 @@ export default function PublicMenuPage() {
       discoverProducts(
         menu,
         "$all",
-        search,
+        deferredSearch,
         discovery,
         ranking.data?.productIds ?? [],
         now,
       ),
-    [menu, search, discovery, ranking.data, now],
+    [menu, deferredSearch, discovery, ranking.data, now],
   )
   const hasPromotions =
     menu.commerce?.promotions.some((p) => promotionActive(p, now)) ?? false
@@ -193,6 +194,7 @@ export default function PublicMenuPage() {
                 className="store-card__logo"
                 src={store.logoUrl}
                 alt={`Logo ${store.name}`}
+                priority
               />
               <div
                 className={`status ${store.isOpen ? "status--open" : "status--closed"}`}
@@ -235,7 +237,7 @@ export default function PublicMenuPage() {
             </div>
           </div>
           <div className="hero-media">
-            <ImageWithFallback src={store.coverUrl} alt="" />
+            <ImageWithFallback src={store.coverUrl} alt="" priority />
             <div className="hero-caption">
               <UtensilsCrossed size={17} aria-hidden="true" />
               <span>Escolha. Personalize. Aproveite.</span>
@@ -347,7 +349,7 @@ export default function PublicMenuPage() {
             <PublicOffers
               controller={controller}
               disabled={loading || !!loadError}
-              search={search}
+              search={deferredSearch}
             />
           )}
           <section
@@ -355,6 +357,7 @@ export default function PublicMenuPage() {
             id="cardapio"
             aria-labelledby="category-title"
             tabIndex={-1}
+            aria-busy={deferredSearch !== search}
           >
             <div className="section-heading">
               <div>
@@ -364,8 +367,8 @@ export default function PublicMenuPage() {
                     ? "Mais vendidos"
                     : discovery === "PROMOTIONS"
                       ? "Promoções e ofertas"
-                      : search
-                        ? `Resultados para “${search}”`
+                      : deferredSearch
+                        ? `Resultados para “${deferredSearch}”`
                         : "Cardápio"}
                 </h2>
               </div>

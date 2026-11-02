@@ -1,0 +1,32 @@
+:root {
+  --font-ui: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --ink: #25252d;
+  --muted: #656570;
+  --line: #e4e3e8;
+  --paper: #ffffff;
+  --wash: #f6f5f8;
+  --brand: #ce283d;
+  --brand-dark: #a51d30;
+  --soft-green: #fff0f1;
+  --forest: #292933;
+  --accent: #ffe2d9;
+  --brand-gradient: linear-gradient(110deg, #d52e43, #bd2036);
+  --danger: #b42338;
+  --success: #19724c;
+  --success-soft: #e9f6ee;
+  --warning: #8e580c;
+  --warning-soft: #fff4da;
+  --info: #365d9b;
+  --info-soft: #edf3ff;
+  --shadow: 0 8px 32px #26243707, 0 1px 3px #26243705;
+  --shadow-raised: 0 12px 36px #26243712;
+  --radius: 1.25rem;
+  --glass: #ffffffeb;
+  --glass-line: #ffffff;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+}

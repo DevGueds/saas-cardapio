@@ -1,4 +1,3 @@
-import LoginPage from "../modules/identity/presentation/LoginPage"
 import { createBrowserRouter, Navigate, Outlet, useLocation } from "react-router"
 
 import PublicRoute from "./presentation/PublicRoute"
@@ -37,7 +36,13 @@ export const router = createBrowserRouter(
               .default,
           }),
         },
-        { path: "/login", Component: LoginPage },
+        {
+          path: "/login",
+          lazy: async () => ({
+            Component: (await import("../modules/identity/presentation/LoginPage"))
+              .default,
+          }),
+        },
         {
           path: "/minha-conta",
           lazy: async () => ({

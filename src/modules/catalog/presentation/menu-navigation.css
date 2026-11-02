@@ -2,10 +2,12 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: #faf9f5;
+  background: #faf8f6f5;
   padding: 0.6rem 0.25rem;
   margin-top: 1rem;
-  box-shadow: 0 5px 10px #172f2708;
+  box-shadow: 0 6px 16px #402d1e06;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 .category-nav a {
   text-decoration: none;
@@ -13,6 +15,18 @@
 .menu-category {
   scroll-margin-top: 0;
   margin-bottom: 2.5rem;
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .category-nav {
+    background: #faf8f6;
+  }
+}
+@media (max-width: 767px) {
+  .category-nav {
+    background: #faf8f6;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
 }
 .menu-category > .section-heading {
   align-items: center;

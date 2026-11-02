@@ -1,14 +1,7 @@
 @font-face {
-  font-family: "DM Sans";
-  src: url("/fonts/DM-Sans-Variable.ttf") format("truetype");
+  font-family: "Plus Jakarta Sans";
+  src: url("/fonts/Plus-Jakarta-Sans-Latin.woff2") format("woff2");
   font-style: normal;
-  font-weight: 100 1000;
-  font-display: swap;
-}
-@font-face {
-  font-family: Manrope;
-  src: url("/fonts/Manrope-Variable.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 200 800;
+  font-weight: 400 800;
   font-display: swap;
 }

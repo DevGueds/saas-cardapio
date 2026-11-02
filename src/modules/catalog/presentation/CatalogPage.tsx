@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router"
 import { can } from "@cardapio/domain/permissions"
 import { useAccount } from "../../identity/presentation/AccountContext"
 import PageHeading from "../../../shared/presentation/PageHeading"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useDeferredValue, useMemo, useState } from "react"
 
 import {
   CheckCircle2,
@@ -45,9 +45,19 @@ export default function CatalogPage() {
   const mutation = useMutation()
 
   const [search, setSearch] = useState("")
+  const deferredSearch = useDeferredValue(search)
+  const query = normalizeName(deferredSearch)
+  const availableCount = useMemo(
+    () => menu.products.reduce((count, product) => count + Number(product.available), 0),
+    [menu.products],
+  )
 
   const [selectedCategoryId, setCategoryId] = useState("")
-  const categoryId = menu.categories.some((category) => category.id === selectedCategoryId) ? selectedCategoryId : ""
+  const categoryId = menu.categories.some(
+    (category) => category.id === selectedCategoryId,
+  )
+    ? selectedCategoryId
+    : ""
 
   const [view, setView] = useState<"grid" | "table">("grid")
 
@@ -86,11 +96,9 @@ export default function CatalogPage() {
       menu.products.filter(
         (product) =>
           (!categoryId || product.categoryId === categoryId) &&
-          normalizeName(`${product.name} ${product.description}`).includes(
-            normalizeName(search),
-          ),
+          normalizeName(`${product.name} ${product.description}`).includes(query),
       ),
-    [menu.products, categoryId, search],
+    [menu.products, categoryId, query],
   )
   const { run, clearError } = mutation
   const editProduct = useCallback(
@@ -180,7 +188,7 @@ export default function CatalogPage() {
           </span>
           <div>
             <span>Disponíveis</span>
-            <strong>{menu.products.filter((product) => product.available).length}</strong>
+            <strong>{availableCount}</strong>
           </div>
           <small>Prontos para pedir</small>
         </div>
@@ -190,9 +198,7 @@ export default function CatalogPage() {
           </span>
           <div>
             <span>Esgotados</span>
-            <strong>
-              {menu.products.filter((product) => !product.available).length}
-            </strong>
+            <strong>{menu.products.length - availableCount}</strong>
           </div>
           <small>Você pode reativar quando quiser</small>
         </div>

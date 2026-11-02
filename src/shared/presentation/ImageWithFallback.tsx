@@ -6,10 +6,12 @@ export default function ImageWithFallback({
   src,
   alt,
   className = "",
+  priority = false,
 }: {
   src: string
   alt: string
   className?: string
+  priority?: boolean
 }) {
   const [failedSource, setFailedSource] = useState<string | null>(null)
   useEffect(() => {
@@ -31,7 +33,8 @@ export default function ImageWithFallback({
       src={src}
       alt={alt}
       className={className}
-      loading="lazy"
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : undefined}
       decoding="async"
       onError={() => setFailedSource(src)}
     />
