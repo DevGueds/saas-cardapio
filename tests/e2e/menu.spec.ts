@@ -474,6 +474,7 @@ test("imagem válida pode ser removida sem restaurar foto de exemplo", async ({
 
   await page.getByRole("button", { name: "Salvar produto" }).click()
   await expect(page.getByText("Produto salvo com sucesso.")).toBeVisible()
+  await expect(page.getByRole("dialog", { name: "Editar produto" })).toHaveCount(0)
   const card = page
     .locator("article")
     .filter({ has: page.getByRole("heading", { name: "Smash Clássico", exact: true }) })
@@ -487,6 +488,10 @@ test("imagem válida pode ser removida sem restaurar foto de exemplo", async ({
   await page.getByRole("button", { name: "Salvar produto" }).click()
 
   await expect(page.getByText("Produto salvo com sucesso.")).toBeVisible()
+
+  // The previous success toast may still be visible. Wait for this save to finish
+  // before reloading, otherwise the unfinished draft is correctly restored.
+  await expect(page.getByRole("dialog", { name: "Editar produto" })).toHaveCount(0)
 
   await page.reload()
 

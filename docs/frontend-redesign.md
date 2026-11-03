@@ -2,7 +2,7 @@
 
 ## Contexto e objetivos
 
-Organizar a operação em blocos bento, com superfícies claras e vidro discreto na navegação. A ação principal precisa continuar reconhecível em celular e desktop. A direção aplica o `SKILL.md` mestre e as referências de glassmorphism, bento, performance e UX/UI fornecidas para esta alteração.
+Organizar a operação em blocos bento, com superfícies claras e vidro discreto na navegação e nos painéis principais. A ação principal precisa continuar reconhecível em celular e desktop. A direção aplica o `SKILL.md` mestre e as referências de glassmorphism, bento, performance e UX/UI fornecidas para esta alteração.
 
 O frontend mantém os serviços injetados, contratos, permissões, revisões de gravação, carrinho, adicionais, recuperação de conexão e dados reais. O dashboard demonstrativo utiliza os produtos cadastrados; indicadores de vendas continuam dependendo da API.
 
@@ -20,7 +20,7 @@ O frontend mantém os serviços injetados, contratos, permissões, revisões de 
 | Espaçamento      | 4, 8, 12, 16, 24, 32 px                          | Ritmo entre elementos             |
 | Bordas           | 12–14 px em controles; 18–26 px em cartões       | Hierarquia entre controle e bloco |
 
-`design-tokens.css` concentra os valores. Os layouts ficam nos módulos; `redesign-components.css` uniformiza os componentes compartilhados. As quatro cores e os três modelos escolhidos pelo estabelecimento permanecem disponíveis no cardápio.
+`design-tokens.css` concentra os valores. Os layouts ficam nos módulos; `redesign-components.css` uniformiza os componentes compartilhados e `glass-surfaces.css` define as superfícies de vidro. As quatro cores e os três modelos escolhidos pelo estabelecimento permanecem disponíveis no cardápio.
 
 ## Regras dos componentes
 
@@ -28,7 +28,8 @@ O frontend mantém os serviços injetados, contratos, permissões, revisões de 
 - **Dashboard:** na loja conectada, os indicadores de vendas vêm primeiro, seguidos pelo gráfico e pelos dados operacionais. Na demonstração, catálogo e atalhos usam blocos de tamanhos diferentes. Datas, comparação, tabelas alternativas e exportação permanecem disponíveis.
 - **Cardápio:** identidade, informações e imagem da loja em blocos; produtos com descrição, preço, foto e ação. Cada categoria mantém todos os itens e atalhos por âncora. Seleção e quantidade são visíveis. Fotos ocultas e produtos indisponíveis têm tratamento próprio.
 - **Formulários e diálogos:** conservar rótulos, regras, mensagens, rascunhos e validações existentes. Controles mantêm os estados normal, hover, foco, ativo, desabilitado, carregando, erro e sucesso. O botão principal confirma o resultado somente após a gravação.
-- **Vidro:** um desfoque de 12 px no cabeçalho administrativo e 8 px nos atalhos do cardápio em desktop. No celular, superfícies mais opacas dispensam o desfoque. Fallbacks CSS atendem ausência de suporte e preferência por transparência reduzida.
+- **Vidro:** painéis administrativos selecionados usam branco levemente transparente, reflexo claro e uma textura SVG estática compartilhada. Não há um desfoque por cartão. Cabeçalho e diálogos administrativos usam 12 px de desfoque em desktop; os atalhos do cardápio usam 8 px. No celular, superfícies mais opacas dispensam o desfoque. Fallbacks CSS atendem ausência de suporte e preferência por transparência reduzida.
+- **Seleção de lojas:** contexto da conta, quantidade real de lojas, função da pessoa, endereço do cardápio e entrada no painel. Busca sem exigir acentos aparece em contas com mais de quatro lojas. Contas vazias explicam criação e convite da equipe. Atualização de acessos bloqueia repetições enquanto a solicitação está pendente. Animações de entrada são curtas e respeitam movimento reduzido.
 
 ## Acessibilidade e critérios verificáveis
 
@@ -84,7 +85,7 @@ Usar tarefas concretas: “Organizar produtos”, “Acompanhar pedidos”, “S
 
 **Impacto:** risco de perda de fluidez em dispositivos com recursos limitados.
 
-**Antes/depois:** cartões de conteúdo opacos, desfoque limitado à navegação desktop, animações curtas e preferência por movimento reduzido. Os efeitos de conexão, polling e imagens mantêm suas limpezas existentes.
+**Antes/depois:** cartões com transparência discreta e textura estática reutilizada, sem filtros por cartão; desfoque limitado à navegação e aos diálogos desktop, animações curtas e preferência por movimento reduzido. Os efeitos de conexão, polling e imagens mantêm suas limpezas existentes. A seleção de lojas indexa nomes e endereços com `useMemo`, sem solicitar dados adicionais de cada estabelecimento.
 
 **Trade-offs:** o vidro fica mais discreto no celular. Não há detecção de GPU, nova fila de rede, novo cache de sessão ou mudança de backend nesta alteração. Não foram inferidos FPS, Lighthouse ou capacidade de requisições por segundo.
 
@@ -107,3 +108,11 @@ Usar tarefas concretas: “Organizar produtos”, “Acompanhar pedidos”, “S
 - [x] Verificação visual dos indicadores reais, além do estado demonstrativo.
 
 Verificação de 02/11/2026: 282 testes unitários, 32 cenários demonstrativos e 20 cenários com API real exercitados. Tipos, lint, UTF-8, build e integração do HTML social com Caddy aprovados. Os cenários demonstrativos incluem a suíte completa inicial e as verificações específicas após o ajuste de contraste dos campos.
+
+## Revisão de contraste e vidro de 03/11/2026
+
+O estado selecionado das abas de pedidos misturava texto vermelho com fundo escuro após a troca de tema. A correção define o par de cores completo: texto branco em `#302e3b`. A regressão é verificada no navegador alternando as três situações, incluindo os controles não selecionados. O cálculo resolve fundos sólidos e transparências nos ancestrais; gradientes e textura também exigem inspeção visual. Isso não constitui auditoria WCAG integral.
+
+A seleção de lojas foi extraída em um componente de apresentação e recebeu composição responsiva, cartões de vidro, identificação da conta e estados de busca e conta vazia. Uma busca ativa continua editável se a atualização reduzir o número de lojas. O cabeçalho de pedidos prontos usa o verde semântico da operação. As verificações cobrem destinos conforme a permissão, criação de loja, atualização pendente, perfil, saída, textos longos, teclado e telas de 320, 390 e 1440 px.
+
+Validação desta revisão: 287 testes unitários e 33 cenários demonstrativos exercitados. A suíte completa aprovou 32; o cenário de remoção de foto aguardava uma notificação de sucesso anterior e recarregava antes da conclusão da segunda gravação. O teste passou a aguardar o fechamento do modal e foi aprovado em duas execuções isoladas, mantendo o limite original de 30 segundos. Também passaram três cenários com API real; a seleção/criação de lojas e o contraste dos pedidos foram repetidos após os ajustes finais. O seletor de situações dos pedidos permanece em uma linha em 320 px, com controles de pelo menos 44 px de altura.

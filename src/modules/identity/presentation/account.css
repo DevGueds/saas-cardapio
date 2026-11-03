@@ -145,45 +145,6 @@
 .account-form {
   margin: 2rem 0 1rem;
 }
-.stores-page {
-  max-width: 75rem;
-  margin: 0 auto;
-  padding: clamp(1.25rem, 5vw, 4rem);
-}
-.stores-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-  gap: 1.25rem;
-  margin-bottom: 2rem;
-}
-.account-store-card {
-  display: grid;
-  gap: 0.6rem;
-  border: 1px solid var(--line);
-  border-radius: 1.1rem;
-  padding: 1.75rem;
-  background: white;
-  box-shadow: var(--shadow);
-  overflow-wrap: anywhere;
-}
-.account-store-card > svg {
-  color: var(--brand);
-  margin-bottom: 1rem;
-}
-.account-store-card h2 {
-  font-size: 1.25rem;
-}
-.account-store-card span,
-.account-store-card small {
-  color: var(--muted);
-}
-.account-store-card strong {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: var(--brand);
-  margin-top: 1rem;
-}
 .account-actions {
   display: flex;
   flex-wrap: wrap;

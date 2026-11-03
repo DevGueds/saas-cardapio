@@ -1,7 +1,5 @@
-import { can, roleLabels } from "@cardapio/domain/permissions"
 import { useCallback, useEffect, useState } from "react"
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router"
-import { ArrowRight, Plus, Store } from "lucide-react"
 import type { AppError, RestaurantAccess, SessionView } from "@cardapio/contracts"
 import { useServices } from "../../../app/presentation/ServicesProvider"
 import MenuScope from "../../../app/presentation/MenuScope"
@@ -10,7 +8,7 @@ import ErrorNotice from "../../../shared/presentation/ErrorNotice"
 import { useMutation } from "../../../shared/presentation/use-mutation"
 import AccountContext from "./AccountContext"
 import CreateStoreDialog from "./CreateStoreDialog"
-import EmailVerificationNotice from "./EmailVerificationNotice"
+import StoreSelector from "./StoreSelector"
 export default function ApiAdminRoute() {
   const { auth } = useServices(),
     navigate = useNavigate(),
@@ -132,59 +130,16 @@ export default function ApiAdminRoute() {
     if (result?.ok) navigate("/login", { replace: true })
   }
   return (
-    <main className="stores-page">
-      <EmailVerificationNotice session={data.session} />
-      <header className="page-heading">
-        <div>
-          <p className="eyebrow">Sua conta</p>
-          <h1>Qual loja vamos cuidar hoje?</h1>
-          <p className="page-description">
-            Olá, {data.session.user.name}. Escolha uma loja para abrir o painel.
-          </p>
-        </div>
-        <button
-          className="secondary-button"
-          onClick={() => void logout()}
-          disabled={mutation.pending}
-        >
-          Sair da conta
-        </button>
-      </header>
-      <Link className="secondary-button" to="/minha-conta">
-        Meu perfil e contato
-      </Link>
-      {mutation.error && <ErrorNotice error={mutation.error} />}
-      <div className="stores-grid">
-        {data.stores.map((store) => (
-          <Link
-            className="account-store-card"
-            key={store.id}
-            to={`/admin/${!can(store.role, "catalog:write") ? "orders" : "menu"}?restaurant=${store.id}`}
-          >
-            <Store size={28} aria-hidden="true" />
-            <h2>{store.name}</h2>
-            <span>/menu/{store.slug}</span>
-            <small>{roleLabels[store.role]}</small>
-            <strong>
-              Abrir painel <ArrowRight size={18} aria-hidden="true" />
-            </strong>
-          </Link>
-        ))}
-      </div>
-      {!data.stores.length && (
-        <p className="info-notice">
-          Sua conta ainda não tem lojas disponíveis. Se você faz parte de uma equipe,
-          informe seu e-mail ao proprietário para ele liberar o acesso. Você também pode
-          criar sua própria loja.
-        </p>
-      )}
-      <button className="secondary-button" onClick={() => void reload()}>
-        Atualizar meus acessos
-      </button>
-      <button className="primary-button" onClick={() => setCreating(true)}>
-        <Plus size={18} aria-hidden="true" />
-        Criar nova loja
-      </button>
+    <>
+      <StoreSelector
+        session={data.session}
+        stores={data.stores}
+        error={mutation.error}
+        signingOut={mutation.pending}
+        onLogout={() => void logout()}
+        onRefresh={reload}
+        onCreate={() => setCreating(true)}
+      />
       {creating && (
         <CreateStoreDialog
           onClose={() => setCreating(false)}
@@ -194,6 +149,6 @@ export default function ApiAdminRoute() {
           }}
         />
       )}
-    </main>
+    </>
   )
 }

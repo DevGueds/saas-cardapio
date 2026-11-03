@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { PNG } from "pngjs"
 import { currentLegalAcceptance } from "@cardapio/contracts"
+import { expectReadableText } from "../browser-contrast"
 async function remember(id: string) {
   await mkdir(".cache", { recursive: true })
   const filename = ".cache/settings-browser-users.json"
@@ -10,6 +11,67 @@ async function remember(id: string) {
   try { ids = JSON.parse(await readFile(filename, "utf8")) } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error }
   await writeFile(filename, JSON.stringify([...ids, id]))
 }
+test("glass store selection, create dialog and selected order tabs stay readable and usable", async ({ page, baseURL }) => {
+  test.setTimeout(180000)
+  const suffix = randomUUID().slice(0, 8), slug = `glass-${suffix}`
+  const account = await (await page.request.post("/api/v1/auth/register", {
+    headers: { origin: baseURL! }, data: { name: "Ana da Silva", email: `${slug}@browser.example.test`, password: "M7!qR2@x", legalAcceptance: currentLegalAcceptance, restaurantName: "Café da Praça · Cozinha artesanal", slug },
+  })).json()
+  expect(account.ok).toBe(true)
+  await remember(account.value.user.id)
+  const store = (await (await page.request.get("/api/v1/me/restaurants")).json()).value[0]
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 960 })
+    await page.goto("/admin")
+    const consent = page.getByRole("button", { name: "Entendi", exact: true })
+    if (await consent.isVisible()) await consent.click()
+    await expect(page.getByRole("heading", { name: "Qual loja vamos cuidar hoje?" })).toBeVisible()
+    await expect(page.getByText("1 loja na sua conta")).toBeVisible()
+    const card = page.getByRole("link", { name: /Café da Praça.*Abrir painel/ })
+    await expect(card).toHaveAttribute("href", `/admin/menu?restaurant=${store.id}`)
+    await expectReadableText(page.locator(".stores-greeting,.stores-count,.store-role,.store-card-details p,.store-card-footer,.stores-footer p"))
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: `.cache/glass-stores-${width}.png`, fullPage: true })
+    const create = page.getByRole("button", { name: "Criar nova loja", exact: true })
+    await create.click()
+    const dialog = page.getByRole("dialog", { name: "Criar nova loja", exact: true })
+    await expect(dialog).toBeVisible()
+    await expectReadableText(dialog.locator(".form-intro,.field-help,.field > span"))
+    if (width < 768) expect(await dialog.evaluate(element => getComputedStyle(element).backdropFilter)).toBe("none")
+    await page.screenshot({ path: `.cache/glass-create-store-${width}.png`, fullPage: true })
+    await page.keyboard.press("Escape")
+    await expect(create).toBeFocused()
+  }
+  await page.getByRole("button", { name: "Criar nova loja", exact: true }).click()
+  await page.getByLabel("Nome da loja *", { exact: true }).fill("Cozinha do Bairro")
+  await page.getByLabel("Endereço do cardápio *", { exact: true }).fill(`${slug}-bairro`)
+  await page.getByRole("button", { name: "Criar loja", exact: true }).click()
+  await expect(page.getByRole("heading", { name: "Gestão do Cardápio", exact: true })).toBeVisible()
+  await page.goto("/admin")
+  await expect(page.getByText("2 lojas na sua conta")).toBeVisible()
+  await page.getByRole("link", { name: /Cozinha do Bairro.*Abrir painel/ }).click()
+  await expect(page.getByRole("heading", { name: "Gestão do Cardápio", exact: true })).toBeVisible()
+  await page.goto(`/admin/orders?restaurant=${store.id}`)
+  const tabs = page.getByRole("group", { name: "Situação dos pedidos", exact: true })
+  for (const label of ["Em andamento", "Concluídos", "Cancelados"]) {
+    await tabs.getByRole("button", { name: label, exact: true }).click()
+    await expect(tabs.getByRole("button", { name: label, exact: true })).toHaveAttribute("aria-pressed", "true")
+    await expectReadableText(tabs.locator("button"))
+  }
+  await tabs.getByRole("button", { name: "Em andamento", exact: true }).click()
+  await expectReadableText(page.locator(".live-order-column--ready h2,.live-orders-empty p,.live-orders-empty small"))
+  await page.screenshot({ path: ".cache/glass-orders-desktop.png", fullPage: true })
+  await page.setViewportSize({ width: 320, height: 900 })
+  await expectReadableText(tabs.locator("button"))
+  const positions = await tabs.locator("button").evaluateAll(elements => elements.map(element => ({ top: element.getBoundingClientRect().top, height: element.getBoundingClientRect().height })))
+  expect(new Set(positions.map(position => position.top)).size).toBe(1)
+  expect(positions.every(position => position.height >= 44)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: ".cache/glass-orders-mobile.png", fullPage: true })
+  await page.goto("/admin")
+  await page.getByRole("button", { name: "Sair da conta", exact: true }).click()
+  await expect(page).toHaveURL(/\/login$/)
+})
 test("email-off mobile signup skips confirmation and the personal profile can be edited with a photo", async ({ page }) => {
   const email = `settings-person-${randomUUID().slice(0,8)}@browser.example.test`
   await page.setViewportSize({ width: 320, height: 900 })

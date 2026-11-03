@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test"
+import { expectReadableText } from "../browser-contrast"
 
 test.beforeEach(async ({ context }) => {
   await context.route(/https:\/\//, (route) => route.abort())
@@ -7,6 +8,54 @@ const noOverflow = async (page: Page) =>
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
   ).toBe(true)
+
+test("dashboard navigation, instructions and selected controls keep readable contrast", async ({
+  page,
+}) => {
+  test.setTimeout(120000)
+  for (const route of [
+    "menu",
+    "analytics",
+    "orders",
+    "hours",
+    "settings",
+    "addons",
+    "offers",
+    "sharing",
+    "appearance",
+  ]) {
+    await page.goto(`/admin/${route}`)
+    await expect(page.locator(".admin-main h1")).toBeVisible()
+    await expectReadableText(
+      page.locator(
+        ".admin-nav a,.page-description,.field-help,.eyebrow,.analytics-periods button,.analytics-segmented button,.view-toggle button,.order-filters button,.offer-tabs button,.sharing-networks button",
+      ),
+    )
+  }
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.setViewportSize({ width: 320, height: 900 })
+  await page.goto("/admin/menu")
+  await page.getByRole("button", { name: "Novo produto", exact: true }).click()
+  const dialog = page.getByRole("dialog")
+  await expect(dialog).toBeVisible()
+  expect(
+    await dialog.evaluate((element) => getComputedStyle(element).backdropFilter),
+  ).toBe("none")
+  await expectReadableText(dialog.locator(".field-help,.form-intro"))
+  await noOverflow(page)
+  await page.keyboard.press("Escape")
+  await expect(
+    page.getByRole("button", { name: "Novo produto", exact: true }),
+  ).toBeFocused()
+  const media = await page.context().newCDPSession(page)
+  await media.send("Emulation.setEmulatedMedia", {
+    features: [{ name: "prefers-reduced-transparency", value: "reduce" }],
+  })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await expect(page.locator(".admin-topbar")).toHaveCSS("backdrop-filter", "none")
+  await expect(page.locator(".catalog-toolbar")).toHaveCSS("background-image", "none")
+  await media.detach()
+})
 
 test("mobile shortcuts keep navigation, focus and touch targets accessible", async ({
   page,
