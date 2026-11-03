@@ -30,3 +30,5 @@
 @import "./modules/payments/presentation/payments.css";
 @import "./modules/engagement/presentation/engagement.css";
 @import "./shared/presentation/styles/redesign-components.css";
+@import "./shared/presentation/styles/glass-surfaces.css";
+@import "./modules/identity/presentation/store-selector.css";

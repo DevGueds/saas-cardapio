@@ -1,0 +1,156 @@
+/* Static grain and an opaque base keep text crisp without a GPU layer per card. */
+:root {
+  --glass-texture: url("/textures/glass-noise.svg");
+  --glass-surface: #ffffffdb;
+  --glass-border: #dcdde8;
+  --glass-shadow: inset 0 1px 0 #fff, 0 8px 28px #38365908, 0 1px 3px #38365905;
+}
+.admin-shell {
+  background:
+    radial-gradient(ellipse at 90% 0, #e5e6fb80, transparent 46%),
+    radial-gradient(ellipse at 5% 60%, #e5eff650, transparent 50%), var(--wash);
+}
+.admin-sidebar,
+.admin-topbar {
+  background-image: var(--glass-texture);
+}
+.glass-surface,
+.admin-main
+  :is(
+    .analytics-panel,
+    .analytics-filter-bar,
+    .catalog-toolbar,
+    .form-section,
+    .hours-settings-card,
+    .commerce-card,
+    .security-card,
+    .profile-card,
+    .payment-card,
+    .printer-card
+  ) {
+  background-color: var(--glass-surface);
+  background-image: var(--glass-texture), linear-gradient(125deg, #ffffff9e, #ffffff0a);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+.admin-main .live-order-column {
+  background-color: #eeedf5c9;
+  background-image: var(--glass-texture), linear-gradient(145deg, #ffffff65, #ffffff00);
+  box-shadow: inset 0 1px 0 #fff;
+}
+.live-order-column--ready {
+  border-top-color: #4d8664;
+}
+.live-order-column--ready > header {
+  background: #e8f3ed;
+  color: #245c3f;
+}
+.live-order-tabs {
+  background: #e9e8f0;
+  border: 1px solid #dcdbe5;
+  box-shadow: inset 0 1px 0 #ffffffc9;
+}
+.live-order-tabs button {
+  color: #514d5d;
+}
+.live-order-tabs button[aria-pressed="true"] {
+  background: #302e3b;
+  color: #fff;
+  box-shadow:
+    0 2px 6px #302e3b26,
+    inset 0 1px 0 #ffffff20;
+}
+.live-order-tabs button:hover:not([aria-pressed="true"]) {
+  background: #ffffffb8;
+  color: var(--ink);
+}
+@media (max-width: 480px) {
+  .live-orders-toolbar .live-order-tabs {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    width: 100%;
+  }
+  .live-orders-toolbar .live-order-tabs button {
+    min-width: 0;
+    padding: 10px 4px;
+    font-size: 0.75rem;
+  }
+}
+/* Only dialogs and the existing fixed header blur content behind them. */
+body:has(.admin-shell, .stores-page) .app-dialog:not(.navigation-dialog) {
+  background-color: #fffffff0;
+  background-image: var(--glass-texture), linear-gradient(130deg, #ffffffc9, #f4f2fb73);
+  border-color: #e6e5ee;
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 32px 100px #25233530;
+}
+@supports (backdrop-filter: blur(1px)) {
+  @media (min-width: 768px) {
+    body:has(.admin-shell, .stores-page) .app-dialog:not(.navigation-dialog) {
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+  }
+}
+@media (max-width: 767px), (prefers-reduced-transparency: reduce) {
+  .glass-surface,
+  .admin-main
+    :is(
+      .analytics-panel,
+      .analytics-filter-bar,
+      .catalog-toolbar,
+      .form-section,
+      .hours-settings-card,
+      .commerce-card,
+      .security-card,
+      .profile-card,
+      .payment-card,
+      .printer-card
+    ),
+  body:has(.admin-shell, .stores-page) .app-dialog:not(.navigation-dialog) {
+    background-color: #fafaff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass-texture: none;
+  }
+  .glass-surface,
+  .admin-main
+    :is(
+      .analytics-panel,
+      .analytics-filter-bar,
+      .catalog-toolbar,
+      .form-section,
+      .hours-settings-card,
+      .commerce-card,
+      .security-card,
+      .profile-card,
+      .payment-card,
+      .printer-card
+    ),
+  body:has(.admin-shell, .stores-page) .app-dialog:not(.navigation-dialog) {
+    background-image: none;
+  }
+  .admin-topbar,
+  .admin-sidebar {
+    background: #fff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .admin-main .live-order-column {
+    background: #f0eef5;
+  }
+}
+@media (forced-colors: active) {
+  .glass-surface,
+  .app-dialog,
+  .admin-main .live-order-column {
+    background-image: none;
+    box-shadow: none;
+  }
+}

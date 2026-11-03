@@ -308,6 +308,7 @@ html {
 }
 .live-order-tabs button[aria-pressed="true"] {
   background: var(--forest);
+  color: #fff;
 }
 .order-summary {
   background: var(--wash);
